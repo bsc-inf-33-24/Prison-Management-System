@@ -34,7 +34,7 @@ public class IncidentController {
     // security matrix).
     @PostMapping("/incidents")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('DISCIPLINARY_OFFICER')")
+    @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Log an inmate incident")
     public IncidentResponse logIncident(@Valid @RequestBody LogIncidentRequest request,
                                          @AuthenticationPrincipal UserDetails currentUser) {
@@ -42,7 +42,7 @@ public class IncidentController {
     }
 
     @PatchMapping("/incidents/{incidentId}/outcome")
-    @PreAuthorize("hasRole('DISCIPLINARY_OFFICER')")
+    @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Record a disciplinary outcome")
     public IncidentResponse recordOutcome(@PathVariable UUID incidentId,
                                            @Valid @RequestBody RecordOutcomeRequest request) {
