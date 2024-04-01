@@ -5,6 +5,8 @@ import com.pms.api.cell.service.CellService;
 import com.pms.api.inmate.service.InmateService;
 import com.pms.api.incident.service.IncidentService;
 import com.pms.api.user.service.UserService;
+import com.pms.api.visitor.service.VisitService;
+import com.pms.api.visitor.service.VisitorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -157,6 +159,36 @@ public class ApiExceptionHandler {
     @ExceptionHandler(CellService.CellAlreadyAssignedToSameCellException.class)
     public ResponseEntity<ApiError> handleCellAlreadyAssignedToSameCell() {
         return problem(HttpStatus.CONFLICT, "The inmate is already assigned to this cell.");
+    }
+
+    @ExceptionHandler(VisitorService.VisitorNotFoundException.class)
+    public ResponseEntity<ApiError> handleVisitorNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Visitor not found.");
+    }
+
+    @ExceptionHandler(VisitorService.DuplicateVisitorIdentityException.class)
+    public ResponseEntity<ApiError> handleDuplicateVisitorIdentity() {
+        return problem(HttpStatus.CONFLICT, "A visitor with that identity number already exists.");
+    }
+
+    @ExceptionHandler(VisitService.VisitNotFoundException.class)
+    public ResponseEntity<ApiError> handleVisitNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Visit not found.");
+    }
+
+    @ExceptionHandler(VisitService.InmateNotFoundException.class)
+    public ResponseEntity<ApiError> handleVisitInmateNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Inmate not found.");
+    }
+
+    @ExceptionHandler(VisitService.UserNotFoundException.class)
+    public ResponseEntity<ApiError> handleVisitUserNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "User not found.");
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> handleIllegalArgument() {
+        return problem(HttpStatus.BAD_REQUEST, "One or more request fields are invalid.");
     }
 
     @ExceptionHandler(Exception.class)
