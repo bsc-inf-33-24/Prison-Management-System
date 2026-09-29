@@ -8,7 +8,7 @@ create table HealthRecords(
     created_by VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     status VARCHAR(50) CHECK (status IN ('ongoing','critical','recovered')),
-)
+);
 
 create table MedicalCondition(
     condition_id BIGSERIAL PRIMARY KEY,
@@ -19,7 +19,7 @@ create table MedicalCondition(
     date_recorded DATE,
     status VARCHAR(50) CHECK (status IN ('active','resolved')),
     recorded_by VARCHAR(255)
-)
+);
 
 create table Consultation(
     consultation_id BIGSERIAL PRIMARY KEY,
@@ -29,7 +29,7 @@ create table Consultation(
     diagnosis TEXT,
     treatment_provided TEXT,
     consulted_by VARCHAR(255)
-)
+);
 
 create table Medication(
     medication_id BIGSERIAL PRIMARY KEY,
@@ -41,7 +41,7 @@ create table Medication(
     end_date DATE,
     status ,
     prescribed_by VARCHAR(255)
-)
+);
 
 create table MedicationAdministration(
     administration_id BIGSERIAL PRIMARY KEY,
@@ -49,7 +49,7 @@ create table MedicationAdministration(
     administrated_datetime DATE,
     dose_given VARCHAR(255),
     administrated_by VARCHAR(255)
-)
+);
 
 create table MedicalAppointment(
     appointment_id BIGSERIAL PRIMARY KEY,
@@ -60,4 +60,4 @@ create table MedicalAppointment(
     external_facility VARCHAR(255),
     status VARCHAR(50) CHECK (status IN ('scheduled','completed','cancelled')),
     scheduled_by VARCHAR(255)
-)
+);

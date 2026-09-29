@@ -5,7 +5,7 @@ create table Visitor(
     id_number VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
     relationship_to_inmate VARCHAR(255) NOT NULL
-)
+);
 
 create table Visit(
     visit_id BIGSERIAL PRIMARY KEY,
@@ -13,4 +13,4 @@ create table Visit(
     visit_datetime DATE NOT NULL,
     duration NUMBER,
     logged_by VARCHAR(255) NOT NULL
-)
+);

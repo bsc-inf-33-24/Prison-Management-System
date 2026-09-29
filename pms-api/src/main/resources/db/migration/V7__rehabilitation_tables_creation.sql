@@ -6,7 +6,7 @@ create table RehabProgram(
     instructor VARCHAR(255) NOT NULL,
     schedule VARCHAR(255),
     status VARCHAR(255)
-)
+);
 
 create table Enrollment(
     enrollment_id BIGSERIAL PRIMARY KEY,
@@ -14,7 +14,7 @@ create table Enrollment(
     program_id VARCHAR(255),
     enrollment_date DATE,
     status VARCHAR(255)
-)
+);
 
 create table AttendanceRecord(
     attendance_id BIGSERIAL PRIMARY KEY,
@@ -23,4 +23,4 @@ create table AttendanceRecord(
     present VARCHAR(10) NOT NULL CHECK (status IN ('Y','N')),
     remarks TEXT,
     recorded_by VARCHAR(255) NOT NULL
-)
+);
