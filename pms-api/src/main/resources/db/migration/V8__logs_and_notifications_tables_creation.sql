@@ -6,7 +6,7 @@ create table AuditLog(
     record_id VARCHAR(50),
     old/new_values VARCHAR(255),
     timestamp TIMESTAMPTZ DEFAULT NOW()
-)
+);
 
 create table Notification(
     notification_id BIGSERIAL PRIMARY KEY,
@@ -16,4 +16,4 @@ create table Notification(
     related_record_id VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     is_read VARCHAR(10)
-)
+);
