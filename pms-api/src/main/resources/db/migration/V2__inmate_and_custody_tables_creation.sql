@@ -10,7 +10,7 @@ create table Inmate(
     next_of_kin VARCHAR(255),
     classification VARCHAR(255),
     status VARCHAR(255)
-)
+);
 
 create table Cell(
     cell_id BIGSERIAL PRIMARY KEY,
@@ -19,7 +19,7 @@ create table Cell(
     capacity NUMBER,
     current_occupancy VARCHAR(255),
     classification_type VARCHAR(255)
-)
+);
 
 create table CellAssignment(
     assignment_id BIGSERIAL PRIMARY KEY,
@@ -28,4 +28,4 @@ create table CellAssignment(
     date_assigned DATE,
     date_released DATE,
     assigned_by VARCHAR(255)
-)
+);

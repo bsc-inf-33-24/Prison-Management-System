@@ -6,7 +6,7 @@ create table Incident(
     status VARCHAR(50) CHECK (status IN ('resolved','open')),
     outcome VARCHAR(255),
     reported_by VARCHAR(255)
-)
+);
 
 create table IncidentInmate(
     incident_id BIGSERIAL REFERENCES Incident(incident_id) ON DELETE CASCADE,
@@ -14,5 +14,5 @@ create table IncidentInmate(
     role_in_incident VARCHAR(255),
 
     PRIMARY KEY (incident_id, inmate_id)
-)
+);
 
