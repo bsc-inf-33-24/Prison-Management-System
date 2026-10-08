@@ -23,9 +23,9 @@ services:
       db:
         condition: service_healthy
     environment:
-      DB_URL: jdbc:postgresql://db:5432/pms
-      DB_USER: pms_user
-      DB_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/pms
+      SPRING_DATASOURCE_USERNAME: pms_user
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
