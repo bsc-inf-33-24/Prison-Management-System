@@ -4,6 +4,7 @@ import com.pms.api.user.dto.CreateUserRequest;
 import com.pms.api.user.dto.UpdateRoleRequest;
 import com.pms.api.user.dto.UserResponse;
 import com.pms.api.user.service.UserService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/users")
 @PreAuthorize("hasRole('SUPER_ADMIN')")
+@SecurityRequirement(name = "bearerAuth")
 public class UserController {
 
     private final UserService userService;

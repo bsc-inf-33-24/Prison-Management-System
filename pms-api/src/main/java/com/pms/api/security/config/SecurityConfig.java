@@ -1,7 +1,10 @@
 package com.pms.api.security.config;
 
+import com.pms.api.common.error.ApiError;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -47,9 +50,17 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/api/v1/auth/login", "/api/v1/auth/logout").permitAll()
+                        .requestMatchers("/actuator/health", "/api/v1/auth/login", "/api/v1/auth/logout",
+                                "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()
                 )
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, exception) ->
+                                writeSecurityError(response, HttpStatus.UNAUTHORIZED,
+                                        "Authentication is required."))
+                        .accessDeniedHandler((request, response, exception) ->
+                                writeSecurityError(response, HttpStatus.FORBIDDEN,
+                                        "You are not authorized to access this resource.")))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
@@ -57,5 +68,16 @@ public class SecurityConfig {
                         org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    private static void writeSecurityError(jakarta.servlet.http.HttpServletResponse response,
+                                           HttpStatus status, String message)
+            throws java.io.IOException {
+        response.setStatus(status.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        ApiError error = ApiError.of(status, message);
+        response.getWriter().write("{\"status\":" + error.status()
+                + ",\"error\":\"" + error.error()
+                + "\",\"message\":\"" + error.message() + "\"}");
     }
 }
