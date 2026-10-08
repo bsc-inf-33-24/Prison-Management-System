@@ -6,9 +6,10 @@ import com.pms.api.user.dto.UserResponse;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -51,8 +52,13 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional(readOnly = true)
-    public List<UserResponse> findAll() {
-        return userRepository.findAllByOrderByIdAsc().stream().map(UserResponse::from).toList();
+    public Page<UserResponse> findAll(String search, String role, String status, Pageable pageable) {
+        return userRepository.searchUsers(normalizeFilter(search), normalizeFilter(role), normalizeFilter(status), pageable)
+                .map(UserResponse::from);
+    }
+
+    private static String normalizeFilter(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     @Transactional(readOnly = true)
