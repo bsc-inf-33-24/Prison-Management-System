@@ -1,84 +1,92 @@
 package com.pms.api.common.error;
 
-import java.util.Comparator;
-import java.util.List;
-
+import com.pms.api.auth.service.AuthService;
+import com.pms.api.inmate.service.InmateService;
+import com.pms.api.user.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import com.pms.api.user.service.UserService;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.AuthenticationException;
-import com.pms.api.auth.service.AuthService;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ProblemDetail> handleValidationFailure(MethodArgumentNotValidException exception) {
-        List<FieldViolation> errors = exception.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(error -> new FieldViolation(
-                        error.getField(),
-                        error.getDefaultMessage() == null ? "Invalid value." : error.getDefaultMessage()
-                ))
-                .sorted(Comparator.comparing(FieldViolation::field))
-                .toList();
-
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "One or more request fields are invalid."
-        );
-        problem.setTitle("Validation failed");
-        problem.setProperty("errors", errors);
-
-        return ResponseEntity.badRequest().body(problem);
+    public ResponseEntity<ApiError> handleValidationFailure() {
+        return problem(HttpStatus.BAD_REQUEST, "One or more request fields are invalid.");
     }
 
-    public record FieldViolation(String field, String message) {
+    @ExceptionHandler(InmateService.InmateNotFoundException.class)
+    public ResponseEntity<ApiError> handleInmateNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Inmate not found.");
+    }
+
+    @ExceptionHandler(InmateService.InmateNumberAlreadyExistsException.class)
+    public ResponseEntity<ApiError> handleInmateNumberConflict() {
+        return problem(HttpStatus.CONFLICT, "An inmate with that inmate number already exists.");
     }
 
     @ExceptionHandler(UserService.UsernameAlreadyExistsException.class)
-    public ResponseEntity<ProblemDetail> handleUsernameConflict() {
+    public ResponseEntity<ApiError> handleUsernameConflict() {
         return problem(HttpStatus.CONFLICT, "Username already exists.");
     }
 
     @ExceptionHandler(UserService.UserNotFoundException.class)
-    public ResponseEntity<ProblemDetail> handleUserNotFound() {
+    public ResponseEntity<ApiError> handleUserNotFound() {
         return problem(HttpStatus.NOT_FOUND, "User not found.");
     }
 
     @ExceptionHandler(UserService.InvalidRoleException.class)
-    public ResponseEntity<ProblemDetail> handleInvalidRole() {
+    public ResponseEntity<ApiError> handleInvalidRole() {
         return problem(HttpStatus.BAD_REQUEST, "Role is not allowed.");
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ProblemDetail> handleBadCredentials() {
+    public ResponseEntity<ApiError> handleBadCredentials() {
         return problem(HttpStatus.UNAUTHORIZED, "Invalid username or password.");
     }
 
     @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ProblemDetail> handleAuthenticationFailure() {
+    public ResponseEntity<ApiError> handleAuthenticationFailure() {
         return problem(HttpStatus.UNAUTHORIZED, "Invalid username or password.");
     }
 
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied() {
+        return problem(HttpStatus.FORBIDDEN, "You are not authorized to access this resource.");
+    }
+
     @ExceptionHandler(AuthService.AccountLockedException.class)
-    public ResponseEntity<ProblemDetail> handleAccountLocked() {
+    public ResponseEntity<ApiError> handleAccountLocked() {
         return problem(HttpStatus.TOO_MANY_REQUESTS, "Account temporarily locked after too many failed login attempts.");
     }
 
     @ExceptionHandler(AuthService.InvalidCurrentPasswordException.class)
-    public ResponseEntity<ProblemDetail> handleInvalidCurrentPassword() {
+    public ResponseEntity<ApiError> handleInvalidCurrentPassword() {
         return problem(HttpStatus.BAD_REQUEST, "Current password is incorrect.");
     }
 
-    private ResponseEntity<ProblemDetail> problem(HttpStatus status, String detail) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
-        return ResponseEntity.status(status).body(problem);
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrityViolation() {
+        return problem(HttpStatus.CONFLICT, "The request conflicts with existing data.");
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleUnexpectedException(Exception exception) {
+        LOGGER.error("Unexpected API error ({})", exception.getClass().getName());
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+    }
+
+    private ResponseEntity<ApiError> problem(HttpStatus status, String message) {
+        return ResponseEntity.status(status).body(ApiError.of(status, message));
     }
 }
