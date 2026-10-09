@@ -4,6 +4,7 @@ import com.pms.api.auth.dto.AuthRequest;
 import com.pms.api.auth.dto.AuthResponse;
 import com.pms.api.auth.service.AuthService;
 import com.pms.api.auth.dto.ChangePasswordRequest;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,6 +35,7 @@ public class AuthController {
     }
 
     @PostMapping("/password/change")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Void> changePassword(@AuthenticationPrincipal UserDetails currentUser,
                                                 @Valid @RequestBody ChangePasswordRequest request) {
         authService.changePassword(currentUser.getUsername(), request);
