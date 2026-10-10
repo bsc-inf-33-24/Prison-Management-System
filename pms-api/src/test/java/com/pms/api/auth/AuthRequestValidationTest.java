@@ -40,17 +40,14 @@ class AuthRequestValidationTest {
     }
 
     @Test
-    void returnsFieldSpecificMessagesForInvalidCredentials() throws Exception {
+    void returnsStandardApiErrorForInvalidCredentials() throws Exception {
         mockMvc.perform(post("/validation-probe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"\",\"password\":\"\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.title").value("Validation failed"))
-                .andExpect(jsonPath("$.errors[0].field").value("password"))
-                .andExpect(jsonPath("$.errors[0].message").value("Password is required."))
-                .andExpect(jsonPath("$.errors[1].field").value("username"))
-                .andExpect(jsonPath("$.errors[1].message").value("Username is required."));
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("One or more request fields are invalid."));
     }
 
     @Test
@@ -65,6 +62,7 @@ class AuthRequestValidationTest {
                 .getContentAsString();
 
         assertFalse(response.contains(submittedPassword));
+        assertFalse(response.contains("\"errors\""));
     }
 
     @RestController
