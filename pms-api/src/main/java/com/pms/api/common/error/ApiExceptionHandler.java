@@ -2,6 +2,7 @@ package com.pms.api.common.error;
 
 import com.pms.api.auth.service.AuthService;
 import com.pms.api.inmate.service.InmateService;
+import com.pms.api.incident.service.IncidentService;
 import com.pms.api.user.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +79,26 @@ public class ApiExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrityViolation() {
         return problem(HttpStatus.CONFLICT, "The request conflicts with existing data.");
+    }
+
+    @ExceptionHandler(IncidentService.IncidentNotFoundException.class)
+    public ResponseEntity<ApiError> handleIncidentNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Incident not found.");
+    }
+
+    @ExceptionHandler(IncidentService.IncidentInmateNotFoundException.class)
+    public ResponseEntity<ApiError> handleIncidentInmateNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "One or more inmates were not found.");
+    }
+
+    @ExceptionHandler(IncidentService.DuplicateInmateIdsException.class)
+    public ResponseEntity<ApiError> handleDuplicateInmateIds() {
+        return problem(HttpStatus.BAD_REQUEST, "The same inmate ID was listed more than once.");
+    }
+
+    @ExceptionHandler(IncidentService.OutcomeAlreadyRecordedException.class)
+    public ResponseEntity<ApiError> handleOutcomeAlreadyRecorded() {
+        return problem(HttpStatus.CONFLICT, "This incident already has a recorded outcome.");
     }
 
     @ExceptionHandler(Exception.class)
