@@ -1,6 +1,5 @@
 package com.pms.api.incident.service;
 
-import com.pms.api.common.audit.Audited;
 import com.pms.api.incident.dto.IncidentHistoryItemResponse;
 import com.pms.api.incident.dto.IncidentResponse;
 import com.pms.api.incident.dto.LogIncidentRequest;
@@ -38,12 +37,13 @@ public class IncidentService {
         this.userRepository = userRepository;
     }
 
-    // @Audited marks this as an action worth recording in the system's audit
-    // trail (see com.pms.api.common.audit.Audited). NOTE: as of this change,
-    // @Audited is still just a marker - nothing in the codebase reads it or
-    // writes to the AuditLog table (V8). That gap is pre-existing and is not
-    // something this change invents; see the handover notes for Issue #27.
-    @Audited
+    // Auditing is explicitly NOT implemented for Incident Management
+    // (Issue #27, item 3): @Audited was only a marker annotation - nothing
+    // read it or wrote to the AuditLog table (V8). Rather than leave a
+    // misleading annotation on these methods, it's removed here. Wiring
+    // real auditing against AuditLog is a separate, larger piece of work
+    // (an aspect/listener that writes userId/action/entityName/recordId/
+    // timestamp/oldValues/newValues) and is out of scope for this fix.
     @Transactional
     public IncidentResponse logIncident(LogIncidentRequest request, String reportingUsername) {
         // Reject the same inmate listed twice (e.g. inmate 1 appearing in
@@ -89,7 +89,6 @@ public class IncidentService {
         return toResponse(incident, incidentInmateRepository.findByIncidentId(incident.getId()));
     }
 
-    @Audited
     @Transactional
     public IncidentResponse recordOutcome(Long incidentId, RecordOutcomeRequest request) {
         // Confirms the incident exists at all, so we can tell "doesn't
