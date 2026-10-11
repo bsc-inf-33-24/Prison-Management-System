@@ -2,6 +2,7 @@ package com.pms.api.cases.entity;
 
 import com.pms.api.common.entity.BaseEntity;
 import com.pms.api.inmate.entity.Inmate;
+import com.pms.api.sentence.entity.Sentence;
 import com.pms.api.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,6 +16,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
@@ -65,6 +67,9 @@ public class Case extends BaseEntity {
     )
     private Set<Crime> crimes = new LinkedHashSet<>();
 
+    @OneToMany(mappedBy = "caseEntity", fetch = FetchType.LAZY)
+    private Set<Sentence> sentences = new LinkedHashSet<>();
+
     protected Case() {
     }
 
@@ -113,6 +118,10 @@ public class Case extends BaseEntity {
 
     public Set<Crime> getCrimes() {
         return crimes;
+    }
+
+    public Set<Sentence> getSentences() {
+        return sentences;
     }
 
     public void updateDetails(String caseNumber, String court, LocalDate caseStartDate, LocalDate caseEndDate) {
