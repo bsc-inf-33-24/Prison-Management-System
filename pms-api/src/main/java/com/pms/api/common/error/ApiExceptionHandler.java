@@ -1,6 +1,7 @@
 package com.pms.api.common.error;
 
 import com.pms.api.auth.service.AuthService;
+import com.pms.api.cell.service.CellService;
 import com.pms.api.inmate.service.InmateService;
 import com.pms.api.incident.service.IncidentService;
 import com.pms.api.user.service.UserService;
@@ -99,6 +100,41 @@ public class ApiExceptionHandler {
     @ExceptionHandler(IncidentService.OutcomeAlreadyRecordedException.class)
     public ResponseEntity<ApiError> handleOutcomeAlreadyRecorded() {
         return problem(HttpStatus.CONFLICT, "This incident already has a recorded outcome.");
+    }
+
+    @ExceptionHandler(CellService.CellNotFoundException.class)
+    public ResponseEntity<ApiError> handleCellNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Cell not found.");
+    }
+
+    @ExceptionHandler(CellService.InmateNotFoundException.class)
+    public ResponseEntity<ApiError> handleCellInmateNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Inmate not found.");
+    }
+
+    @ExceptionHandler(CellService.CellAllocationNotFoundException.class)
+    public ResponseEntity<ApiError> handleCellAllocationNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "No cell allocation exists for this inmate.");
+    }
+
+    @ExceptionHandler(CellService.CellCapacityExceededException.class)
+    public ResponseEntity<ApiError> handleCellCapacityExceeded() {
+        return problem(HttpStatus.CONFLICT, "This cell is at full capacity.");
+    }
+
+    @ExceptionHandler(CellService.CellClassificationMismatchException.class)
+    public ResponseEntity<ApiError> handleCellClassificationMismatch() {
+        return problem(HttpStatus.CONFLICT, "The inmate classification does not match the cell classification.");
+    }
+
+    @ExceptionHandler(CellService.CellAlreadyAllocatedException.class)
+    public ResponseEntity<ApiError> handleCellAlreadyAllocated() {
+        return problem(HttpStatus.CONFLICT, "This inmate is already assigned to a cell.");
+    }
+
+    @ExceptionHandler(CellService.CellAlreadyAssignedToSameCellException.class)
+    public ResponseEntity<ApiError> handleCellAlreadyAssignedToSameCell() {
+        return problem(HttpStatus.CONFLICT, "The inmate is already assigned to this cell.");
     }
 
     @ExceptionHandler(Exception.class)
