@@ -96,6 +96,11 @@ public class ApiExceptionHandler {
         return problem(HttpStatus.BAD_REQUEST, "The same inmate ID was listed more than once.");
     }
 
+    @ExceptionHandler(IncidentService.InvalidParticipantException.class)
+    public ResponseEntity<ApiError> handleInvalidParticipant() {
+        return problem(HttpStatus.BAD_REQUEST, "Inmate entries cannot be null.");
+    }
+
     @ExceptionHandler(IncidentService.OutcomeAlreadyRecordedException.class)
     public ResponseEntity<ApiError> handleOutcomeAlreadyRecorded() {
         return problem(HttpStatus.CONFLICT, "This incident already has a recorded outcome.");

@@ -1,88 +1,80 @@
 package com.pms.api.incident.entity;
 
-import com.pms.api.common.entity.BaseEntity;
-import com.pms.api.inmate.entity.Inmate;
-import com.pms.api.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
-import java.time.OffsetDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.LocalDate;
 
-// Extends BaseEntity so we get created_at / updated_at for free (see
-// com.pms.api.common.entity.BaseEntity). BaseEntity does NOT provide the id,
-// so every entity (including this one) declares its own @Id — that's the
-// convention the rest of the project already uses (see Inmate.java).
+// Maps directly onto V5__discipline_tables_creation.sql's "Incident" table.
+// Column-for-column with that migration on purpose — see IncidentInmate for
+// the relationship table (IncidentInmate), which carries role_in_incident.
+//
+// Deliberately does NOT extend BaseEntity / have created_at, updated_at, or
+// a foreign key to User: V5 doesn't define those columns, and
+// spring.jpa.hibernate.ddl-auto=validate means Hibernate refuses to start if
+// the entity claims a column the database doesn't have.
 @Entity
-@Table(name = "incidents")
-public class Incident extends BaseEntity {
+@Table(name = "Incident")
+public class Incident {
+
+    public static final String STATUS_OPEN = "open";
+    public static final String STATUS_RESOLVED = "resolved";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "incident_id")
     private Long id;
 
-    // When the incident actually happened (as reported), separate from
-    // createdAt (when the record was saved to the system, from BaseEntity).
-    @Column(name = "incident_date", nullable = false)
-    private OffsetDateTime incidentDate;
+    @Column(name = "incident_date")
+    private LocalDate incidentDate;
 
-    @Column(name = "description", nullable = false, length = 2000)
+    @Column(name = "description")
     private String description;
 
-    // Null until a Disciplinary Officer records one via PATCH .../outcome.
-    @Column(name = "outcome", length = 2000)
+    // Restricted to 'open' / 'resolved' by a CHECK constraint in V5.
+    @Column(name = "status", length = 50)
+    private String status;
+
+    // V5 caps this at VARCHAR(255) - deliberately narrower than you might
+    // expect for free text, so RecordOutcomeRequest validates the same limit.
+    @Column(name = "outcome", length = 255)
     private String outcome;
 
-    // Who logged this incident. Required, and never changes after creation
-    // (updatable = false), so the audit trail of "who reported it" is fixed.
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "logged_by", nullable = false, updatable = false)
-    private User loggedBy;
+    // Plain text in the schema (not a foreign key to the users table). The
+    // service layer still derives this from the authenticated JWT identity
+    // rather than trusting client input - it's just stored as a name, not a
+    // referential link.
+    @Column(name = "reported_by", length = 255)
+    private String reportedBy;
 
-    // The inmate(s) involved. Many-to-many because one incident can involve
-    // several inmates, and one inmate can be in several incidents over time.
-    @ManyToMany
-    @JoinTable(
-            name = "incident_inmates",
-            joinColumns = @JoinColumn(name = "incident_id"),
-            inverseJoinColumns = @JoinColumn(name = "inmate_id")
-    )
-    private Set<Inmate> inmates = new HashSet<>();
-
-    // JPA needs a no-arg constructor; keep it protected so nobody outside
-    // this class/package accidentally creates a half-built Incident.
+    // JPA requires a no-arg constructor; kept protected so nothing outside
+    // this package can create a half-built Incident.
     protected Incident() {
     }
 
-    private Incident(OffsetDateTime incidentDate, String description, User loggedBy, Set<Inmate> inmates) {
+    private Incident(LocalDate incidentDate, String description, String reportedBy) {
         this.incidentDate = incidentDate;
         this.description = description;
-        this.loggedBy = loggedBy;
-        this.inmates = inmates;
+        this.reportedBy = reportedBy;
+        this.status = STATUS_OPEN;
     }
 
-    // Named factory method instead of a public constructor — reads clearly
-    // at the call site (Incident.logNew(...)) and keeps construction rules
-    // enforceable in one place if we add more later.
-    public static Incident logNew(OffsetDateTime incidentDate, String description, User loggedBy, Set<Inmate> inmates) {
-        return new Incident(incidentDate, description, loggedBy, inmates);
+    // Named factory method instead of a public constructor - reads clearly
+    // at the call site (Incident.logNew(...)) and keeps the "always starts
+    // open" rule enforceable in one place.
+    public static Incident logNew(LocalDate incidentDate, String description, String reportedBy) {
+        return new Incident(incidentDate, description, reportedBy);
     }
 
     public Long getId() {
         return id;
     }
 
-    public OffsetDateTime getIncidentDate() {
+    public LocalDate getIncidentDate() {
         return incidentDate;
     }
 
@@ -90,19 +82,15 @@ public class Incident extends BaseEntity {
         return description;
     }
 
+    public String getStatus() {
+        return status;
+    }
+
     public String getOutcome() {
         return outcome;
     }
 
-    public void setOutcome(String outcome) {
-        this.outcome = outcome;
-    }
-
-    public User getLoggedBy() {
-        return loggedBy;
-    }
-
-    public Set<Inmate> getInmates() {
-        return inmates;
+    public String getReportedBy() {
+        return reportedBy;
     }
 }
