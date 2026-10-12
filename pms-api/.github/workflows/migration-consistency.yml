@@ -1,0 +1,14 @@
+name: Migration consistency
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  migration-versions:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Flyway migration versions
+        shell: pwsh
+        run: ./scripts/check-flyway-versions.ps1
