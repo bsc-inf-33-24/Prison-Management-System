@@ -1,0 +1,139 @@
+package com.pms.api.rehabilitation.service;
+
+import com.pms.api.common.audit.AuditService;
+import com.pms.api.rehabilitation.dto.program.CreateProgramRequest;
+import com.pms.api.rehabilitation.dto.program.ProgramResponse;
+import com.pms.api.rehabilitation.dto.program.ProgramDetailResponse;
+import com.pms.api.rehabilitation.dto.program.UpdateProgramRequest;
+import com.pms.api.rehabilitation.dto.program.UpdateProgramStatusRequest;
+import com.pms.api.rehabilitation.entity.RehabilitationProgram;
+import com.pms.api.rehabilitation.exception.RehabilitationExceptions.ProgramNotFoundException;
+import com.pms.api.rehabilitation.repository.RehabilitationProgramRepository;
+import com.pms.api.rehabilitation.repository.EnrollmentRepository;
+import com.pms.api.rehabilitation.specification.ProgramSpecifications;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class RehabilitationProgramService {
+
+    public static final String ACTIVE = "active";
+    public static final String INACTIVE = "inactive";
+    public static final String COMPLETED = "completed";
+
+    private final RehabilitationProgramRepository programRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final AuditService auditService;
+
+    public RehabilitationProgramService(RehabilitationProgramRepository programRepository,
+                                        EnrollmentRepository enrollmentRepository,
+                                        AuditService auditService) {
+        this.programRepository = programRepository;
+        this.enrollmentRepository = enrollmentRepository;
+        this.auditService = auditService;
+    }
+
+    @Transactional
+    public ProgramResponse create(CreateProgramRequest request, String username) {
+        RehabilitationProgram program = new RehabilitationProgram(
+                request.name().trim(),
+                request.description(),
+                request.instructor().trim(),
+                request.schedule(),
+                ACTIVE
+        );
+        RehabilitationProgram saved = programRepository.save(program);
+        auditService.record(username, "PROGRAM_CREATED", "RehabProgram", saved.getId(), null,
+                "name=" + saved.getName() + ",status=" + saved.getStatus());
+        return ProgramResponse.from(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProgramResponse> list(Pageable pageable) {
+        return list(null, null, null, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProgramResponse> list(String name, String instructor, String status,
+                                      String schedule, Pageable pageable) {
+        Specification<RehabilitationProgram> specification =
+                Specification.where((Specification<RehabilitationProgram>) null);
+        if (name != null && !name.isBlank()) {
+            specification = specification.and(ProgramSpecifications.nameContains(name));
+        }
+        if (instructor != null && !instructor.isBlank()) {
+            specification = specification.and(ProgramSpecifications.instructorContains(instructor));
+        }
+        if (status != null && !status.isBlank()) {
+            specification = specification.and(ProgramSpecifications.statusIs(normalizeStatus(status)));
+        }
+        if (schedule != null && !schedule.isBlank()) {
+            specification = specification.and(ProgramSpecifications.scheduleContains(schedule));
+        }
+        return programRepository.findAll(specification, pageable).map(ProgramResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public ProgramResponse get(Long programId) {
+        return ProgramResponse.from(findProgram(programId));
+    }
+
+    @Transactional(readOnly = true)
+    public ProgramDetailResponse getDetails(Long programId) {
+        RehabilitationProgram program = findProgram(programId);
+        return ProgramDetailResponse.from(
+                program,
+                enrollmentRepository.countByProgram_IdAndStatusIn(
+                        programId, java.util.List.of("enrolled", "suspended")),
+                enrollmentRepository.countByProgram_IdAndStatus(programId, "completed")
+        );
+    }
+
+    @Transactional
+    public ProgramResponse update(Long programId, UpdateProgramRequest request, String username) {
+        RehabilitationProgram program = findProgram(programId);
+        String oldValues = "name=" + program.getName() + ",instructor=" + program.getInstructor();
+        program.updateDetails(
+                request.name().trim(),
+                request.description(),
+                request.instructor().trim(),
+                request.schedule()
+        );
+        auditService.record(username, "PROGRAM_UPDATED", "RehabProgram", program.getId(), oldValues,
+                "name=" + program.getName() + ",instructor=" + program.getInstructor());
+        return ProgramResponse.from(program);
+    }
+
+    @Transactional
+    public ProgramResponse updateStatus(Long programId, UpdateProgramStatusRequest request,
+                                        String username) {
+        String status = normalizeStatus(request.status());
+        if ((INACTIVE.equals(status) || COMPLETED.equals(status))
+                && (request.reason() == null || request.reason().isBlank())) {
+            throw new IllegalArgumentException("A reason is required for this program status.");
+        }
+
+        RehabilitationProgram program = findProgram(programId);
+        String oldStatus = program.getStatus();
+        program.updateStatus(status);
+        auditService.record(username, "PROGRAM_STATUS_CHANGED", "RehabProgram", program.getId(),
+                "status=" + oldStatus, "status=" + status + ",reason=" + request.reason());
+        return ProgramResponse.from(program);
+    }
+
+    public RehabilitationProgram findProgram(Long programId) {
+        return programRepository.findById(programId)
+                .orElseThrow(ProgramNotFoundException::new);
+    }
+
+    public static String normalizeStatus(String status) {
+        String normalized = status.trim().toLowerCase();
+        if (!ACTIVE.equals(normalized) && !INACTIVE.equals(normalized) && !COMPLETED.equals(normalized)) {
+            throw new IllegalArgumentException("Invalid program status.");
+        }
+        return normalized;
+    }
+}
