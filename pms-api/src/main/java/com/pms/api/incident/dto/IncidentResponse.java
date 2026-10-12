@@ -1,19 +1,21 @@
 package com.pms.api.incident.dto;
 
-import java.time.Instant;
-import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
-// What we send back to the client after logging an incident or recording
-// an outcome. loggedBy is just the user's ID (not the whole User object) —
-// we don't want to leak other staff details through this endpoint.
+// What we send back after logging an incident or recording an outcome.
+// reportedBy is the reporting officer's name (a plain string in the schema,
+// not a user ID - see Incident.reportedBy). Every field here traces back to
+// an actual V5 column; nothing is invented.
 public record IncidentResponse(
         Long id,
-        List<Long> inmateIds,
-        OffsetDateTime incidentDate,
+        LocalDate incidentDate,
         String description,
+        String status,
         String outcome,
-        Long loggedBy,
-        Instant createdAt
+        String reportedBy,
+        List<ParticipantResponse> participants
 ) {
+    public record ParticipantResponse(Long inmateId, String roleInIncident) {
+    }
 }

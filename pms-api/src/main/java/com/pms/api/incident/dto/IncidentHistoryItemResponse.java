@@ -1,14 +1,17 @@
 package com.pms.api.incident.dto;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDate;
 
-// A lighter shape for GET /api/inmates/{id}/incidents — a list of past
-// incidents for one inmate doesn't need to repeat which inmates were
-// involved (we already know: this one), so we drop that field here.
+// A lighter shape for GET /api/inmates/{id}/incidents - a list of past
+// incidents for one inmate. roleInIncident is that inmate's own role in
+// this particular incident (from IncidentInmate.role_in_incident), not a
+// list of everyone else's roles - we already know which inmate this is.
 public record IncidentHistoryItemResponse(
         Long id,
-        OffsetDateTime incidentDate,
+        LocalDate incidentDate,
         String description,
-        String outcome
+        String status,
+        String outcome,
+        String roleInIncident
 ) {
 }
