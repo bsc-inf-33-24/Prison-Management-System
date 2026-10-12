@@ -81,7 +81,7 @@ public class CellService {
         Inmate inmate = inmateRepository.findById(inmateId)
                 .orElseThrow(InmateNotFoundException::new);
 
-        CellAllocation currentAllocation = cellAllocationRepository.findByInmate_Id(inmateId)
+        CellAllocation currentAllocation = cellAllocationRepository.findByInmateId(inmateId)
                 .orElseThrow(CellAllocationNotFoundException::new);
 
         Cell currentCell = currentAllocation.getCell();
