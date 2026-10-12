@@ -1,14 +1,21 @@
-name: Migration consistency
+﻿name: Migration consistency
 
 on:
   pull_request:
   push:
 
 jobs:
-  migration-versions:
-    runs-on: windows-latest
+  flyway:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
       - name: Check Flyway migration versions
         shell: pwsh
         run: ./scripts/check-flyway-versions.ps1
+      - name: Verify empty and pre-V12 PostgreSQL migrations and Hibernate validation
+        run: bash ./mvnw -Dtest=FlywayMigrationPostgresTest,PmsApiApplicationTests test
