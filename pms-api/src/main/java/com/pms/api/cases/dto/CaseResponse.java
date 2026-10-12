@@ -3,6 +3,7 @@ package com.pms.api.cases.dto;
 import com.pms.api.cases.entity.Case;
 import com.pms.api.cases.entity.Crime;
 import com.pms.api.inmate.entity.Inmate;
+import com.pms.api.sentence.dto.SentenceResponse;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -18,7 +19,7 @@ public record CaseResponse(
         Long remainingDays,
         InmateSummary inmate,
         List<CrimeSummary> crimes,
-        List<Object> sentences,
+        List<SentenceResponse> sentences,
         Instant createdAt,
         Instant updatedAt,
         Long createdBy
@@ -34,7 +35,9 @@ public record CaseResponse(
                 remainingDays(caseEntity),
                 InmateSummary.from(caseEntity.getInmate()),
                 caseEntity.getCrimes().stream().map(CrimeSummary::from).collect(Collectors.toList()),
-                List.of(),
+                caseEntity.getSentences() == null ? List.of() : caseEntity.getSentences().stream()
+                        .map(SentenceResponse::from)
+                        .toList(),
                 caseEntity.getCreatedAt(),
                 caseEntity.getUpdatedAt(),
                 caseEntity.getCreatedBy() == null ? null : caseEntity.getCreatedBy().getId()
