@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 public record RecordOutcomeRequest(
 
         @NotBlank(message = "Outcome is required.")
-        @Size(max = 2000, message = "Outcome must be at most 2000 characters.")
+        @Size(max = 255, message = "Outcome must be at most 255 characters.")
         String outcome
 ) {
 }
