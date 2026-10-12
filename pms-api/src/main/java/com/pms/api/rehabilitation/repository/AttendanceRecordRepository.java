@@ -1,0 +1,17 @@
+package com.pms.api.rehabilitation.repository;
+
+import com.pms.api.rehabilitation.entity.AttendanceRecord;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+
+public interface AttendanceRecordRepository
+        extends JpaRepository<AttendanceRecord, Long>,
+                JpaSpecificationExecutor<AttendanceRecord> {
+
+    boolean existsByEnrollment_IdAndSessionDate(Long enrollmentId, java.time.LocalDate sessionDate);
+
+    Page<AttendanceRecord> findByEnrollment_IdOrderBySessionDateDescIdDesc(
+            Long enrollmentId, Pageable pageable);
+}
