@@ -16,6 +16,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import com.pms.api.auth.service.PasswordPolicy;
+import com.pms.api.auth.service.UnavailableRecoveryTokenDelivery;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -76,6 +78,21 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiError> handleInvalidCurrentPassword() {
         return problem(HttpStatus.BAD_REQUEST, "Current password is incorrect.");
     }
+
+    @ExceptionHandler(AuthService.PasswordReuseException.class)
+    public ResponseEntity<ApiError> handlePasswordReuse() { return problem(HttpStatus.BAD_REQUEST, "The new password must differ from the current password."); }
+
+    @ExceptionHandler(AuthService.InvalidResetTokenException.class)
+    public ResponseEntity<ApiError> handleInvalidResetToken() { return problem(HttpStatus.BAD_REQUEST, "The password reset request is invalid or expired."); }
+
+    @ExceptionHandler(PasswordPolicy.WeakPasswordException.class)
+    public ResponseEntity<ApiError> handleWeakPassword() {
+        return problem(HttpStatus.BAD_REQUEST,
+                "Password must be 8 to 16 characters and contain at least one digit and one punctuation mark.");
+    }
+
+    @ExceptionHandler(UnavailableRecoveryTokenDelivery.RecoveryDeliveryUnavailableException.class)
+    public ResponseEntity<ApiError> handleRecoveryDeliveryUnavailable() { return problem(HttpStatus.SERVICE_UNAVAILABLE, "Password recovery is temporarily unavailable."); }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrityViolation() {
