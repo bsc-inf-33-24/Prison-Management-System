@@ -66,6 +66,9 @@ public class User {
     @Column(name = "locked_until")
     private Instant lockedUntil;
 
+    @Column(name = "authentication_version", nullable = false)
+    private long authenticationVersion;
+
     @ElementCollection
     @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "permission", nullable = false)
@@ -147,11 +150,13 @@ public class User {
 
     public void updatePasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+        invalidateAuthentication();
     }
 
     public void replaceRoleAndPermissions(String role, Set<String> permissions) {
         this.role = role;
         replacePermissions(permissions);
+        invalidateAuthentication();
     }
 
     public boolean isActive() {
@@ -160,10 +165,20 @@ public class User {
 
     public void deactivate() {
         this.status = INACTIVE;
+        invalidateAuthentication();
     }
 
     public void reactivate() {
         this.status = ACTIVE;
+        invalidateAuthentication();
+    }
+
+    public long getAuthenticationVersion() {
+        return authenticationVersion;
+    }
+
+    public void invalidateAuthentication() {
+        authenticationVersion++;
     }
 
     private void replacePermissions(Set<String> permissions) {

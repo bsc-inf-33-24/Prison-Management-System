@@ -9,6 +9,7 @@ public record AuthRequest(
     String username,
 
     @NotBlank(message = "Password is required.")
+    @Size(max = 16, message = "Password must not exceed 16 characters.")
     String password
 ) {
 }

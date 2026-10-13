@@ -23,14 +23,18 @@ public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    private final com.pms.api.auth.service.PasswordPolicy passwordPolicy;
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                       com.pms.api.auth.service.PasswordPolicy passwordPolicy) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.passwordPolicy = passwordPolicy;
     }
 
     @Transactional
     public UserResponse create(CreateUserRequest request) {
         String username = request.username().trim();
+        passwordPolicy.validate(request.password());
         validateRole(request.role());
         if (userRepository.existsByUsername(username)) {
             throw new UsernameAlreadyExistsException();
@@ -85,6 +89,7 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public void changePassword(User user, String newPassword) {
+        passwordPolicy.validate(newPassword);
         user.updatePasswordHash(passwordEncoder.encode(newPassword));
         user.resetLoginFailures();
     }
