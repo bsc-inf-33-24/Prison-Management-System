@@ -53,7 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/api/v1/auth/login", "/api/v1/auth/password/forgot",
                                 "/api/v1/auth/password/reset",
                                 "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .anyRequest().authenticated()
+                        .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, exception) ->
