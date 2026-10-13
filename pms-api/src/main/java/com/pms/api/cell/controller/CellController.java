@@ -7,7 +7,9 @@ import com.pms.api.cell.dto.CellMoveResponse;
 import com.pms.api.cell.dto.CellResponse;
 import com.pms.api.cell.dto.CreateCellRequest;
 import com.pms.api.cell.service.CellService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -22,8 +24,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 @SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Cell allocation and custody", description = "Manage cell inventory and inmate cell allocation.")
 public class CellController {
 
     private final CellService cellService;
@@ -35,6 +38,7 @@ public class CellController {
     @PostMapping("/cells")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create a cell")
     public CellResponse createCell(@Valid @RequestBody CreateCellRequest request) {
         return cellService.createCell(request);
     }
@@ -42,6 +46,7 @@ public class CellController {
     @PostMapping("/inmates/{inmateId}/cell-allocation")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Allocate an inmate to a cell")
     public CellAllocationResponse allocate(@PathVariable Long inmateId,
                                            @Valid @RequestBody AllocateCellRequest request) {
         return cellService.allocate(inmateId, request);
@@ -49,6 +54,7 @@ public class CellController {
 
     @PutMapping("/inmates/{inmateId}/cell-allocation")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @Operation(summary = "Move an inmate to a different cell")
     public CellMoveResponse move(@PathVariable Long inmateId,
                                 @Valid @RequestBody AllocateCellRequest request) {
         return cellService.move(inmateId, request);
@@ -56,12 +62,14 @@ public class CellController {
 
     @GetMapping("/cells")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @Operation(summary = "List cells")
     public List<CellResponse> listCells() {
         return cellService.listCells();
     }
 
     @GetMapping("/cells/{cellId}")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @Operation(summary = "Get a cell")
     public CellDetailResponse getCell(@PathVariable Long cellId) {
         return cellService.getCell(cellId);
     }
