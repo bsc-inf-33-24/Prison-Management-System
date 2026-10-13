@@ -91,7 +91,7 @@ public class VisitService {
             throw new IllegalArgumentException("visitDateFrom must be before or equal to visitDateTo.");
         }
 
-        Specification<Visit> specification = Specification.where(null);
+        Specification<Visit> specification = Specification.where((Specification<Visit>) null);
         if (visitId != null) {
             specification = specification.and(equalLong("id", visitId));
         }

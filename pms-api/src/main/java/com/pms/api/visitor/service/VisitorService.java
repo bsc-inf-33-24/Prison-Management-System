@@ -72,7 +72,7 @@ public class VisitorService {
                                               String relationshipToInmate, int page, int size, String sort) {
         validatePage(page, size);
 
-        Specification<Visitor> specification = Specification.where(null);
+        Specification<Visitor> specification = Specification.where((Specification<Visitor>) null);
         if (fullName != null && !fullName.isBlank()) {
             specification = specification.and(likeIgnoreCase("fullName", fullName));
         }
@@ -92,7 +92,6 @@ public class VisitorService {
 
     public Visitor findVisitor(Long visitorId) {
         return visitorRepository.findById(visitorId).orElseThrow(VisitorNotFoundException::new);
-                ;
     }
 
     private static Specification<Visitor> likeIgnoreCase(String fieldName, String value) {
