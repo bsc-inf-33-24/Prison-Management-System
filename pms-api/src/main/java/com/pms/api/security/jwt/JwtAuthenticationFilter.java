@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Claims;
 import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.pms.api.user.entity.User;
+import com.pms.api.user.repository.UserRepository;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -24,10 +27,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
-        this.jwtService = jwtService;
-        this.userDetailsService = userDetailsService;
+    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService,
+                                   UserRepository userRepository) {
+        this.jwtService = jwtService; this.userDetailsService = userDetailsService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -36,14 +41,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ") && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                UserDetails user = userDetailsService.loadUserByUsername(jwtService.username(header.substring(7)));
-                if (user.isEnabled() && user.isAccountNonLocked()) {
+                Claims claims = jwtService.claims(header.substring(7));
+                User account = userRepository.findByUsername(claims.getSubject())
+                        .orElseThrow(() -> new UsernameNotFoundException("Invalid username or password."));
+                Number versionClaim = claims.get("ver", Number.class);
+                Number userIdClaim = claims.get("uid", Number.class);
+                long version = versionClaim == null ? -1 : versionClaim.longValue();
+                Long userId = userIdClaim == null ? null : userIdClaim.longValue();
+                UserDetails user = userDetailsService.loadUserByUsername(account.getUsername());
+                if (userId != null && userId.equals(account.getId()) && version == account.getAuthenticationVersion()
+                        && user.isEnabled() && user.isAccountNonLocked()) {
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             user, null, user.getAuthorities());
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
-            } catch (JwtException | UsernameNotFoundException exception) {
+            } catch (JwtException | UsernameNotFoundException | IllegalArgumentException exception) {
                 LOGGER.warn("Rejected invalid bearer token ({})", exception.getClass().getSimpleName());
             }
         }

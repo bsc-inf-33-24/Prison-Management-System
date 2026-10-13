@@ -7,6 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import io.jsonwebtoken.Claims;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,15 +28,19 @@ public class JwtService {
         return Jwts.builder()
                 .subject(user.getUsername())
                 .claim("uid", user.getId())
+                .claim("ver", user.getAuthenticationVersion())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(accessTokenTtl)))
                 .signWith(signingKey)
                 .compact();
     }
 
-    public String username(String token) {
-        Claims claims = Jwts.parser().verifyWith(signingKey).build()
-                .parseSignedClaims(token).getPayload();
-        return claims.getSubject();
+    public Claims claims(String token) {
+        return Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token).getPayload();
     }
+
+    public String username(String token) {
+        return claims(token).getSubject();
+    }
+
 }
