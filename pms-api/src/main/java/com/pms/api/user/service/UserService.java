@@ -69,7 +69,7 @@ public class UserService implements UserDetailsService {
         Pageable pageable = PageableValidator.create(page, size, sort,
                 Set.of("id", "fullName", "username", "role", "status", "createdAt"),
                 Sort.by(Sort.Order.asc("id")), paginationProperties);
-        Specification<User> specification = Specification.where(null);
+        Specification<User> specification = Specification.where((Specification<User>) null);
         if (status != null && !status.isBlank()) {
             if (!User.ACTIVE.equalsIgnoreCase(status) && !User.INACTIVE.equalsIgnoreCase(status)) {
                 throw new IllegalArgumentException("Invalid user status.");

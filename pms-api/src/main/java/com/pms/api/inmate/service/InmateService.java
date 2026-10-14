@@ -59,7 +59,7 @@ public class InmateService {
         Pageable pageable = PageableValidator.create(page, size, sort,
                 Set.of("id", "inmateNumber", "firstName", "lastName", "admissionDate", "createdAt"),
                 Sort.by(Sort.Order.asc("id")), paginationProperties);
-        Specification<Inmate> specification = Specification.where(null);
+        Specification<Inmate> specification = Specification.where((Specification<Inmate>) null);
         if (search != null && !search.isBlank()) {
             String value = "%" + escapeLikePattern(search.trim()).toLowerCase(Locale.ROOT) + "%";
             specification = specification.and((root, query, cb) -> cb.or(
