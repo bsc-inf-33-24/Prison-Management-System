@@ -12,11 +12,20 @@ import com.pms.api.cell.entity.CellAllocation;
 import com.pms.api.cell.repository.CellAllocationRepository;
 import com.pms.api.cell.repository.CellRepository;
 import com.pms.api.common.audit.Audited;
+import com.pms.api.common.pagination.PageResponse;
+import com.pms.api.common.pagination.PageableValidator;
+import com.pms.api.common.pagination.PaginationProperties;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashMap;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,13 +35,16 @@ public class CellService {
     private final CellRepository cellRepository;
     private final CellAllocationRepository cellAllocationRepository;
     private final InmateRepository inmateRepository;
+    private final PaginationProperties paginationProperties;
 
     public CellService(CellRepository cellRepository,
                        CellAllocationRepository cellAllocationRepository,
-                       InmateRepository inmateRepository) {
+                       InmateRepository inmateRepository,
+                       PaginationProperties paginationProperties) {
         this.cellRepository = cellRepository;
         this.cellAllocationRepository = cellAllocationRepository;
         this.inmateRepository = inmateRepository;
+        this.paginationProperties = paginationProperties;
     }
 
     @Audited
@@ -115,10 +127,28 @@ public class CellService {
     }
 
     @Transactional(readOnly = true)
-    public List<CellResponse> listCells() {
-        return cellRepository.findAllByOrderByIdAsc().stream()
-                .map(cell -> CellResponse.from(cell, cellAllocationRepository.countByCellId(cell.getId())))
-                .toList();
+    public PageResponse<CellResponse> listCells(String blockName, String classification,
+                                                 Integer page, Integer size, List<String> sort) {
+        Pageable pageable = PageableValidator.create(page, size, sort,
+                Set.of("id", "blockName", "cellNumber", "capacity"),
+                Sort.by(Sort.Order.asc("id")), paginationProperties);
+        Specification<Cell> specification = Specification.where(null);
+        if (blockName != null && !blockName.isBlank()) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("blockName"), blockName.trim()));
+        }
+        if (classification != null && !classification.isBlank()) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("classification"), classification.trim()));
+        }
+
+        var cells = cellRepository.findAll(specification, pageable);
+        List<Long> cellIds = cells.getContent().stream().map(Cell::getId).toList();
+        Map<Long, Long> occupancyByCellId = new HashMap<>();
+        if (!cellIds.isEmpty()) {
+            cellAllocationRepository.countByCellIds(cellIds)
+                    .forEach(row -> occupancyByCellId.put((Long) row[0], (Long) row[1]));
+        }
+        return PageResponse.from(cells.map(cell ->
+                CellResponse.from(cell, occupancyByCellId.getOrDefault(cell.getId(), 0L))));
     }
 
     @Transactional(readOnly = true)
