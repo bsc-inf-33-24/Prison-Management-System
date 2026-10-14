@@ -9,7 +9,16 @@ import com.pms.api.sentence.dto.SentenceRequest;
 import com.pms.api.sentence.dto.SentenceResponse;
 import com.pms.api.sentence.entity.Sentence;
 import com.pms.api.sentence.repository.SentenceRepository;
+import com.pms.api.common.pagination.PageResponse;
+import com.pms.api.common.pagination.PageableValidator;
+import com.pms.api.common.pagination.PaginationProperties;
 import java.util.List;
+import java.time.LocalDate;
+import java.util.Locale;
+import java.util.Set;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,13 +28,16 @@ public class SentenceService {
     private final SentenceRepository sentenceRepository;
     private final InmateRepository inmateRepository;
     private final CaseRepository caseRepository;
+    private final PaginationProperties paginationProperties;
 
     public SentenceService(SentenceRepository sentenceRepository,
                           InmateRepository inmateRepository,
-                          CaseRepository caseRepository) {
+                          CaseRepository caseRepository,
+                          PaginationProperties paginationProperties) {
         this.sentenceRepository = sentenceRepository;
         this.inmateRepository = inmateRepository;
         this.caseRepository = caseRepository;
+        this.paginationProperties = paginationProperties;
     }
 
     @Audited
@@ -48,16 +60,36 @@ public class SentenceService {
     }
 
     @Transactional(readOnly = true)
-    public List<SentenceResponse> list(Long inmateId, Long caseId) {
-        List<Sentence> sentences;
-        if (inmateId != null) {
-            sentences = sentenceRepository.findByInmateIdOrderByIdAsc(inmateId);
-        } else if (caseId != null) {
-            sentences = sentenceRepository.findByCaseEntityIdOrderByIdAsc(caseId);
-        } else {
-            sentences = sentenceRepository.findAllByOrderByIdAsc();
+    public PageResponse<SentenceResponse> list(Long inmateId, Long caseId, String status,
+                                                LocalDate startDateFrom, LocalDate startDateTo,
+                                                Integer page, Integer size, List<String> sort) {
+        Pageable pageable = PageableValidator.create(page, size, sort,
+                Set.of("id", "startDate", "releaseDate", "status", "createdAt"),
+                Sort.by(Sort.Order.asc("id")), paginationProperties);
+        if (startDateFrom != null && startDateTo != null && startDateFrom.isAfter(startDateTo)) {
+            throw new IllegalArgumentException("The start date range is invalid.");
         }
-        return sentences.stream().map(SentenceResponse::from).toList();
+        Specification<Sentence> specification = Specification.where(null);
+        if (inmateId != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("inmate").get("id"), inmateId));
+        }
+        if (caseId != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("caseEntity").get("id"), caseId));
+        }
+        if (status != null && !status.isBlank()) {
+            String normalized = status.trim().toLowerCase(Locale.ROOT);
+            if (!Sentence.ALLOWED_STATUSES.contains(normalized)) {
+                throw new IllegalArgumentException("Invalid sentence status.");
+            }
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("status"), normalized));
+        }
+        if (startDateFrom != null) {
+            specification = specification.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("startDate"), startDateFrom));
+        }
+        if (startDateTo != null) {
+            specification = specification.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("startDate"), startDateTo));
+        }
+        return PageResponse.from(sentenceRepository.findAll(specification, pageable).map(SentenceResponse::from));
     }
 
     @Transactional(readOnly = true)

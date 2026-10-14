@@ -9,6 +9,8 @@ import com.pms.api.sentence.service.SentenceService;
 import com.pms.api.user.service.UserService;
 import com.pms.api.visitor.service.VisitService;
 import com.pms.api.visitor.service.VisitorService;
+import com.pms.api.common.pagination.InvalidPaginationException;
+import com.pms.api.common.pagination.InvalidSortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -20,6 +22,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import com.pms.api.auth.service.PasswordPolicy;
 import com.pms.api.auth.service.UnavailableRecoveryTokenDelivery;
 
@@ -231,6 +234,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgument() {
         return problem(HttpStatus.BAD_REQUEST, "One or more request fields are invalid.");
+    }
+
+    @ExceptionHandler({InvalidPaginationException.class, InvalidSortException.class})
+    public ResponseEntity<ApiError> handlePaginationFailure(RuntimeException exception) {
+        return problem(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleQueryParameterTypeMismatch() {
+        return problem(HttpStatus.BAD_REQUEST, "One or more query parameters are invalid.");
     }
 
     @ExceptionHandler(Exception.class)

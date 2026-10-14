@@ -22,6 +22,7 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import org.hibernate.annotations.BatchSize;
 
 @Entity
 @Table(
@@ -35,6 +36,7 @@ public class Case extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @BatchSize(size = 20)
     @JoinColumn(name = "inmate_id", nullable = false)
     private Inmate inmate;
 
@@ -55,10 +57,12 @@ public class Case extends BaseEntity {
     private CaseStatus status = CaseStatus.ONGOING;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @BatchSize(size = 20)
     @JoinColumn(name = "created_by", nullable = false, updatable = false)
     private User createdBy;
 
     @ManyToMany(fetch = FetchType.LAZY)
+    @BatchSize(size = 20)
     @JoinTable(
             name = "case_crimes",
             joinColumns = @JoinColumn(name = "case_id"),
@@ -68,6 +72,7 @@ public class Case extends BaseEntity {
     private Set<Crime> crimes = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "caseEntity", fetch = FetchType.LAZY)
+    @BatchSize(size = 20)
     private Set<Sentence> sentences = new LinkedHashSet<>();
 
     protected Case() {
