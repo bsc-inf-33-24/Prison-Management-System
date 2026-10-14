@@ -3,6 +3,7 @@ package com.pms.api.cases.controller;
 import com.pms.api.cases.dto.CrimeRequest;
 import com.pms.api.cases.dto.CrimeResponse;
 import com.pms.api.cases.service.CrimeService;
+import com.pms.api.common.pagination.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -44,8 +46,12 @@ public class CrimeController {
     @Operation(summary = "List crime catalog entries")
     @GetMapping("/crimes")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CASE_OFFICER')")
-    public List<CrimeResponse> list() {
-        return crimeService.list();
+    public PageResponse<CrimeResponse> list(@RequestParam(required = false) String category,
+                                            @RequestParam(required = false) String search,
+                                            @RequestParam(required = false) Integer page,
+                                            @RequestParam(required = false) Integer size,
+                                            @RequestParam(required = false) List<String> sort) {
+        return crimeService.list(category, search, page, size, sort);
     }
 
     @Operation(summary = "Get a crime catalog entry")

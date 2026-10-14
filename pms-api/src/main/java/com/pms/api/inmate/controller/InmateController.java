@@ -3,6 +3,7 @@ package com.pms.api.inmate.controller;
 import com.pms.api.inmate.dto.InmateRequest;
 import com.pms.api.inmate.dto.InmateResponse;
 import com.pms.api.inmate.service.InmateService;
+import com.pms.api.common.pagination.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,8 +44,14 @@ public class InmateController {
     @GetMapping
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List inmate records")
-    public List<InmateResponse> list(@RequestParam(required = false) String search) {
-        return inmateService.list(search);
+    public PageResponse<InmateResponse> list(@RequestParam(required = false) String search,
+                                             @RequestParam(required = false) String classification,
+                                             @RequestParam(required = false) String gender,
+                                             @RequestParam(required = false) String facility,
+                                             @RequestParam(required = false) Integer page,
+                                             @RequestParam(required = false) Integer size,
+                                             @RequestParam(required = false) List<String> sort) {
+        return inmateService.list(search, classification, gender, facility, page, size, sort);
     }
 
     @GetMapping("/{inmateId}")

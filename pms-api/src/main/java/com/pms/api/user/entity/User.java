@@ -13,6 +13,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import org.hibernate.annotations.BatchSize;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
@@ -70,6 +71,7 @@ public class User {
     private long authenticationVersion;
 
     @ElementCollection
+    @BatchSize(size = 20)
     @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "permission", nullable = false)
     private Set<String> permissions = new HashSet<>();

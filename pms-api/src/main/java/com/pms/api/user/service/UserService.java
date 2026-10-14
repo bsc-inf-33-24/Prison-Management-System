@@ -5,6 +5,9 @@ import com.pms.api.user.dto.UpdateRoleRequest;
 import com.pms.api.user.dto.UserResponse;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
+import com.pms.api.common.pagination.PageResponse;
+import com.pms.api.common.pagination.PageableValidator;
+import com.pms.api.common.pagination.PaginationProperties;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -17,6 +20,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -24,11 +30,14 @@ public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.pms.api.auth.service.PasswordPolicy passwordPolicy;
+    private final PaginationProperties paginationProperties;
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       com.pms.api.auth.service.PasswordPolicy passwordPolicy) {
+                       com.pms.api.auth.service.PasswordPolicy passwordPolicy,
+                       PaginationProperties paginationProperties) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.passwordPolicy = passwordPolicy;
+        this.paginationProperties = paginationProperties;
     }
 
     @Transactional
@@ -55,8 +64,34 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional(readOnly = true)
-    public List<UserResponse> findAll() {
-        return userRepository.findAllByOrderByIdAsc().stream().map(UserResponse::from).toList();
+    public PageResponse<UserResponse> findAll(String status, String role, String search,
+                                               Integer page, Integer size, List<String> sort) {
+        Pageable pageable = PageableValidator.create(page, size, sort,
+                Set.of("id", "fullName", "username", "role", "status", "createdAt"),
+                Sort.by(Sort.Order.asc("id")), paginationProperties);
+        Specification<User> specification = Specification.where(null);
+        if (status != null && !status.isBlank()) {
+            if (!User.ACTIVE.equalsIgnoreCase(status) && !User.INACTIVE.equalsIgnoreCase(status)) {
+                throw new IllegalArgumentException("Invalid user status.");
+            }
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(cb.lower(root.get("status")), status.trim().toLowerCase(Locale.ROOT)));
+        }
+        if (role != null && !role.isBlank()) {
+            validateRole(role);
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("role"), role.trim()));
+        }
+        if (search != null && !search.isBlank()) {
+            String value = "%" + escapeLike(search.trim()).toLowerCase(Locale.ROOT) + "%";
+            specification = specification.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("fullName")), value, '!'),
+                    cb.like(cb.lower(root.get("username")), value, '!')));
+        }
+        return PageResponse.from(userRepository.findAll(specification, pageable).map(UserResponse::from));
+    }
+
+    private static String escapeLike(String value) {
+        return value.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
     @Transactional(readOnly = true)

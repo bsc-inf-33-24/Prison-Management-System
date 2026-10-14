@@ -5,12 +5,20 @@ import com.pms.api.inmate.dto.InmateRequest;
 import com.pms.api.inmate.dto.InmateResponse;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
+import com.pms.api.common.pagination.PageResponse;
+import com.pms.api.common.pagination.PageableValidator;
+import com.pms.api.common.pagination.PaginationProperties;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 @Service
 public class InmateService {
@@ -19,11 +27,14 @@ public class InmateService {
 
     private final InmateRepository inmateRepository;
     private final String facilityName;
+    private final PaginationProperties paginationProperties;
 
     public InmateService(InmateRepository inmateRepository,
-                         @Value("${app.facility-name}") String facilityName) {
+                         @Value("${app.facility-name}") String facilityName,
+                         PaginationProperties paginationProperties) {
         this.inmateRepository = inmateRepository;
         this.facilityName = facilityName;
+        this.paginationProperties = paginationProperties;
     }
 
     @Audited
@@ -43,14 +54,29 @@ public class InmateService {
     }
 
     @Transactional(readOnly = true)
-    public List<InmateResponse> list(String search) {
-        List<Inmate> inmates;
-        if (search == null || search.isBlank()) {
-            inmates = inmateRepository.findAllByOrderByIdAsc();
-        } else {
-            inmates = inmateRepository.search(escapeLikePattern(search.trim()));
+    public PageResponse<InmateResponse> list(String search, String classification, String gender,
+                                             String facility, Integer page, Integer size, List<String> sort) {
+        Pageable pageable = PageableValidator.create(page, size, sort,
+                Set.of("id", "inmateNumber", "firstName", "lastName", "admissionDate", "createdAt"),
+                Sort.by(Sort.Order.asc("id")), paginationProperties);
+        Specification<Inmate> specification = Specification.where(null);
+        if (search != null && !search.isBlank()) {
+            String value = "%" + escapeLikePattern(search.trim()).toLowerCase(Locale.ROOT) + "%";
+            specification = specification.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("firstName")), value, '!'),
+                    cb.like(cb.lower(root.get("lastName")), value, '!'),
+                    cb.like(cb.lower(root.get("inmateNumber")), value, '!')));
         }
-        return inmates.stream().map(InmateResponse::from).toList();
+        if (classification != null && !classification.isBlank()) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("classification"), classification.trim()));
+        }
+        if (gender != null && !gender.isBlank()) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("gender"), gender.trim()));
+        }
+        if (facility != null && !facility.isBlank()) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("currentFacility"), facility.trim()));
+        }
+        return PageResponse.from(inmateRepository.findAll(specification, pageable).map(InmateResponse::from));
     }
 
     @Transactional(readOnly = true)
