@@ -13,6 +13,9 @@ public interface CellAllocationRepository extends JpaRepository<CellAllocation, 
     @Query("select count(a) from CellAllocation a where a.cell.id = :cellId")
     long countByCellId(@Param("cellId") Long cellId);
 
+    @Query("select a.cell.id, count(a) from CellAllocation a where a.cell.id in :cellIds group by a.cell.id")
+    List<Object[]> countByCellIds(@Param("cellIds") List<Long> cellIds);
+
     Optional<CellAllocation> findByInmateId(Long inmateId);
 
     List<CellAllocation> findByCell_IdOrderByAllocatedAtAsc(Long cellId);

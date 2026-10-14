@@ -7,6 +7,7 @@ import com.pms.api.cell.dto.CellMoveResponse;
 import com.pms.api.cell.dto.CellResponse;
 import com.pms.api.cell.dto.CreateCellRequest;
 import com.pms.api.cell.service.CellService;
+import com.pms.api.common.pagination.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -63,8 +65,12 @@ public class CellController {
     @GetMapping("/cells")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List cells")
-    public List<CellResponse> listCells() {
-        return cellService.listCells();
+    public PageResponse<CellResponse> listCells(@RequestParam(required = false) String blockName,
+                                                @RequestParam(required = false) String classification,
+                                                @RequestParam(required = false) Integer page,
+                                                @RequestParam(required = false) Integer size,
+                                                @RequestParam(required = false) List<String> sort) {
+        return cellService.listCells(blockName, classification, page, size, sort);
     }
 
     @GetMapping("/cells/{cellId}")
