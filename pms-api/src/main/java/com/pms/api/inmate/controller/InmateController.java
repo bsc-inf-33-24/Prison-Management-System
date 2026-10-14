@@ -35,7 +35,7 @@ public class InmateController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Enroll an inmate")
     public InmateResponse enroll(@Valid @RequestBody InmateRequest request) {
         return inmateService.enroll(request);
