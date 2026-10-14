@@ -31,8 +31,11 @@ public class SentenceService {
     @Audited
     @Transactional
     public SentenceResponse create(SentenceRequest request) {
+        validateRequest(request);
         Case caseEntity = findCase(request.caseId());
         Inmate inmate = findInmate(request.inmateId());
+        ensureCaseAndInmateMatch(caseEntity, inmate);
+        ensureSentenceAllowedForCase(caseEntity);
         Sentence sentence = Sentence.create(
                 caseEntity,
                 inmate,
@@ -65,9 +68,12 @@ public class SentenceService {
     @Audited
     @Transactional
     public SentenceResponse update(Long sentenceId, SentenceRequest request) {
+        validateRequest(request);
         Sentence sentence = findSentence(sentenceId);
         Case caseEntity = findCase(request.caseId());
         Inmate inmate = findInmate(request.inmateId());
+        ensureCaseAndInmateMatch(caseEntity, inmate);
+        ensureSentenceAllowedForCase(caseEntity);
         sentence.updateDetails(
                 caseEntity,
                 inmate,
@@ -77,6 +83,42 @@ public class SentenceService {
                 request.status()
         );
         return SentenceResponse.from(sentenceRepository.saveAndFlush(sentence));
+    }
+
+    private void validateRequest(SentenceRequest request) {
+        if (request == null) {
+            throw new InvalidSentenceRequestException();
+        }
+        if (request.caseId() == null || request.caseId() <= 0) {
+            throw new InvalidSentenceRequestException();
+        }
+        if (request.inmateId() == null || request.inmateId() <= 0) {
+            throw new InvalidSentenceRequestException();
+        }
+        if (request.duration() == null || request.duration() <= 0) {
+            throw new InvalidSentenceRequestException();
+        }
+        if (request.startDate() == null) {
+            throw new InvalidSentenceRequestException();
+        }
+        if (request.releaseDate() != null && request.releaseDate().isBefore(request.startDate())) {
+            throw new InvalidSentenceRequestException();
+        }
+        if (request.status() == null || request.status().isBlank()) {
+            throw new InvalidSentenceRequestException();
+        }
+    }
+
+    private void ensureCaseAndInmateMatch(Case caseEntity, Inmate inmate) {
+        if (caseEntity.getInmate() == null || !caseEntity.getInmate().getId().equals(inmate.getId())) {
+            throw new InvalidSentenceRequestException();
+        }
+    }
+
+    private void ensureSentenceAllowedForCase(Case caseEntity) {
+        if (caseEntity.getStatus() != null && caseEntity.getStatus() != com.pms.api.cases.entity.CaseStatus.ONGOING) {
+            throw new InvalidSentenceRequestException();
+        }
     }
 
     private Case findCase(Long caseId) {
@@ -98,5 +140,8 @@ public class SentenceService {
     }
 
     public static class CaseNotFoundException extends RuntimeException {
+    }
+
+    public static class InvalidSentenceRequestException extends RuntimeException {
     }
 }
