@@ -132,7 +132,7 @@ public class CellService {
         Pageable pageable = PageableValidator.create(page, size, sort,
                 Set.of("id", "blockName", "cellNumber", "capacity"),
                 Sort.by(Sort.Order.asc("id")), paginationProperties);
-        Specification<Cell> specification = Specification.where(null);
+        Specification<Cell> specification = Specification.where((Specification<Cell>) null);
         if (blockName != null && !blockName.isBlank()) {
             specification = specification.and((root, query, cb) -> cb.equal(root.get("blockName"), blockName.trim()));
         }

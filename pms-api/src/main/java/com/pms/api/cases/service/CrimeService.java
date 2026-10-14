@@ -47,7 +47,7 @@ public class CrimeService {
         Pageable pageable = PageableValidator.create(page, size, sort,
                 Set.of("id", "offenceName", "category", "createdAt"),
                 Sort.by(Sort.Order.asc("id")), paginationProperties);
-        Specification<Crime> specification = Specification.where(null);
+        Specification<Crime> specification = Specification.where((Specification<Crime>) null);
         if (category != null && !category.isBlank()) {
             specification = specification.and((root, query, cb) -> cb.equal(root.get("category"), category.trim()));
         }

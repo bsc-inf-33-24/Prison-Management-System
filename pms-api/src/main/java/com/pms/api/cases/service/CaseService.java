@@ -96,7 +96,7 @@ public class CaseService {
         if (startDateFrom != null && startDateTo != null && startDateFrom.isAfter(startDateTo)) {
             throw new IllegalArgumentException("The case start date range is invalid.");
         }
-        Specification<Case> specification = Specification.where(null);
+        Specification<Case> specification = Specification.where((Specification<Case>) null);
         if (status != null && !status.isBlank()) {
             CaseStatus caseStatus = CaseStatus.from(status);
             if (caseStatus == null) {

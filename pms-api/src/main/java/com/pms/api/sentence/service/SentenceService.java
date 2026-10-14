@@ -69,7 +69,7 @@ public class SentenceService {
         if (startDateFrom != null && startDateTo != null && startDateFrom.isAfter(startDateTo)) {
             throw new IllegalArgumentException("The start date range is invalid.");
         }
-        Specification<Sentence> specification = Specification.where(null);
+        Specification<Sentence> specification = Specification.where((Specification<Sentence>) null);
         if (inmateId != null) {
             specification = specification.and((root, query, cb) -> cb.equal(root.get("inmate").get("id"), inmateId));
         }
