@@ -4,6 +4,7 @@ import com.pms.api.user.dto.CreateUserRequest;
 import com.pms.api.user.dto.UpdateRoleRequest;
 import com.pms.api.user.dto.UserResponse;
 import com.pms.api.user.service.UserService;
+import com.pms.api.common.pagination.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -43,8 +45,14 @@ public class UserController {
 
     @GetMapping
     @Operation(summary = "List users")
-    public List<UserResponse> findAll() {
-        return userService.findAll();
+    public PageResponse<UserResponse> findAll(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) List<String> sort) {
+        return userService.findAll(status, role, search, page, size, sort);
     }
 
     @GetMapping("/{userId}")

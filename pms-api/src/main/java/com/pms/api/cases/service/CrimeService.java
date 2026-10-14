@@ -5,7 +5,15 @@ import com.pms.api.cases.dto.CrimeResponse;
 import com.pms.api.cases.entity.Crime;
 import com.pms.api.cases.repository.CrimeRepository;
 import com.pms.api.common.audit.Audited;
+import com.pms.api.common.pagination.PageResponse;
+import com.pms.api.common.pagination.PageableValidator;
+import com.pms.api.common.pagination.PaginationProperties;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,9 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class CrimeService {
 
     private final CrimeRepository crimeRepository;
+    private final PaginationProperties paginationProperties;
 
-    public CrimeService(CrimeRepository crimeRepository) {
+    public CrimeService(CrimeRepository crimeRepository, PaginationProperties paginationProperties) {
         this.crimeRepository = crimeRepository;
+        this.paginationProperties = paginationProperties;
     }
 
     @Audited
@@ -32,8 +42,26 @@ public class CrimeService {
     }
 
     @Transactional(readOnly = true)
-    public List<CrimeResponse> list() {
-        return crimeRepository.findAll().stream().map(CrimeResponse::from).toList();
+    public PageResponse<CrimeResponse> list(String category, String search, Integer page, Integer size,
+                                            List<String> sort) {
+        Pageable pageable = PageableValidator.create(page, size, sort,
+                Set.of("id", "offenceName", "category", "createdAt"),
+                Sort.by(Sort.Order.asc("id")), paginationProperties);
+        Specification<Crime> specification = Specification.where(null);
+        if (category != null && !category.isBlank()) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("category"), category.trim()));
+        }
+        if (search != null && !search.isBlank()) {
+            String value = "%" + escapeLike(search.trim()) + "%";
+            specification = specification.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("offenceName")), value.toLowerCase(Locale.ROOT), '!'),
+                    cb.like(cb.lower(root.get("description")), value.toLowerCase(Locale.ROOT), '!')));
+        }
+        return PageResponse.from(crimeRepository.findAll(specification, pageable).map(CrimeResponse::from));
+    }
+
+    private static String escapeLike(String value) {
+        return value.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
     @Audited
