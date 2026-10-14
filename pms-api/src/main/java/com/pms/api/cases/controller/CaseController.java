@@ -38,7 +38,7 @@ public class CaseController {
 
     @PostMapping("/cases")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('CASE_OFFICER')")
+    @PreAuthorize("hasAnyRole('CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Create a case record")
     public CaseResponse createCase(@Valid @RequestBody CaseRequest request,
                                   @AuthenticationPrincipal UserDetails user) {
@@ -46,7 +46,7 @@ public class CaseController {
     }
 
     @GetMapping("/cases")
-    @PreAuthorize("hasRole('CASE_OFFICER')")
+    @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List case records")
     public List<CaseResponse> listCases(@RequestParam(required = false) String status,
                                        @RequestParam(required = false) Long inmateId,
@@ -55,28 +55,28 @@ public class CaseController {
     }
 
     @GetMapping("/cases/{caseId}")
-    @PreAuthorize("hasRole('CASE_OFFICER')")
+    @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Get a case record")
     public CaseResponse getCase(@PathVariable Long caseId) {
         return caseService.getCase(caseId);
     }
 
     @PutMapping("/cases/{caseId}")
-    @PreAuthorize("hasRole('CASE_OFFICER')")
+    @PreAuthorize("hasAnyRole('CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update a case record")
     public CaseResponse updateCase(@PathVariable Long caseId, @Valid @RequestBody CaseRequest request) {
         return caseService.updateCase(caseId, request);
     }
 
     @PatchMapping("/cases/{caseId}/status")
-    @PreAuthorize("hasRole('CASE_OFFICER')")
+    @PreAuthorize("hasAnyRole('CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update case status")
     public CaseResponse updateStatus(@PathVariable Long caseId, @Valid @RequestBody CaseStatusRequest request) {
         return caseService.updateStatus(caseId, request);
     }
 
     @GetMapping("/inmates/{inmateId}/cases")
-    @PreAuthorize("hasRole('CASE_OFFICER')")
+    @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List inmate cases")
     public List<CaseResponse> getCasesForInmate(@PathVariable Long inmateId) {
         return caseService.getCasesForInmate(inmateId);

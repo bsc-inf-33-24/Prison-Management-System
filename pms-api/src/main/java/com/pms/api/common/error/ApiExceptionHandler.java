@@ -1,9 +1,11 @@
 package com.pms.api.common.error;
 
 import com.pms.api.auth.service.AuthService;
+import com.pms.api.cases.service.CaseService;
 import com.pms.api.cell.service.CellService;
 import com.pms.api.inmate.service.InmateService;
 import com.pms.api.incident.service.IncidentService;
+import com.pms.api.sentence.service.SentenceService;
 import com.pms.api.user.service.UserService;
 import com.pms.api.visitor.service.VisitService;
 import com.pms.api.visitor.service.VisitorService;
@@ -184,6 +186,46 @@ public class ApiExceptionHandler {
     @ExceptionHandler(VisitService.UserNotFoundException.class)
     public ResponseEntity<ApiError> handleVisitUserNotFound() {
         return problem(HttpStatus.NOT_FOUND, "User not found.");
+    }
+
+    @ExceptionHandler(CaseService.CaseNotFoundException.class)
+    public ResponseEntity<ApiError> handleCaseNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Case not found.");
+    }
+
+    @ExceptionHandler(CaseService.InmateNotFoundException.class)
+    public ResponseEntity<ApiError> handleCaseInmateNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Inmate not found.");
+    }
+
+    @ExceptionHandler(CaseService.CrimeNotFoundException.class)
+    public ResponseEntity<ApiError> handleCrimeNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Crime not found.");
+    }
+
+    @ExceptionHandler(CaseService.InvalidCaseRequestException.class)
+    public ResponseEntity<ApiError> handleInvalidCaseRequest() {
+        return problem(HttpStatus.BAD_REQUEST, "One or more case fields are invalid.");
+    }
+
+    @ExceptionHandler(SentenceService.SentenceNotFoundException.class)
+    public ResponseEntity<ApiError> handleSentenceNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Sentence not found.");
+    }
+
+    @ExceptionHandler(SentenceService.InmateNotFoundException.class)
+    public ResponseEntity<ApiError> handleSentenceInmateNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Inmate not found.");
+    }
+
+    @ExceptionHandler(SentenceService.CaseNotFoundException.class)
+    public ResponseEntity<ApiError> handleSentenceCaseNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Case not found.");
+    }
+
+    @ExceptionHandler(SentenceService.InvalidSentenceRequestException.class)
+    public ResponseEntity<ApiError> handleInvalidSentenceRequest() {
+        return problem(HttpStatus.BAD_REQUEST, "One or more sentence fields are invalid.");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
