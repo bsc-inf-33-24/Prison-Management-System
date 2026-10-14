@@ -36,7 +36,6 @@ public class Case extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @BatchSize(size = 20)
     @JoinColumn(name = "inmate_id", nullable = false)
     private Inmate inmate;
 
@@ -57,7 +56,6 @@ public class Case extends BaseEntity {
     private CaseStatus status = CaseStatus.ONGOING;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @BatchSize(size = 20)
     @JoinColumn(name = "created_by", nullable = false, updatable = false)
     private User createdBy;
 

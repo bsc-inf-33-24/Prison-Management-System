@@ -18,8 +18,7 @@ public record UserResponse(
     public static UserResponse from(User user) {
         return new UserResponse(
                 user.getId(), user.getFullName(), user.getUsername(), user.getRole(),
-                user.getStatus(), new LinkedHashSet<>(user.getPermissions()),
-                user.getCreatedAt(), user.getUpdatedAt()
+                user.getStatus(), new LinkedHashSet<> (user.getPermissions()), user.getCreatedAt(), user.getUpdatedAt()
         );
     }
 }
