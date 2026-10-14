@@ -4,11 +4,13 @@ import com.pms.api.cases.dto.CaseRequest;
 import com.pms.api.cases.dto.CaseResponse;
 import com.pms.api.cases.dto.CaseStatusRequest;
 import com.pms.api.cases.service.CaseService;
+import com.pms.api.common.pagination.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.time.LocalDate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -48,10 +50,16 @@ public class CaseController {
     @GetMapping("/cases")
     @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List case records")
-    public List<CaseResponse> listCases(@RequestParam(required = false) String status,
-                                       @RequestParam(required = false) Long inmateId,
-                                       @RequestParam(required = false) Long crimeId) {
-        return caseService.listCases(status, inmateId, crimeId);
+    public PageResponse<CaseResponse> listCases(@RequestParam(required = false) String status,
+                                                @RequestParam(required = false) Long inmateId,
+                                                @RequestParam(required = false) Long crimeId,
+                                                @RequestParam(required = false) LocalDate caseStartDateFrom,
+                                                @RequestParam(required = false) LocalDate caseStartDateTo,
+                                                @RequestParam(required = false) Integer page,
+                                                @RequestParam(required = false) Integer size,
+                                                @RequestParam(required = false) List<String> sort) {
+        return caseService.listCases(status, inmateId, crimeId, caseStartDateFrom, caseStartDateTo,
+                page, size, sort);
     }
 
     @GetMapping("/cases/{caseId}")
@@ -78,7 +86,11 @@ public class CaseController {
     @GetMapping("/inmates/{inmateId}/cases")
     @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List inmate cases")
-    public List<CaseResponse> getCasesForInmate(@PathVariable Long inmateId) {
-        return caseService.getCasesForInmate(inmateId);
+    public PageResponse<CaseResponse> getCasesForInmate(@PathVariable Long inmateId,
+                                                        @RequestParam(required = false) String status,
+                                                        @RequestParam(required = false) Integer page,
+                                                        @RequestParam(required = false) Integer size,
+                                                        @RequestParam(required = false) List<String> sort) {
+        return caseService.getCasesForInmate(inmateId, status, page, size, sort);
     }
 }

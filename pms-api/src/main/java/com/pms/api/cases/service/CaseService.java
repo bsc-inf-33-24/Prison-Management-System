@@ -9,6 +9,9 @@ import com.pms.api.cases.entity.Crime;
 import com.pms.api.cases.repository.CaseRepository;
 import com.pms.api.cases.repository.CrimeRepository;
 import com.pms.api.common.audit.Audited;
+import com.pms.api.common.pagination.PageResponse;
+import com.pms.api.common.pagination.PageableValidator;
+import com.pms.api.common.pagination.PaginationProperties;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.user.entity.User;
@@ -16,6 +19,11 @@ import com.pms.api.user.repository.UserRepository;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.time.LocalDate;
+import java.util.Locale;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,15 +34,18 @@ public class CaseService {
     private final InmateRepository inmateRepository;
     private final CrimeRepository crimeRepository;
     private final UserRepository userRepository;
+    private final PaginationProperties paginationProperties;
 
     public CaseService(CaseRepository caseRepository,
                        InmateRepository inmateRepository,
                        CrimeRepository crimeRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       PaginationProperties paginationProperties) {
         this.caseRepository = caseRepository;
         this.inmateRepository = inmateRepository;
         this.crimeRepository = crimeRepository;
         this.userRepository = userRepository;
+        this.paginationProperties = paginationProperties;
     }
 
     @Audited
@@ -63,20 +74,54 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public List<CaseResponse> listCases(String status, Long inmateId, Long crimeId) {
-        return caseRepository.findAllByOrderByCaseStartDateDesc().stream()
-                .filter(c -> status == null || c.getStatus().name().equalsIgnoreCase(status))
-                .filter(c -> inmateId == null || c.getInmate().getId().equals(inmateId))
-                .filter(c -> crimeId == null || c.getCrimes().stream().anyMatch(crime -> crime.getId().equals(crimeId)))
-                .map(CaseResponse::from)
-                .toList();
+    public PageResponse<CaseResponse> listCases(String status, Long inmateId, Long crimeId,
+                                                LocalDate caseStartDateFrom, LocalDate caseStartDateTo,
+                                                Integer page, Integer size, List<String> sort) {
+        Pageable pageable = PageableValidator.create(page, size, sort,
+                Set.of("id", "caseNumber", "caseStartDate", "caseEndDate", "status"),
+                Sort.by(Sort.Order.desc("caseStartDate"), Sort.Order.desc("id")), paginationProperties);
+        Specification<Case> specification = caseSpecification(status, inmateId, crimeId,
+                caseStartDateFrom, caseStartDateTo);
+        return PageResponse.from(caseRepository.findAll(specification, pageable).map(CaseResponse::from));
     }
 
     @Transactional(readOnly = true)
-    public List<CaseResponse> getCasesForInmate(Long inmateId) {
-        return caseRepository.findByInmateIdOrderByCaseStartDateDesc(inmateId).stream()
-                .map(CaseResponse::from)
-                .toList();
+    public PageResponse<CaseResponse> getCasesForInmate(Long inmateId, String status,
+                                                        Integer page, Integer size, List<String> sort) {
+        return listCases(status, inmateId, null, null, null, page, size, sort);
+    }
+
+    private static Specification<Case> caseSpecification(String status, Long inmateId, Long crimeId,
+                                                          LocalDate startDateFrom, LocalDate startDateTo) {
+        if (startDateFrom != null && startDateTo != null && startDateFrom.isAfter(startDateTo)) {
+            throw new IllegalArgumentException("The case start date range is invalid.");
+        }
+        Specification<Case> specification = Specification.where(null);
+        if (status != null && !status.isBlank()) {
+            CaseStatus caseStatus = CaseStatus.from(status);
+            if (caseStatus == null) {
+                throw new IllegalArgumentException("Invalid case status.");
+            }
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("status"), caseStatus));
+        }
+        if (inmateId != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("inmate").get("id"), inmateId));
+        }
+        if (crimeId != null) {
+            specification = specification.and((root, query, cb) -> {
+                query.distinct(true);
+                return cb.equal(root.join("crimes").get("id"), crimeId);
+            });
+        }
+        if (startDateFrom != null) {
+            specification = specification.and((root, query, cb) ->
+                    cb.greaterThanOrEqualTo(root.get("caseStartDate"), startDateFrom));
+        }
+        if (startDateTo != null) {
+            specification = specification.and((root, query, cb) ->
+                    cb.lessThanOrEqualTo(root.get("caseStartDate"), startDateTo));
+        }
+        return specification;
     }
 
     @Audited
