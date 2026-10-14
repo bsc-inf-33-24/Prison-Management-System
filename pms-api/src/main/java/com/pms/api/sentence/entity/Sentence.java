@@ -50,6 +50,24 @@ public class Sentence extends BaseEntity {
     }
 
     private Sentence(Case caseEntity, Inmate inmate, Integer duration, LocalDate startDate, LocalDate releaseDate, String status) {
+        if (caseEntity == null) {
+            throw new IllegalArgumentException("caseId is required.");
+        }
+        if (inmate == null) {
+            throw new IllegalArgumentException("inmateId is required.");
+        }
+        if (duration == null || duration <= 0) {
+            throw new IllegalArgumentException("duration must be greater than 0.");
+        }
+        if (startDate == null) {
+            throw new IllegalArgumentException("startDate is required.");
+        }
+        if (releaseDate != null && releaseDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("releaseDate cannot be before startDate.");
+        }
+        if (caseEntity.getStatus() != null && caseEntity.getStatus() != com.pms.api.cases.entity.CaseStatus.ONGOING) {
+            throw new IllegalArgumentException("Sentences can only be created for ongoing cases.");
+        }
         this.caseEntity = caseEntity;
         this.inmate = inmate;
         this.duration = duration;
@@ -101,6 +119,24 @@ public class Sentence extends BaseEntity {
 
     public void updateDetails(Case caseEntity, Inmate inmate, Integer duration, LocalDate startDate,
                              LocalDate releaseDate, String status) {
+        if (caseEntity == null) {
+            throw new IllegalArgumentException("caseId is required.");
+        }
+        if (inmate == null) {
+            throw new IllegalArgumentException("inmateId is required.");
+        }
+        if (duration == null || duration <= 0) {
+            throw new IllegalArgumentException("duration must be greater than 0.");
+        }
+        if (startDate == null) {
+            throw new IllegalArgumentException("startDate is required.");
+        }
+        if (releaseDate != null && releaseDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("releaseDate cannot be before startDate.");
+        }
+        if (caseEntity.getStatus() != null && caseEntity.getStatus() != com.pms.api.cases.entity.CaseStatus.ONGOING) {
+            throw new IllegalArgumentException("Sentences can only be created for ongoing cases.");
+        }
         this.caseEntity = caseEntity;
         this.inmate = inmate;
         this.duration = duration;
