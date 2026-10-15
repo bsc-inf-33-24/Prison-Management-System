@@ -8,9 +8,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.UUID;
 
 public record CaseResponse(
-        Long id,
+        UUID id,
         String caseNumber,
         String court,
         LocalDate caseStartDate,
@@ -22,11 +23,11 @@ public record CaseResponse(
         List<SentenceResponse> sentences,
         Instant createdAt,
         Instant updatedAt,
-        Long createdBy
+        UUID createdBy
 ) {
     public static CaseResponse from(Case caseEntity) {
         return new CaseResponse(
-                caseEntity.getId(),
+                caseEntity.getPublicUuid(),
                 caseEntity.getCaseNumber(),
                 caseEntity.getCourt(),
                 caseEntity.getCaseStartDate(),
@@ -40,7 +41,7 @@ public record CaseResponse(
                         .toList(),
                 caseEntity.getCreatedAt(),
                 caseEntity.getUpdatedAt(),
-                caseEntity.getCreatedBy() == null ? null : caseEntity.getCreatedBy().getId()
+                caseEntity.getCreatedBy() == null ? null : caseEntity.getCreatedBy().getPublicUuid()
         );
     }
 
@@ -51,10 +52,10 @@ public record CaseResponse(
         return java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), caseEntity.getCaseEndDate());
     }
 
-    public record InmateSummary(Long id, String inmateNumber, String firstName, String lastName) {
+    public record InmateSummary(UUID id, String inmateNumber, String firstName, String lastName) {
         public static InmateSummary from(Inmate inmate) {
             return new InmateSummary(
-                    inmate.getId(),
+                    inmate.getPublicUuid(),
                     inmate.getInmateNumber(),
                     inmate.getFirstName(),
                     inmate.getLastName()
@@ -62,10 +63,10 @@ public record CaseResponse(
         }
     }
 
-    public record CrimeSummary(Long id, String offenceName, String description, String category) {
+    public record CrimeSummary(UUID id, String offenceName, String description, String category) {
         public static CrimeSummary from(Crime crime) {
             return new CrimeSummary(
-                    crime.getId(),
+                    crime.getPublicUuid(),
                     crime.getOffenceName(),
                     crime.getDescription(),
                     crime.getCategory()

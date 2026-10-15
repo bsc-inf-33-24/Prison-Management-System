@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Set;
 import java.time.LocalDate;
 import java.util.Locale;
+import java.util.UUID;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -53,7 +55,7 @@ public class CaseService {
     public CaseResponse createCase(CaseRequest request, String username) {
         validateRequest(request);
 
-        Inmate inmate = inmateRepository.findById(request.inmateId())
+        Inmate inmate = inmateRepository.findByPublicUuid(request.inmateId())
                 .orElseThrow(InmateNotFoundException::new);
 
         List<Crime> crimes = getValidCrimes(request.crimeIds());
@@ -69,24 +71,26 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public CaseResponse getCase(Long caseId) {
+    public CaseResponse getCase(UUID caseId) {
         return CaseResponse.from(findCase(caseId));
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<CaseResponse> listCases(String status, Long inmateId, Long crimeId,
+    public PageResponse<CaseResponse> listCases(String status, UUID inmateId, UUID crimeId,
                                                 LocalDate caseStartDateFrom, LocalDate caseStartDateTo,
                                                 Integer page, Integer size, List<String> sort) {
         Pageable pageable = PageableValidator.create(page, size, sort,
                 Set.of("id", "caseNumber", "caseStartDate", "caseEndDate", "status"),
                 Sort.by(Sort.Order.desc("caseStartDate"), Sort.Order.desc("id")), paginationProperties);
-        Specification<Case> specification = caseSpecification(status, inmateId, crimeId,
+        Long internalInmateId = inmateId == null ? null : inmateRepository.findByPublicUuid(inmateId).map(Inmate::getId).orElse(-1L);
+        Long internalCrimeId = crimeId == null ? null : crimeRepository.findByPublicUuid(crimeId).map(Crime::getId).orElse(-1L);
+        Specification<Case> specification = caseSpecification(status, internalInmateId, internalCrimeId,
                 caseStartDateFrom, caseStartDateTo);
         return PageResponse.from(caseRepository.findAll(specification, pageable).map(CaseResponse::from));
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<CaseResponse> getCasesForInmate(Long inmateId, String status,
+    public PageResponse<CaseResponse> getCasesForInmate(UUID inmateId, String status,
                                                         Integer page, Integer size, List<String> sort) {
         return listCases(status, inmateId, null, null, null, page, size, sort);
     }
@@ -126,7 +130,7 @@ public class CaseService {
 
     @Audited
     @Transactional
-    public CaseResponse updateCase(Long caseId, CaseRequest request) {
+    public CaseResponse updateCase(UUID caseId, CaseRequest request) {
         Case existing = findCase(caseId);
         validateRequest(request);
 
@@ -139,7 +143,7 @@ public class CaseService {
 
     @Audited
     @Transactional
-    public CaseResponse updateStatus(Long caseId, CaseStatusRequest request) {
+    public CaseResponse updateStatus(UUID caseId, CaseStatusRequest request) {
         if (request == null || request.status() == null || request.status().isBlank()) {
             throw new InvalidCaseRequestException();
         }
@@ -160,16 +164,19 @@ public class CaseService {
         return CaseResponse.from(caseRepository.saveAndFlush(existing));
     }
 
-    private List<Crime> getValidCrimes(Set<Long> crimeIds) {
+    private List<Crime> getValidCrimes(Set<UUID> crimeIds) {
         if (crimeIds == null || crimeIds.isEmpty()) {
             return List.of();
         }
 
-        if (crimeIds.stream().anyMatch(id -> id == null || id <= 0)) {
+        if (crimeIds.stream().anyMatch(id -> id == null)) {
             throw new InvalidCaseRequestException();
         }
 
-        List<Crime> crimes = crimeRepository.findAllById(crimeIds);
+        List<Crime> crimes = crimeIds.stream()
+                .map(crimeRepository::findByPublicUuid)
+                .flatMap(Optional::stream)
+                .toList();
         if (crimes.size() != crimeIds.size()) {
             throw new CrimeNotFoundException();
         }
@@ -199,8 +206,8 @@ public class CaseService {
         return false;
     }
 
-    private Case findCase(Long caseId) {
-        return caseRepository.findById(caseId).orElseThrow(CaseNotFoundException::new);
+    private Case findCase(UUID caseId) {
+        return caseRepository.findByPublicUuid(caseId).orElseThrow(CaseNotFoundException::new);
     }
 
     public static class CaseNotFoundException extends RuntimeException {

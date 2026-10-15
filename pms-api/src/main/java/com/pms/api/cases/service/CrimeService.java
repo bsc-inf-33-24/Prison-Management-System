@@ -11,6 +11,7 @@ import com.pms.api.common.pagination.PaginationProperties;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -37,7 +38,7 @@ public class CrimeService {
     }
 
     @Transactional(readOnly = true)
-    public CrimeResponse get(Long crimeId) {
+    public CrimeResponse get(UUID crimeId) {
         return CrimeResponse.from(findCrime(crimeId));
     }
 
@@ -66,7 +67,7 @@ public class CrimeService {
 
     @Audited
     @Transactional
-    public CrimeResponse update(Long crimeId, CrimeRequest request) {
+    public CrimeResponse update(UUID crimeId, CrimeRequest request) {
         validate(request);
         Crime crime = findCrime(crimeId);
         crime.update(request.offenceName().trim(), request.description() == null ? "" : request.description().trim(), request.category().trim());
@@ -84,8 +85,8 @@ public class CrimeService {
         }
     }
 
-    private Crime findCrime(Long crimeId) {
-        return crimeRepository.findById(crimeId).orElseThrow(CrimeNotFoundException::new);
+    private Crime findCrime(UUID crimeId) {
+        return crimeRepository.findByPublicUuid(crimeId).orElseThrow(CrimeNotFoundException::new);
     }
 
     public static class CrimeNotFoundException extends RuntimeException {

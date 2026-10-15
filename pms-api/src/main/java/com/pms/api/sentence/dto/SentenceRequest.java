@@ -5,16 +5,15 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record SentenceRequest(
         @NotNull(message = "caseId is required")
-        @Min(value = 1, message = "caseId must be greater than 0")
-        Long caseId,
+        UUID caseId,
 
         @NotNull(message = "inmateId is required")
-        @Min(value = 1, message = "inmateId must be greater than 0")
-        Long inmateId,
+        UUID inmateId,
 
         @NotNull(message = "duration is required")
         @Min(value = 1, message = "duration must be greater than 0")

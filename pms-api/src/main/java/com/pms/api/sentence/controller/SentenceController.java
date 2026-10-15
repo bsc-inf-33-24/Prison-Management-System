@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.time.LocalDate;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,8 +46,8 @@ public class SentenceController {
     @GetMapping("/sentences")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List sentence records")
-    public PageResponse<SentenceResponse> list(@RequestParam(required = false) Long inmateId,
-                                               @RequestParam(required = false) Long caseId,
+    public PageResponse<SentenceResponse> list(@RequestParam(required = false) UUID inmateId,
+                                               @RequestParam(required = false) UUID caseId,
                                                @RequestParam(required = false) String status,
                                                @RequestParam(required = false) LocalDate startDateFrom,
                                                @RequestParam(required = false) LocalDate startDateTo,
@@ -59,14 +60,14 @@ public class SentenceController {
     @GetMapping("/sentences/{sentenceId}")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Get a sentence record")
-    public SentenceResponse get(@PathVariable Long sentenceId) {
+    public SentenceResponse get(@PathVariable UUID sentenceId) {
         return sentenceService.get(sentenceId);
     }
 
     @GetMapping("/inmates/{inmateId}/sentences")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List sentences for an inmate")
-    public PageResponse<SentenceResponse> listForInmate(@PathVariable Long inmateId,
+    public PageResponse<SentenceResponse> listForInmate(@PathVariable UUID inmateId,
                                                         @RequestParam(required = false) String status,
                                                         @RequestParam(required = false) LocalDate startDateFrom,
                                                         @RequestParam(required = false) LocalDate startDateTo,
@@ -79,7 +80,7 @@ public class SentenceController {
     @PutMapping("/sentences/{sentenceId}")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update a sentence record")
-    public SentenceResponse update(@PathVariable Long sentenceId,
+    public SentenceResponse update(@PathVariable UUID sentenceId,
                                    @Valid @RequestBody SentenceRequest request) {
         return sentenceService.update(sentenceId, request);
     }
