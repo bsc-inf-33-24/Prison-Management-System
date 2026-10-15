@@ -3,9 +3,10 @@ package com.pms.api.inmate.dto;
 import com.pms.api.inmate.entity.Inmate;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 public record InmateResponse(
-        Long id,
+        UUID id,
         String inmateNumber,
         String firstName,
         String lastName,
@@ -20,7 +21,7 @@ public record InmateResponse(
 
     public static InmateResponse from(Inmate inmate) {
         return new InmateResponse(
-                inmate.getId(),
+                inmate.getPublicUuid(),
                 inmate.getInmateNumber(),
                 inmate.getFirstName(),
                 inmate.getLastName(),

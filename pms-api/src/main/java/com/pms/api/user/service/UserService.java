@@ -12,6 +12,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -95,26 +96,26 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional(readOnly = true)
-    public UserResponse findById(Long userId) {
+    public UserResponse findById(UUID userId) {
         return UserResponse.from(getUser(userId));
     }
 
     @Transactional
-    public UserResponse deactivate(Long userId) {
+    public UserResponse deactivate(UUID userId) {
         User user = getUser(userId);
         user.deactivate();
         return UserResponse.from(user);
     }
 
     @Transactional
-    public UserResponse reactivate(Long userId) {
+    public UserResponse reactivate(UUID userId) {
         User user = getUser(userId);
         user.reactivate();
         return UserResponse.from(user);
     }
 
     @Transactional
-    public UserResponse updateRole(Long userId, UpdateRoleRequest request) {
+    public UserResponse updateRole(UUID userId, UpdateRoleRequest request) {
         validateRole(request.role());
         User user = getUser(userId);
         user.replaceRoleAndPermissions(request.role().trim(),
@@ -146,8 +147,8 @@ public class UserService implements UserDetailsService {
                 !user.isLoginLocked(), authorities);
     }
 
-    public User getUser(Long userId) {
-        return userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+    public User getUser(UUID userId) {
+        return userRepository.findByPublicUuid(userId).orElseThrow(UserNotFoundException::new);
     }
 
     public static void validateRole(String role) {

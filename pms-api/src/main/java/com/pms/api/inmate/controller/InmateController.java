@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -57,14 +58,14 @@ public class InmateController {
     @GetMapping("/{inmateId}")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Get an inmate record")
-    public InmateResponse get(@PathVariable Long inmateId) {
+    public InmateResponse get(@PathVariable UUID inmateId) {
         return inmateService.get(inmateId);
     }
 
     @PutMapping("/{inmateId}")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "Update an inmate record")
-    public InmateResponse update(@PathVariable Long inmateId, @Valid @RequestBody InmateRequest request) {
+    public InmateResponse update(@PathVariable UUID inmateId, @Valid @RequestBody InmateRequest request) {
         return inmateService.update(inmateId, request);
     }
 }
