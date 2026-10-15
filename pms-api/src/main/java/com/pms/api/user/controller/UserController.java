@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -57,25 +58,25 @@ public class UserController {
 
     @GetMapping("/{userId}")
     @Operation(summary = "Get a user")
-    public UserResponse findById(@PathVariable Long userId) {
+    public UserResponse findById(@PathVariable UUID userId) {
         return userService.findById(userId);
     }
 
     @PatchMapping("/{userId}/deactivate")
     @Operation(summary = "Deactivate a user")
-    public UserResponse deactivate(@PathVariable Long userId) {
+    public UserResponse deactivate(@PathVariable UUID userId) {
         return userService.deactivate(userId);
     }
 
     @PatchMapping("/{userId}/reactivate")
     @Operation(summary = "Reactivate a user")
-    public UserResponse reactivate(@PathVariable Long userId) {
+    public UserResponse reactivate(@PathVariable UUID userId) {
         return userService.reactivate(userId);
     }
 
     @PutMapping("/{userId}/role")
     @Operation(summary = "Update a user's role")
-    public UserResponse updateRole(@PathVariable Long userId, @Valid @RequestBody UpdateRoleRequest request) {
+    public UserResponse updateRole(@PathVariable UUID userId, @Valid @RequestBody UpdateRoleRequest request) {
         return userService.updateRole(userId, request);
     }
 

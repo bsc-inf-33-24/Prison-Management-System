@@ -3,10 +3,11 @@ package com.pms.api.rehabilitation.dto.attendance;
 import com.pms.api.rehabilitation.entity.AttendanceRecord;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 public record AttendanceResponse(
-        Long id,
-        Long enrollmentId,
+        UUID id,
+        UUID enrollmentId,
         LocalDate sessionDate,
         String attendanceStatus,
         String remarks,
@@ -14,8 +15,8 @@ public record AttendanceResponse(
 ) {
     public static AttendanceResponse from(AttendanceRecord attendance) {
         return new AttendanceResponse(
-                attendance.getId(),
-                attendance.getEnrollment().getId(),
+                attendance.getPublicUuid(),
+                attendance.getEnrollment().getPublicUuid(),
                 attendance.getSessionDate(),
                 fromDatabaseValue(attendance.getPresent()),
                 attendance.getRemarks(),

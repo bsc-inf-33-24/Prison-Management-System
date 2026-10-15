@@ -27,7 +27,7 @@ public class JwtService {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(user.getUsername())
-                .claim("uid", user.getId())
+                .claim("uid", user.getPublicUuid().toString())
                 .claim("ver", user.getAuthenticationVersion())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(accessTokenTtl)))

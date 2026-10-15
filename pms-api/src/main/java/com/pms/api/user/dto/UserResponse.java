@@ -4,9 +4,10 @@ import com.pms.api.user.entity.User;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.UUID;
 
 public record UserResponse(
-        Long id,
+        UUID id,
         String fullName,
         String username,
         String role,
@@ -17,7 +18,7 @@ public record UserResponse(
 ) {
     public static UserResponse from(User user) {
         return new UserResponse(
-                user.getId(), user.getFullName(), user.getUsername(), user.getRole(),
+                user.getPublicUuid(), user.getFullName(), user.getUsername(), user.getRole(),
                 user.getStatus(), new LinkedHashSet<> (user.getPermissions()), user.getCreatedAt(), user.getUpdatedAt()
         );
     }

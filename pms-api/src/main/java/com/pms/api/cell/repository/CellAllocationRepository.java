@@ -3,12 +3,15 @@ package com.pms.api.cell.repository;
 import com.pms.api.cell.entity.CellAllocation;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface CellAllocationRepository extends JpaRepository<CellAllocation, Long> {
+
+    Optional<CellAllocation> findByPublicUuid(UUID publicUuid);
 
     @Query("select count(a) from CellAllocation a where a.cell.id = :cellId")
     long countByCellId(@Param("cellId") Long cellId);

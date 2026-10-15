@@ -16,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -43,7 +44,7 @@ public class IncidentController {
     @PatchMapping("/incidents/{incidentId}/outcome")
     @PreAuthorize("hasRole('DISCIPLINARY_OFFICER')")
     @Operation(summary = "Record a disciplinary outcome")
-    public IncidentResponse recordOutcome(@PathVariable Long incidentId,
+    public IncidentResponse recordOutcome(@PathVariable UUID incidentId,
                                            @Valid @RequestBody RecordOutcomeRequest request) {
         return incidentService.recordOutcome(incidentId, request);
     }
@@ -53,7 +54,7 @@ public class IncidentController {
     @GetMapping("/inmates/{inmateId}/incidents")
     @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Get an inmate's incident history")
-    public List<IncidentHistoryItemResponse> getHistory(@PathVariable Long inmateId) {
+    public List<IncidentHistoryItemResponse> getHistory(@PathVariable UUID inmateId) {
         return incidentService.getHistory(inmateId);
     }
 }

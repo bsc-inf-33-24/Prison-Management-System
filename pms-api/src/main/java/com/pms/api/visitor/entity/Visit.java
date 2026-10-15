@@ -15,6 +15,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "visits")
@@ -24,6 +25,9 @@ public class Visit {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "visit_id")
     private Long id;
+
+    @Column(name = "public_uuid", nullable = false, updatable = false, unique = true)
+    private UUID publicUuid = UUID.randomUUID();
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "visitor_id", nullable = false)
@@ -74,6 +78,10 @@ public class Visit {
 
     public Long getId() {
         return id;
+    }
+
+    public UUID getPublicUuid() {
+        return publicUuid;
     }
 
     public Visitor getVisitor() {

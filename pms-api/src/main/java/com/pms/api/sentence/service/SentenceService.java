@@ -16,6 +16,7 @@ import java.util.List;
 import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -60,7 +61,7 @@ public class SentenceService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<SentenceResponse> list(Long inmateId, Long caseId, String status,
+    public PageResponse<SentenceResponse> list(UUID inmateId, UUID caseId, String status,
                                                 LocalDate startDateFrom, LocalDate startDateTo,
                                                 Integer page, Integer size, List<String> sort) {
         Pageable pageable = PageableValidator.create(page, size, sort,
@@ -69,12 +70,14 @@ public class SentenceService {
         if (startDateFrom != null && startDateTo != null && startDateFrom.isAfter(startDateTo)) {
             throw new IllegalArgumentException("The start date range is invalid.");
         }
+        Long internalInmateId = inmateId == null ? null : inmateRepository.findByPublicUuid(inmateId).map(Inmate::getId).orElse(-1L);
+        Long internalCaseId = caseId == null ? null : caseRepository.findByPublicUuid(caseId).map(Case::getId).orElse(-1L);
         Specification<Sentence> specification = Specification.where((Specification<Sentence>) null);
-        if (inmateId != null) {
-            specification = specification.and((root, query, cb) -> cb.equal(root.get("inmate").get("id"), inmateId));
+        if (internalInmateId != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("inmate").get("id"), internalInmateId));
         }
-        if (caseId != null) {
-            specification = specification.and((root, query, cb) -> cb.equal(root.get("caseEntity").get("id"), caseId));
+        if (internalCaseId != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("caseEntity").get("id"), internalCaseId));
         }
         if (status != null && !status.isBlank()) {
             String normalized = status.trim().toLowerCase(Locale.ROOT);
@@ -93,13 +96,13 @@ public class SentenceService {
     }
 
     @Transactional(readOnly = true)
-    public SentenceResponse get(Long sentenceId) {
+    public SentenceResponse get(UUID sentenceId) {
         return SentenceResponse.from(findSentence(sentenceId));
     }
 
     @Audited
     @Transactional
-    public SentenceResponse update(Long sentenceId, SentenceRequest request) {
+    public SentenceResponse update(UUID sentenceId, SentenceRequest request) {
         validateRequest(request);
         Sentence sentence = findSentence(sentenceId);
         Case caseEntity = findCase(request.caseId());
@@ -121,10 +124,10 @@ public class SentenceService {
         if (request == null) {
             throw new InvalidSentenceRequestException();
         }
-        if (request.caseId() == null || request.caseId() <= 0) {
+        if (request.caseId() == null) {
             throw new InvalidSentenceRequestException();
         }
-        if (request.inmateId() == null || request.inmateId() <= 0) {
+        if (request.inmateId() == null) {
             throw new InvalidSentenceRequestException();
         }
         if (request.duration() == null || request.duration() <= 0) {
@@ -153,16 +156,16 @@ public class SentenceService {
         }
     }
 
-    private Case findCase(Long caseId) {
-        return caseRepository.findById(caseId).orElseThrow(CaseNotFoundException::new);
+    private Case findCase(UUID caseId) {
+        return caseRepository.findByPublicUuid(caseId).orElseThrow(CaseNotFoundException::new);
     }
 
-    private Inmate findInmate(Long inmateId) {
-        return inmateRepository.findById(inmateId).orElseThrow(InmateNotFoundException::new);
+    private Inmate findInmate(UUID inmateId) {
+        return inmateRepository.findByPublicUuid(inmateId).orElseThrow(InmateNotFoundException::new);
     }
 
-    private Sentence findSentence(Long sentenceId) {
-        return sentenceRepository.findById(sentenceId).orElseThrow(SentenceNotFoundException::new);
+    private Sentence findSentence(UUID sentenceId) {
+        return sentenceRepository.findByPublicUuid(sentenceId).orElseThrow(SentenceNotFoundException::new);
     }
 
     public static class SentenceNotFoundException extends RuntimeException {

@@ -1,9 +1,10 @@
 package com.pms.api.rehabilitation.dto.program;
 
 import com.pms.api.rehabilitation.entity.RehabilitationProgram;
+import java.util.UUID;
 
 public record ProgramResponse(
-        Long id,
+        UUID id,
         String name,
         String description,
         String instructor,
@@ -12,7 +13,7 @@ public record ProgramResponse(
 ) {
     public static ProgramResponse from(RehabilitationProgram program) {
         return new ProgramResponse(
-                program.getId(),
+                program.getPublicUuid(),
                 program.getName(),
                 program.getDescription(),
                 program.getInstructor(),

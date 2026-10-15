@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -49,7 +50,7 @@ public class CellController {
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Allocate an inmate to a cell")
-    public CellAllocationResponse allocate(@PathVariable Long inmateId,
+    public CellAllocationResponse allocate(@PathVariable UUID inmateId,
                                            @Valid @RequestBody AllocateCellRequest request) {
         return cellService.allocate(inmateId, request);
     }
@@ -57,7 +58,7 @@ public class CellController {
     @PutMapping("/inmates/{inmateId}/cell-allocation")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "Move an inmate to a different cell")
-    public CellMoveResponse move(@PathVariable Long inmateId,
+    public CellMoveResponse move(@PathVariable UUID inmateId,
                                 @Valid @RequestBody AllocateCellRequest request) {
         return cellService.move(inmateId, request);
     }
@@ -76,7 +77,7 @@ public class CellController {
     @GetMapping("/cells/{cellId}")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Get a cell")
-    public CellDetailResponse getCell(@PathVariable Long cellId) {
+    public CellDetailResponse getCell(@PathVariable UUID cellId) {
         return cellService.getCell(cellId);
     }
 }

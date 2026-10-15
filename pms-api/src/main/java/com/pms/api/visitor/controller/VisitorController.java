@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -59,7 +60,7 @@ public class VisitorController {
     })
     @GetMapping("/visitors/{visitorId}")
     @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
-    public VisitorResponse getVisitor(@PathVariable Long visitorId) {
+    public VisitorResponse getVisitor(@PathVariable UUID visitorId) {
         return visitorService.getVisitor(visitorId);
     }
 

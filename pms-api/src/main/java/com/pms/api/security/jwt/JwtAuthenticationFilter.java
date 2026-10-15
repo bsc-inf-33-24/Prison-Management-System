@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Claims;
 import java.io.IOException;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -45,11 +46,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 User account = userRepository.findByUsername(claims.getSubject())
                         .orElseThrow(() -> new UsernameNotFoundException("Invalid username or password."));
                 Number versionClaim = claims.get("ver", Number.class);
-                Number userIdClaim = claims.get("uid", Number.class);
+                String userUuidClaim = claims.get("uid", String.class);
                 long version = versionClaim == null ? -1 : versionClaim.longValue();
-                Long userId = userIdClaim == null ? null : userIdClaim.longValue();
+                UUID userUuid = userUuidClaim == null ? null : UUID.fromString(userUuidClaim);
                 UserDetails user = userDetailsService.loadUserByUsername(account.getUsername());
-                if (userId != null && userId.equals(account.getId()) && version == account.getAuthenticationVersion()
+                if (userUuid != null && userUuid.equals(account.getPublicUuid()) && version == account.getAuthenticationVersion()
                         && user.isEnabled() && user.isAccountNonLocked()) {
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             user, null, user.getAuthorities());

@@ -5,10 +5,11 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 public record VisitRequest(
-        @NotNull(message = "visitorId is required") Long visitorId,
-        @NotNull(message = "inmateId is required") Long inmateId,
+        @NotNull(message = "visitorId is required") UUID visitorId,
+        @NotNull(message = "inmateId is required") UUID inmateId,
         @NotNull(message = "visitDateTime is required")
         @JsonFormat(shape = JsonFormat.Shape.STRING)
         OffsetDateTime visitDateTime,

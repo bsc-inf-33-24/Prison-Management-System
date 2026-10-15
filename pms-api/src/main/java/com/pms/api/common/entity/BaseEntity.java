@@ -5,9 +5,13 @@ import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import java.time.Instant;
+import java.util.UUID;
 
 @MappedSuperclass
 public abstract class BaseEntity {
+
+    @Column(name = "public_uuid", nullable = false, updatable = false, unique = true)
+    private UUID publicUuid = UUID.randomUUID();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -21,6 +25,10 @@ public abstract class BaseEntity {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public UUID getPublicUuid() {
+        return publicUuid;
     }
 
     @PrePersist
