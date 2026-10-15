@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/rehabilitation/enrollments")
@@ -52,9 +53,9 @@ public class RehabilitationEnrollmentController {
     @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER', 'RECORDS_OFFICER')")
     @Operation(summary = "List and search rehabilitation enrollments")
     public Page<EnrollmentResponse> list(
-            @RequestParam(required = false) Long inmateId,
+            @RequestParam(required = false) UUID inmateId,
             @RequestParam(required = false) String inmateName,
-            @RequestParam(required = false) Long programId,
+            @RequestParam(required = false) UUID programId,
             @RequestParam(required = false) String programName,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) LocalDate enrollmentDateFrom,
@@ -74,7 +75,7 @@ public class RehabilitationEnrollmentController {
     @PreAuthorize("hasRole('REHABILITATION_OFFICER')")
     @Operation(summary = "Update enrollment status")
     public EnrollmentResponse updateStatus(
-            @PathVariable Long enrollmentId,
+            @PathVariable UUID enrollmentId,
             @Valid @RequestBody UpdateEnrollmentStatusRequest request,
             @AuthenticationPrincipal UserDetails currentUser) {
         return enrollmentService.updateStatus(enrollmentId, request, currentUser.getUsername());

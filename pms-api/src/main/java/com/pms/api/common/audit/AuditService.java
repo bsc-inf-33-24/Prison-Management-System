@@ -16,9 +16,9 @@ public class AuditService {
     }
 
     public void record(String username, String action, String entityName,
-                       Long recordId, String oldValues, String newValues) {
+                       String publicRecordId, String oldValues, String newValues) {
         User user = userRepository.findByUsername(username).orElse(null);
         auditLogRepository.save(new AuditLog(
-                user, action, entityName, String.valueOf(recordId), oldValues, newValues));
+                user, action, entityName, publicRecordId, oldValues, newValues));
     }
 }

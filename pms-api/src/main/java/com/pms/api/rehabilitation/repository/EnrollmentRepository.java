@@ -8,10 +8,14 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 public interface EnrollmentRepository
         extends JpaRepository<Enrollment, Long>,
                 JpaSpecificationExecutor<Enrollment> {
+
+    Optional<Enrollment> findByPublicUuid(UUID publicUuid);
 
     boolean existsByInmate_IdAndProgram_IdAndStatusIn(
             Long inmateId, Long programId, Collection<String> statuses);

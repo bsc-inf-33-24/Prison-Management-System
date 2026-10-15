@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class EnrollmentService {
@@ -56,7 +57,7 @@ public class EnrollmentService {
 
     @Transactional
     public EnrollmentResponse create(CreateEnrollmentRequest request, String username) {
-        Inmate inmate = inmateRepository.findById(request.inmateId())
+        Inmate inmate = inmateRepository.findByPublicUuid(request.inmateId())
                 .orElseThrow(InmateService.InmateNotFoundException::new);
         RehabilitationProgram program = programService.findProgram(request.programId());
 
@@ -71,8 +72,8 @@ public class EnrollmentService {
 
         Enrollment enrollment = new Enrollment(inmate, program, request.enrollmentDate(), ENROLLED);
         Enrollment saved = enrollmentRepository.save(enrollment);
-        auditService.record(username, "ENROLLMENT_CREATED", "Enrollment", saved.getId(), null,
-                "inmateId=" + inmate.getId() + ",programId=" + program.getId());
+        auditService.record(username, "ENROLLMENT_CREATED", "Enrollment", saved.getPublicUuid().toString(), null,
+                "inmateId=" + inmate.getPublicUuid() + ",programId=" + program.getPublicUuid());
         return EnrollmentResponse.from(saved);
     }
 
@@ -82,20 +83,22 @@ public class EnrollmentService {
     }
 
     @Transactional(readOnly = true)
-    public Page<EnrollmentResponse> list(Long inmateId, String inmateName, Long programId,
+    public Page<EnrollmentResponse> list(UUID inmateId, String inmateName, UUID programId,
                                          String programName, String status,
                                          LocalDate enrollmentDateFrom, LocalDate enrollmentDateTo,
                                          Pageable pageable) {
         Specification<Enrollment> specification =
                 Specification.where((Specification<Enrollment>) null);
-        if (inmateId != null) {
-            specification = specification.and(EnrollmentSpecifications.inmateId(inmateId));
+        Long internalInmateId = inmateId == null ? null : inmateRepository.findByPublicUuid(inmateId).map(Inmate::getId).orElse(-1L);
+        Long internalProgramId = programId == null ? null : programService.findProgram(programId).getId();
+        if (internalInmateId != null) {
+            specification = specification.and(EnrollmentSpecifications.inmateId(internalInmateId));
         }
         if (inmateName != null && !inmateName.isBlank()) {
             specification = specification.and(EnrollmentSpecifications.inmateNameContains(inmateName));
         }
-        if (programId != null) {
-            specification = specification.and(EnrollmentSpecifications.programId(programId));
+        if (internalProgramId != null) {
+            specification = specification.and(EnrollmentSpecifications.programId(internalProgramId));
         }
         if (programName != null && !programName.isBlank()) {
             specification = specification.and(EnrollmentSpecifications.programNameContains(programName));
@@ -113,16 +116,17 @@ public class EnrollmentService {
     }
 
     @Transactional(readOnly = true)
-    public Page<EnrollmentResponse> history(Long inmateId, Pageable pageable) {
-        if (!inmateRepository.existsById(inmateId)) {
+    public Page<EnrollmentResponse> history(UUID inmateId, Pageable pageable) {
+        Inmate inmate = inmateRepository.findByPublicUuid(inmateId).orElse(null);
+        if (inmate == null) {
             throw new InmateService.InmateNotFoundException();
         }
-        return enrollmentRepository.findByInmate_Id(inmateId, pageable)
+        return enrollmentRepository.findByInmate_Id(inmate.getId(), pageable)
                 .map(EnrollmentResponse::from);
     }
 
     @Transactional
-    public EnrollmentResponse updateStatus(Long enrollmentId, UpdateEnrollmentStatusRequest request,
+    public EnrollmentResponse updateStatus(UUID enrollmentId, UpdateEnrollmentStatusRequest request,
                                            String username) {
         Enrollment enrollment = findEnrollment(enrollmentId);
         String nextStatus = normalizeStatus(request.status());
@@ -139,14 +143,24 @@ public class EnrollmentService {
         }
 
         enrollment.updateStatus(nextStatus);
-        auditService.record(username, "ENROLLMENT_STATUS_CHANGED", "Enrollment", enrollment.getId(),
+        auditService.record(username, "ENROLLMENT_STATUS_CHANGED", "Enrollment", enrollment.getPublicUuid().toString(),
                 "status=" + currentStatus, "status=" + nextStatus + ",reason=" + request.reason());
         return EnrollmentResponse.from(enrollment);
     }
 
-    public Enrollment findEnrollment(Long enrollmentId) {
-        return enrollmentRepository.findById(enrollmentId)
+    public Enrollment findEnrollment(UUID enrollmentId) {
+        return enrollmentRepository.findByPublicUuid(enrollmentId)
                 .orElseThrow(EnrollmentNotFoundException::new);
+    }
+
+    public Long getInmateId(UUID inmateUuid) {
+        return inmateRepository.findByPublicUuid(inmateUuid)
+                .map(Inmate::getId)
+                .orElse(-1L);
+    }
+
+    public Long getProgramId(UUID programUuid) {
+        return programService.findProgram(programUuid).getId();
     }
 
     public static String normalizeStatus(String status) {

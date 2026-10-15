@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/rehabilitation/programs")
@@ -66,14 +67,14 @@ public class RehabilitationProgramController {
     @GetMapping("/{programId}")
     @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER', 'RECORDS_OFFICER')")
     @Operation(summary = "Get a rehabilitation program")
-    public ProgramDetailResponse get(@PathVariable Long programId) {
+    public ProgramDetailResponse get(@PathVariable UUID programId) {
         return programService.getDetails(programId);
     }
 
     @PutMapping("/{programId}")
     @PreAuthorize("hasRole('REHABILITATION_OFFICER')")
     @Operation(summary = "Update rehabilitation program details")
-    public ProgramResponse update(@PathVariable Long programId,
+    public ProgramResponse update(@PathVariable UUID programId,
                                   @Valid @RequestBody UpdateProgramRequest request,
                                   @AuthenticationPrincipal UserDetails currentUser) {
         return programService.update(programId, request, currentUser.getUsername());
@@ -82,7 +83,7 @@ public class RehabilitationProgramController {
     @PatchMapping("/{programId}/status")
     @PreAuthorize("hasRole('REHABILITATION_OFFICER')")
     @Operation(summary = "Update rehabilitation program status")
-    public ProgramResponse updateStatus(@PathVariable Long programId,
+    public ProgramResponse updateStatus(@PathVariable UUID programId,
                                         @Valid @RequestBody UpdateProgramStatusRequest request,
                                         @AuthenticationPrincipal UserDetails currentUser) {
         return programService.updateStatus(programId, request, currentUser.getUsername());

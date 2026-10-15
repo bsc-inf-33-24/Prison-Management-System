@@ -3,19 +3,20 @@ package com.pms.api.rehabilitation.dto.enrollment;
 import com.pms.api.rehabilitation.entity.Enrollment;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 public record EnrollmentResponse(
-        Long id,
-        Long inmateId,
-        Long programId,
+        UUID id,
+        UUID inmateId,
+        UUID programId,
         LocalDate enrollmentDate,
         String status
 ) {
     public static EnrollmentResponse from(Enrollment enrollment) {
         return new EnrollmentResponse(
-                enrollment.getId(),
-                enrollment.getInmate().getId(),
-                enrollment.getProgram().getId(),
+                enrollment.getPublicUuid(),
+                enrollment.getInmate().getPublicUuid(),
+                enrollment.getProgram().getPublicUuid(),
                 enrollment.getEnrollmentDate(),
                 enrollment.getStatus()
         );
