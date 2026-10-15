@@ -13,6 +13,7 @@ import com.pms.api.visitor.repository.VisitorRepository;
 import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -58,12 +59,12 @@ public class VisitorService {
 
         Visitor visitor = new Visitor(fullName, idNumber, phone, relationshipToInmate);
         Visitor saved = visitorRepository.saveAndFlush(visitor);
-        audit(username, "VISITOR_CREATED", "Visitor", saved.getId(), null, visitorSummary(saved));
+        audit(username, "VISITOR_CREATED", "Visitor", saved.getPublicUuid().toString(), null, visitorSummary(saved));
         return VisitorResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
-    public VisitorResponse getVisitor(Long visitorId) {
+    public VisitorResponse getVisitor(UUID visitorId) {
         return VisitorResponse.from(findVisitor(visitorId));
     }
 
@@ -90,8 +91,8 @@ public class VisitorService {
         return visitorRepository.findAll(specification, pageable).map(VisitorResponse::from);
     }
 
-    public Visitor findVisitor(Long visitorId) {
-        return visitorRepository.findById(visitorId).orElseThrow(VisitorNotFoundException::new);
+    public Visitor findVisitor(UUID visitorId) {
+        return visitorRepository.findByPublicUuid(visitorId).orElseThrow(VisitorNotFoundException::new);
     }
 
     private static Specification<Visitor> likeIgnoreCase(String fieldName, String value) {
@@ -137,20 +138,20 @@ public class VisitorService {
         }
     }
 
-    private void audit(String username, String action, String entityName, Long recordId,
+    private void audit(String username, String action, String entityName, String publicRecordId,
                        String oldValues, String newValues) {
         User user = userRepository.findByUsername(username).orElse(null);
         if (user == null) {
             user = userRepository.findByUsername("system").orElse(null);
         }
-        auditService.record(username, action, entityName, recordId, oldValues == null ? "{}" : oldValues,
+        auditService.record(username, action, entityName, publicRecordId, oldValues == null ? "{}" : oldValues,
                 newValues == null ? "{}" : newValues);
     }
 
     private String visitorSummary(Visitor visitor) {
         try {
             return objectMapper.writeValueAsString(new VisitorResponse(
-                    visitor.getId(),
+                    visitor.getPublicUuid(),
                     visitor.getFullName(),
                     visitor.getIdNumber(),
                     visitor.getPhone(),

@@ -2,9 +2,10 @@ package com.pms.api.visitor.dto;
 
 import com.pms.api.visitor.entity.Visit;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 public record VisitHistoryResponse(
-        Long id,
+        UUID id,
         OffsetDateTime visitDateTime,
         Integer durationMinutes,
         VisitResponse.VisitorSummary visitor,
@@ -12,7 +13,7 @@ public record VisitHistoryResponse(
 ) {
     public static VisitHistoryResponse from(Visit visit) {
         return new VisitHistoryResponse(
-                visit.getId(),
+                visit.getPublicUuid(),
                 visit.getVisitDateTime(),
                 visit.getDurationMinutes(),
                 VisitResponse.VisitorSummary.from(visit.getVisitor()),

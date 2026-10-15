@@ -20,6 +20,7 @@ import jakarta.persistence.criteria.JoinType;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -57,9 +58,9 @@ public class VisitService {
         if (request == null) {
             throw new IllegalArgumentException("Visit details are required.");
         }
-        Visitor visitor = visitorRepository.findById(request.visitorId())
+        Visitor visitor = visitorRepository.findByPublicUuid(request.visitorId())
                 .orElseThrow(VisitorService.VisitorNotFoundException::new);
-        Inmate inmate = inmateRepository.findById(request.inmateId())
+        Inmate inmate = inmateRepository.findByPublicUuid(request.inmateId())
                 .orElseThrow(() -> new InmateNotFoundException());
         if (request.visitDateTime() == null) {
             throw new IllegalArgumentException("visitDateTime is required.");
@@ -71,20 +72,20 @@ public class VisitService {
         User user = userRepository.findByUsername(username).orElseThrow(UserNotFoundException::new);
         Visit visit = new Visit(visitor, inmate, request.visitDateTime(), request.durationMinutes(), user);
         Visit saved = visitRepository.saveAndFlush(visit);
-        audit(username, "VISIT_CREATED", "Visit", saved.getId(), "{}", visitSummary(saved));
+        audit(username, "VISIT_CREATED", "Visit", saved.getPublicUuid().toString(), "{}", visitSummary(saved));
         return VisitResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
-    public VisitResponse getVisit(Long visitId) {
+    public VisitResponse getVisit(UUID visitId) {
         return VisitResponse.from(findVisit(visitId));
     }
 
     @Transactional(readOnly = true)
-    public Page<VisitResponse> searchVisits(Long visitId, Long visitorId, String visitorName,
-                                          String visitorIdNumber, Long inmateId, String inmateNumber,
+    public Page<VisitResponse> searchVisits(UUID visitId, UUID visitorId, String visitorName,
+                                          String visitorIdNumber, UUID inmateId, String inmateNumber,
                                           String inmateName, OffsetDateTime visitDateFrom,
-                                          OffsetDateTime visitDateTo, Long loggedBy, int page,
+                                          OffsetDateTime visitDateTo, UUID loggedBy, int page,
                                           int size, String sort) {
         validatePage(page, size);
         if (visitDateFrom != null && visitDateTo != null && visitDateFrom.isAfter(visitDateTo)) {
@@ -93,10 +94,12 @@ public class VisitService {
 
         Specification<Visit> specification = Specification.where((Specification<Visit>) null);
         if (visitId != null) {
-            specification = specification.and(equalLong("id", visitId));
+            specification = specification.and(equalLong("id", visitRepository.findByPublicUuid(visitId)
+                    .map(Visit::getId).orElse(-1L)));
         }
         if (visitorId != null) {
-            specification = specification.and(equalLong("visitor.id", visitorId));
+            specification = specification.and(equalRelatedId("visitor", visitorRepository.findByPublicUuid(visitorId)
+                    .map(Visitor::getId).orElse(-1L)));
         }
         if (visitorName != null && !visitorName.isBlank()) {
             specification = specification.and(visitorNameContains(visitorName));
@@ -105,7 +108,8 @@ public class VisitService {
             specification = specification.and(visitorIdNumberContains(visitorIdNumber));
         }
         if (inmateId != null) {
-            specification = specification.and(equalLong("inmate.id", inmateId));
+            specification = specification.and(equalRelatedId("inmate", inmateRepository.findByPublicUuid(inmateId)
+                    .map(Inmate::getId).orElse(-1L)));
         }
         if (inmateNumber != null && !inmateNumber.isBlank()) {
             specification = specification.and(inmateNumberContains(inmateNumber));
@@ -120,7 +124,8 @@ public class VisitService {
             specification = specification.and(lessThanOrEqualTo("visitDateTime", visitDateTo));
         }
         if (loggedBy != null) {
-            specification = specification.and(equalLong("loggedBy.id", loggedBy));
+            specification = specification.and(equalRelatedId("loggedBy", userRepository.findByPublicUuid(loggedBy)
+                    .map(User::getId).orElse(-1L)));
         }
 
         Pageable pageable = PageRequest.of(page, size, parseSort(sort, "visitDateTime", Sort.Direction.DESC));
@@ -128,10 +133,11 @@ public class VisitService {
     }
 
     @Transactional(readOnly = true)
-    public Page<VisitHistoryResponse> getInmateVisitHistory(Long inmateId, String visitorName,
+    public Page<VisitHistoryResponse> getInmateVisitHistory(UUID inmateId, String visitorName,
                                                           String visitorIdNumber, OffsetDateTime visitDateFrom,
                                                           OffsetDateTime visitDateTo, int page, int size, String sort) {
-        if (!inmateRepository.existsById(inmateId)) {
+        Inmate inmate = inmateRepository.findByPublicUuid(inmateId).orElse(null);
+        if (inmate == null) {
             throw new InmateNotFoundException();
         }
         validatePage(page, size);
@@ -139,7 +145,7 @@ public class VisitService {
             throw new IllegalArgumentException("visitDateFrom must be before or equal to visitDateTo.");
         }
 
-        Specification<Visit> specification = Specification.where((root, query, cb) -> cb.equal(root.get("inmate").get("id"), inmateId));
+        Specification<Visit> specification = Specification.where((root, query, cb) -> cb.equal(root.get("inmate").get("id"), inmate.getId()));
         if (visitorName != null && !visitorName.isBlank()) {
             specification = specification.and(visitorNameContains(visitorName));
         }
@@ -158,7 +164,7 @@ public class VisitService {
     }
 
     @Transactional
-    public VisitResponse updateVisit(Long visitId, UpdateVisitRequest request, String username) {
+    public VisitResponse updateVisit(UUID visitId, UpdateVisitRequest request, String username) {
         Visit visit = findVisit(visitId);
         if (request == null || request.visitDateTime() == null) {
             throw new IllegalArgumentException("visitDateTime is required.");
@@ -170,16 +176,20 @@ public class VisitService {
         Visit prior = new Visit(visit.getVisitor(), visit.getInmate(), visit.getVisitDateTime(), visit.getDurationMinutes(), visit.getLoggedBy());
         visit.updateDetails(request.visitDateTime(), request.durationMinutes());
         Visit saved = visitRepository.saveAndFlush(visit);
-        audit(username, "VISIT_UPDATED", "Visit", saved.getId(), visitSummary(prior), visitSummary(saved));
+        audit(username, "VISIT_UPDATED", "Visit", saved.getPublicUuid().toString(), visitSummary(prior), visitSummary(saved));
         return VisitResponse.from(saved);
     }
 
-    public Visit findVisit(Long visitId) {
-        return visitRepository.findById(visitId).orElseThrow(VisitNotFoundException::new);
+    public Visit findVisit(UUID visitId) {
+        return visitRepository.findByPublicUuid(visitId).orElseThrow(VisitNotFoundException::new);
     }
 
     private static Specification<Visit> equalLong(String fieldName, Long value) {
         return (root, query, cb) -> cb.equal(root.get(fieldName), value);
+    }
+
+    private static Specification<Visit> equalRelatedId(String relation, Long id) {
+        return (root, query, cb) -> cb.equal(root.get(relation).get("id"), id);
     }
 
     private static Specification<Visit> greaterThanOrEqualTo(String fieldName, OffsetDateTime threshold) {
@@ -265,10 +275,10 @@ public class VisitService {
         }
     }
 
-    private void audit(String username, String action, String entityName, Long recordId,
+    private void audit(String username, String action, String entityName, String publicRecordId,
                        String oldValues, String newValues) {
         User user = userRepository.findByUsername(username).orElse(null);
-        auditService.record(username, action, entityName, recordId, oldValues == null ? "{}" : oldValues,
+        auditService.record(username, action, entityName, publicRecordId, oldValues == null ? "{}" : oldValues,
                 newValues == null ? "{}" : newValues);
     }
 
