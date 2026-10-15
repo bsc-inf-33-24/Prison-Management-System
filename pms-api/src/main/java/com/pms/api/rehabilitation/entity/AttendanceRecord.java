@@ -11,6 +11,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 
 @Entity
@@ -21,6 +22,9 @@ public class AttendanceRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "attendance_id")
     private Long id;
+
+    @Column(name = "public_uuid", nullable = false, updatable = false, unique = true)
+    private UUID publicUuid = UUID.randomUUID();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "enrollment_id")
@@ -53,6 +57,10 @@ public class AttendanceRecord {
 
     public Long getId() {
         return id;
+    }
+
+    public UUID getPublicUuid() {
+        return publicUuid;
     }
 
     public Enrollment getEnrollment() {
