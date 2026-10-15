@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class IncidentService {
@@ -48,7 +49,7 @@ public class IncidentService {
     public IncidentResponse logIncident(LogIncidentRequest request, String reportingUsername) {
         // Reject the same inmate listed twice (e.g. inmate 1 appearing in
         // two participant entries) before touching the database.
-        Map<Long, String> roleByInmateId = new LinkedHashMap<>();
+        Map<UUID, String> roleByInmateId = new LinkedHashMap<>();
         for (LogIncidentRequest.Participant participant : request.participants()) {
             // @Valid cascades into each element's own field constraints, but
             // it doesn't fail on a null element in the list itself (e.g. a
@@ -62,7 +63,10 @@ public class IncidentService {
             roleByInmateId.put(participant.inmateId(), participant.roleInIncident());
         }
 
-        List<Inmate> inmates = inmateRepository.findAllById(roleByInmateId.keySet());
+        List<Inmate> inmates = roleByInmateId.keySet().stream()
+                .map(inmateRepository::findByPublicUuid)
+                .flatMap(java.util.Optional::stream)
+                .toList();
         if (inmates.size() != roleByInmateId.size()) {
             // Some of the requested inmate IDs don't exist.
             throw new IncidentInmateNotFoundException();
@@ -83,17 +87,17 @@ public class IncidentService {
 
         for (Inmate inmate : inmates) {
             incidentInmateRepository.save(
-                    new IncidentInmate(incident, inmate, roleByInmateId.get(inmate.getId())));
+                    new IncidentInmate(incident, inmate, roleByInmateId.get(inmate.getPublicUuid())));
         }
 
         return toResponse(incident, incidentInmateRepository.findByIncidentId(incident.getId()));
     }
 
     @Transactional
-    public IncidentResponse recordOutcome(Long incidentId, RecordOutcomeRequest request) {
+    public IncidentResponse recordOutcome(UUID incidentId, RecordOutcomeRequest request) {
         // Confirms the incident exists at all, so we can tell "doesn't
         // exist" (404) apart from "exists but already resolved" (409).
-        incidentRepository.findById(incidentId)
+        Incident incident = incidentRepository.findByPublicUuid(incidentId)
                 .orElseThrow(IncidentNotFoundException::new);
 
         // Write-once, concurrency-safe: this only updates a row that is
@@ -102,24 +106,25 @@ public class IncidentService {
         // 'resolved' or loses the race at the database level, and either
         // way gets 0 rows updated here.
         int updated = incidentRepository.recordOutcomeIfOpen(
-                incidentId, request.outcome(), Incident.STATUS_RESOLVED, Incident.STATUS_OPEN);
+                incident.getId(), request.outcome(), Incident.STATUS_RESOLVED, Incident.STATUS_OPEN);
         if (updated == 0) {
             throw new OutcomeAlreadyRecordedException();
         }
 
-        Incident updatedIncident = incidentRepository.findById(incidentId)
+        Incident updatedIncident = incidentRepository.findByPublicUuid(incidentId)
                 .orElseThrow(IncidentNotFoundException::new);
-        return toResponse(updatedIncident, incidentInmateRepository.findByIncidentId(incidentId));
+        return toResponse(updatedIncident, incidentInmateRepository.findByIncidentId(updatedIncident.getId()));
     }
 
     @Transactional(readOnly = true)
-    public List<IncidentHistoryItemResponse> getHistory(Long inmateId) {
-        if (!inmateRepository.existsById(inmateId)) {
+    public List<IncidentHistoryItemResponse> getHistory(UUID inmateId) {
+        Inmate inmate = inmateRepository.findByPublicUuid(inmateId).orElse(null);
+        if (inmate == null) {
             throw new IncidentInmateNotFoundException();
         }
-        return incidentInmateRepository.findByInmateIdOrderByIncidentDateDesc(inmateId).stream()
+        return incidentInmateRepository.findByInmateIdOrderByIncidentDateDesc(inmate.getId()).stream()
                 .map(participant -> new IncidentHistoryItemResponse(
-                        participant.getIncident().getId(),
+                        participant.getIncident().getPublicUuid(),
                         participant.getIncident().getIncidentDate(),
                         participant.getIncident().getDescription(),
                         participant.getIncident().getStatus(),
@@ -130,10 +135,10 @@ public class IncidentService {
 
     private IncidentResponse toResponse(Incident incident, List<IncidentInmate> participants) {
         List<IncidentResponse.ParticipantResponse> participantResponses = participants.stream()
-                .map(p -> new IncidentResponse.ParticipantResponse(p.getInmate().getId(), p.getRoleInIncident()))
+                .map(p -> new IncidentResponse.ParticipantResponse(p.getInmate().getPublicUuid(), p.getRoleInIncident()))
                 .toList();
         return new IncidentResponse(
-                incident.getId(), incident.getIncidentDate(), incident.getDescription(),
+                incident.getPublicUuid(), incident.getIncidentDate(), incident.getDescription(),
                 incident.getStatus(), incident.getOutcome(), incident.getReportedBy(), participantResponses);
     }
 
