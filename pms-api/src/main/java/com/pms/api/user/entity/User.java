@@ -17,6 +17,7 @@ import org.hibernate.annotations.BatchSize;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -55,6 +56,9 @@ public class User {
     @Column(name = "username", nullable = false, length = 16)
     private String username;
 
+    @Column(name = "email", length = 254)
+    private String email;
+
     @JsonIgnore
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
@@ -90,8 +94,14 @@ public class User {
     }
 
     public User(String fullName, String username, String passwordHash, String role, Set<String> permissions) {
+        this(fullName, username, null, passwordHash, role, permissions);
+    }
+
+    public User(String fullName, String username, String email, String passwordHash, String role,
+                Set<String> permissions) {
         this.fullName = fullName;
         this.username = username;
+        this.email = email == null ? null : email.trim().toLowerCase(Locale.ROOT);
         this.passwordHash = passwordHash;
         this.role = role;
         replacePermissions(permissions);
@@ -111,6 +121,10 @@ public class User {
 
     public String getUsername() {
         return username;
+    }
+
+    public String getEmail() {
+        return email;
     }
 
     @JsonIgnore
