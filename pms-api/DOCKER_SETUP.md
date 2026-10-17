@@ -119,6 +119,23 @@ docker compose down -v
 
 > Use `-v` only if you want to reset the database completely.
 
+## Email password recovery
+
+Recovery email is disabled unless explicitly enabled. To send reset tokens through SMTP, add the following to `.env`:
+
+```env
+RECOVERY_EMAIL_ENABLED=true
+RECOVERY_EMAIL_FROM=security@your-verified-domain.com
+SPRING_MAIL_HOST=smtp.resend.com
+SPRING_MAIL_PORT=587
+SPRING_MAIL_USERNAME=resend
+SPRING_MAIL_PASSWORD=re_your_resend_api_key
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+```
+
+Use the SMTP provider's app password or service credential, not a personal mailbox password. Recreate the app container after changing these settings. Without a configured sender, password recovery stays unavailable. Repeating `POST /api/v1/auth/password/forgot` sends a new token and invalidates any outstanding token for that account.
+
 ## 7) Access the app
 
 Once the containers are running, open:

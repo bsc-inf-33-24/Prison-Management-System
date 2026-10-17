@@ -181,7 +181,19 @@ class UserEmailAuthenticationIntegrationTest {
 
         ArgumentCaptor<String> rawToken = ArgumentCaptor.forClass(String.class);
         verify(recoveryDelivery).deliver(eq(Optional.of(email)), rawToken.capture());
-        assertTrue(resetTokenRepository.findByTokenHash(AuthService.hash(rawToken.getValue())).isPresent());
+        String firstToken = rawToken.getValue();
+        assertTrue(resetTokenRepository.findByTokenHash(AuthService.hash(firstToken)).isPresent());
+
+        reset(recoveryDelivery);
+        MvcResult resendResult = mockMvc.perform(post("/api/v1/auth/password/forgot")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(knownRequest)))
+            .andExpect(status().isAccepted()).andReturn();
+        assertEquals(knownResponse, resendResult.getResponse().getContentAsString());
+        ArgumentCaptor<String> resentToken = ArgumentCaptor.forClass(String.class);
+        verify(recoveryDelivery).deliver(eq(Optional.of(email)), resentToken.capture());
+        assertFalse(resetTokenRepository.findByTokenHash(AuthService.hash(firstToken)).isPresent());
+        assertTrue(resetTokenRepository.findByTokenHash(AuthService.hash(resentToken.getValue())).isPresent());
 
         reset(recoveryDelivery);
         ObjectNode unknownRequest = objectMapper.createObjectNode();
