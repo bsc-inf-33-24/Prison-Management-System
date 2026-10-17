@@ -50,6 +50,7 @@ class FlywayMigrationPostgresTest {
                     "allocated_at", "created_at", "updated_at"));
             assertColumns(connection, "cases", Set.of("id", "inmate_id", "case_number", "court",
                     "case_start_date", "case_end_date", "status", "created_by", "created_at", "updated_at"));
+                assertColumns(connection, "users", Set.of("email"));
             assertColumns(connection, "crimes", Set.of("id", "offence_name", "description", "category",
                     "created_at", "updated_at"));
             assertColumns(connection, "case_crimes", Set.of("case_id", "crime_id"));
@@ -65,6 +66,8 @@ class FlywayMigrationPostgresTest {
             assertForeignKey(connection, "sentences", "inmate_id", "inmates", "id");
             assertUniqueIndex(connection, "cells", Set.of("block_name", "cell_number"));
             assertUniqueIndex(connection, "cell_allocations", Set.of("inmate_id"));
+            assertEmailUniqueIndex(connection);
+            assertLegacyUserUnchanged(connection);
             assertCheckConstraint(connection, "cells", "capacity > 0");
             assertThat(count(connection, "\"Case\"")).isEqualTo(1);
             assertThat(count(connection, "crime")).isEqualTo(1);
@@ -81,6 +84,8 @@ class FlywayMigrationPostgresTest {
 
     private void insertLegacyRows(Connection connection) throws Exception {
         try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("INSERT INTO users (full_name, username, password_hash, role) "
+                    + "VALUES ('Legacy user', 'legacy-user', 'legacy-password-hash', 'Records Officer')");
             statement.executeUpdate("INSERT INTO inmate (full_name) VALUES ('Legacy inmate')");
             statement.executeUpdate("INSERT INTO \"Case\" (inmate_id, case_number) "
                     + "VALUES (1, 'LEGACY-CASE')");
@@ -140,6 +145,31 @@ class FlywayMigrationPostgresTest {
             }
         }
         assertThat(columnsByIndex.values()).anySatisfy(columns -> assertThat(columns).containsExactlyInAnyOrderElementsOf(expectedColumns));
+    }
+
+    private void assertEmailUniqueIndex(Connection connection) throws Exception {
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT indexdef FROM pg_indexes "
+                     + "WHERE tablename = 'users' AND indexname = 'uk_users_email_lower'")) {
+            assertThat(result.next()).isTrue();
+            assertThat(result.getString("indexdef").toLowerCase(Locale.ROOT))
+                    .contains("unique index", "lower(", "email", "where (email is not null)");
+        }
+    }
+
+    private void assertLegacyUserUnchanged(Connection connection) throws Exception {
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT password_hash, role, status, "
+                     + "authentication_version, failed_login_attempts, email FROM users "
+                     + "WHERE username = 'legacy-user'")) {
+            assertThat(result.next()).isTrue();
+            assertThat(result.getString("password_hash")).isEqualTo("legacy-password-hash");
+            assertThat(result.getString("role")).isEqualTo("Records Officer");
+            assertThat(result.getString("status")).isEqualTo("active");
+            assertThat(result.getLong("authentication_version")).isZero();
+            assertThat(result.getInt("failed_login_attempts")).isZero();
+            assertThat(result.getString("email")).isNull();
+        }
     }
 
     private void assertCheckConstraint(Connection connection, String table, String expectedExpression)

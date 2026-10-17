@@ -51,6 +51,16 @@ public class ApiExceptionHandler {
         return problem(HttpStatus.CONFLICT, "Username already exists.");
     }
 
+    @ExceptionHandler(UserService.EmailAlreadyExistsException.class)
+    public ResponseEntity<ApiError> handleEmailConflict() {
+        return problem(HttpStatus.CONFLICT, "Email already exists.");
+    }
+
+    @ExceptionHandler(UserService.UserIdentityAlreadyExistsException.class)
+    public ResponseEntity<ApiError> handleUserIdentityConflict() {
+        return problem(HttpStatus.CONFLICT, "Username or email already exists.");
+    }
+
     @ExceptionHandler(UserService.UserNotFoundException.class)
     public ResponseEntity<ApiError> handleUserNotFound() {
         return problem(HttpStatus.NOT_FOUND, "User not found.");
