@@ -10,11 +10,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.pms.api.auth.repository.PasswordResetTokenRepository;
+import com.pms.api.auth.service.AuthService;
+import com.pms.api.auth.service.RecoveryTokenDelivery;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,6 +29,13 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.annotation.Transactional;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -41,6 +53,17 @@ class UserEmailAuthenticationIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private PasswordResetTokenRepository resetTokenRepository;
+
+    @MockitoBean
+    private RecoveryTokenDelivery recoveryDelivery;
+
+    @BeforeEach
+    void resetRecoveryDeliveryMock() {
+        reset(recoveryDelivery);
+    }
 
     @Test
     void acceptsOptionalEmailAndAuthenticatesWithUsernameOrNormalizedEmail() throws Exception {
@@ -138,6 +161,37 @@ class UserEmailAuthenticationIntegrationTest {
         login(username, "Records456!").andExpect(status().isOk());
         login(email, "Records456!").andExpect(status().isOk());
         login(email, "Records123!").andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @Transactional
+    void recoversByEmailWithoutDisclosingWhetherTheAddressIsRegistered() throws Exception {
+        String username = uniqueUsername();
+        String email = "recovery." + UUID.randomUUID() + "@example.test";
+        createUser(username, " " + email + " ", true);
+
+        ObjectNode knownRequest = objectMapper.createObjectNode();
+        knownRequest.put("username", "  " + email.toUpperCase(java.util.Locale.ROOT) + "  ");
+        MvcResult knownResult = mockMvc.perform(post("/api/v1/auth/password/forgot")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(knownRequest)))
+                .andExpect(status().isAccepted()).andReturn();
+        String knownResponse = knownResult.getResponse().getContentAsString();
+        assertFalse(knownResponse.contains(email));
+
+        ArgumentCaptor<String> rawToken = ArgumentCaptor.forClass(String.class);
+        verify(recoveryDelivery).deliver(eq(Optional.of(email)), rawToken.capture());
+        assertTrue(resetTokenRepository.findByTokenHash(AuthService.hash(rawToken.getValue())).isPresent());
+
+        reset(recoveryDelivery);
+        ObjectNode unknownRequest = objectMapper.createObjectNode();
+        unknownRequest.put("username", "missing." + UUID.randomUUID() + "@example.test");
+        MvcResult unknownResult = mockMvc.perform(post("/api/v1/auth/password/forgot")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(unknownRequest)))
+                .andExpect(status().isAccepted()).andReturn();
+        assertEquals(knownResponse, unknownResult.getResponse().getContentAsString());
+        verify(recoveryDelivery).deliver(eq(Optional.empty()), anyString());
     }
 
     private JsonNode createUser(String username, String email, boolean includeEmail) throws Exception {
