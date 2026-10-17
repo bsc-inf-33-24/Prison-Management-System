@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -18,6 +20,9 @@ class ApiVersioningAndSwaggerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+        @Autowired
+        private ObjectMapper objectMapper;
 
     @Test
     void openApiUsesCanonicalVersionedBusinessPaths() throws Exception {
@@ -44,5 +49,12 @@ class ApiVersioningAndSwaggerTest {
                 .doesNotContain("\"/api/cells\"")
                 .doesNotContain("\"/api/incidents\"")
                 .doesNotContain("\"/api/sentences\"");
+
+        JsonNode document = objectMapper.readTree(docs);
+        JsonNode createUserSchema = document.at("/components/schemas/CreateUserRequest");
+        assertThat(createUserSchema.at("/properties/email").isObject()).isTrue();
+        assertThat(createUserSchema.path("required").toString()).doesNotContain("email");
+        assertThat(document.at("/components/schemas/AuthRequest/properties/username/description").asText())
+                .contains("Username or email");
     }
 }

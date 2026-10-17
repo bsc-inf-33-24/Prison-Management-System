@@ -14,6 +14,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -50,11 +51,15 @@ public class AuthService {
 
     @Transactional(noRollbackFor = org.springframework.security.core.AuthenticationException.class)
     public LoginResult login(AuthRequest request) {
-        String username = request.username().trim();
-        User knownUser = userRepository.findByUsername(username).orElse(null);
+        String login = request.username().trim();
+        User knownUser = userRepository.findByUsername(login)
+                .or(() -> userRepository.findByEmailIgnoreCase(login))
+                .orElse(null);
         if (knownUser != null && knownUser.isLoginLocked()) throw new AccountLockedException();
         try {
-            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, request.password()));
+            String canonicalUsername = knownUser == null ? login : knownUser.getUsername();
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(canonicalUsername, request.password()));
             User user = userRepository.findByUsername(authentication.getName()).orElseThrow(() -> new BadCredentialsException("Invalid username or password."));
             user.resetLoginFailures();
             return new LoginResult(new AuthResponse(jwtService.generateToken(user), "Bearer"));
@@ -67,12 +72,17 @@ public class AuthService {
     @Transactional
     public PasswordRecoveryResponse forgotPassword(ForgotPasswordRequest request) {
         String rawToken = randomToken();
-        User user = userRepository.findByUsername(request.username().trim()).orElse(null);
+        String identity = request.username().trim();
+        User user = userRepository.findByUsername(identity)
+                .or(() -> userRepository.findByEmailIgnoreCase(identity))
+                .orElse(null);
+        Optional<String> recipient = Optional.empty();
         if (user != null && user.isActive()) {
             resetTokens.deleteOutstandingForUser(user.getId());
             resetTokens.save(new PasswordResetToken(user, hash(rawToken), Instant.now().plus(resetTtl)));
+            recipient = Optional.of(user.getEmail() == null ? user.getUsername() : user.getEmail());
         }
-        recoveryDelivery.deliver(request.username().trim(), rawToken);
+        recoveryDelivery.deliver(recipient, rawToken);
         return new PasswordRecoveryResponse(RECOVERY_MESSAGE);
     }
 
