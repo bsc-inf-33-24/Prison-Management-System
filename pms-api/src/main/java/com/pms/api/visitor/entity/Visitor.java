@@ -10,6 +10,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(
@@ -22,6 +23,9 @@ public class Visitor {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "visitor_id")
     private Long id;
+
+    @Column(name = "public_uuid", nullable = false, updatable = false, unique = true)
+    private UUID publicUuid = UUID.randomUUID();
 
     @Column(name = "full_name", nullable = false, length = 255)
     private String fullName;
@@ -65,6 +69,10 @@ public class Visitor {
 
     public Long getId() {
         return id;
+    }
+
+    public UUID getPublicUuid() {
+        return publicUuid;
     }
 
     public String getFullName() {

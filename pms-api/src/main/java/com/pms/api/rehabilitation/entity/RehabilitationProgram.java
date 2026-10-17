@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.UUID;
 
 
 @Entity
@@ -16,6 +17,9 @@ public class RehabilitationProgram {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "program_id")
     private Long id;
+
+    @Column(name = "public_uuid", nullable = false, updatable = false, unique = true)
+    private UUID publicUuid = UUID.randomUUID();
 
     @Column(name = "name", nullable = false, length = 255)
     private String name;
@@ -46,6 +50,10 @@ public class RehabilitationProgram {
 
     public Long getId() {
         return id;
+    }
+
+    public UUID getPublicUuid() {
+        return publicUuid;
     }
 
     public String getName() {

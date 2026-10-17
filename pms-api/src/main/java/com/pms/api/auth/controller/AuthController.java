@@ -45,7 +45,7 @@ public class AuthController {
     }
 
     @PostMapping("/password/forgot")
-    @Operation(summary = "Initiate password recovery", description = "Returns the same response for known and unknown usernames. A configured recovery delivery integration is required.")
+    @Operation(summary = "Initiate password recovery", description = "Accepts a username or email and returns the same response for registered and unregistered identities. A configured recovery delivery integration is required.")
     public ResponseEntity<PasswordRecoveryResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         return ResponseEntity.accepted().body(authService.forgotPassword(request));
     }

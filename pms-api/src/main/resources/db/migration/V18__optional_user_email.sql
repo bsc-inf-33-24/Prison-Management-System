@@ -1,0 +1,5 @@
+ALTER TABLE users ADD COLUMN email VARCHAR(254);
+
+CREATE UNIQUE INDEX uk_users_email_lower
+    ON users (LOWER(email))
+    WHERE email IS NOT NULL;

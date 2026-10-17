@@ -1,9 +1,10 @@
 package com.pms.api.cell.dto;
 
 import com.pms.api.cell.entity.Cell;
+import java.util.UUID;
 
 public record CellResponse(
-        Long id,
+        UUID id,
         String name,
         Integer capacity,
         Integer currentOccupancy,
@@ -12,7 +13,7 @@ public record CellResponse(
     public static CellResponse from(Cell cell, long occupancy) {
         int currentOccupancy = Math.toIntExact(occupancy);
         return new CellResponse(
-                cell.getId(),
+                cell.getPublicUuid(),
                 cell.getName(),
                 cell.getCapacity(),
                 currentOccupancy,

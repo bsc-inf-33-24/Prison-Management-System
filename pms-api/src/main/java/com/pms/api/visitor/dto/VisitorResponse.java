@@ -2,9 +2,10 @@ package com.pms.api.visitor.dto;
 
 import com.pms.api.visitor.entity.Visitor;
 import java.time.Instant;
+import java.util.UUID;
 
 public record VisitorResponse(
-        Long id,
+        UUID id,
         String fullName,
         String idNumber,
         String phone,
@@ -14,7 +15,7 @@ public record VisitorResponse(
 ) {
     public static VisitorResponse from(Visitor visitor) {
         return new VisitorResponse(
-                visitor.getId(),
+                visitor.getPublicUuid(),
                 visitor.getFullName(),
                 visitor.getIdNumber(),
                 visitor.getPhone(),

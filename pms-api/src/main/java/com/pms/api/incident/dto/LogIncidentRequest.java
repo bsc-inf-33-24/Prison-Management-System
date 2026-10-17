@@ -11,6 +11,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 // ignoreUnknown = true: if the client sends an extra field we don't expect,
 // we ignore it instead of failing the whole request - matches the
@@ -38,7 +39,7 @@ public record LogIncidentRequest(
 
             @NotNull(message = "Inmate ID is required.")
             @Positive(message = "Inmate ID must be a positive number.")
-            Long inmateId,
+            UUID inmateId,
 
             @Size(max = 255, message = "Role in incident must be at most 255 characters.")
             String roleInIncident

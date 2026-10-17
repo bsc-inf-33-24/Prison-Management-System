@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.UUID;
 
 @Service
 public class RehabilitationProgramService {
@@ -46,7 +47,7 @@ public class RehabilitationProgramService {
                 ACTIVE
         );
         RehabilitationProgram saved = programRepository.save(program);
-        auditService.record(username, "PROGRAM_CREATED", "RehabProgram", saved.getId(), null,
+        auditService.record(username, "PROGRAM_CREATED", "RehabProgram", saved.getPublicUuid().toString(), null,
                 "name=" + saved.getName() + ",status=" + saved.getStatus());
         return ProgramResponse.from(saved);
     }
@@ -77,23 +78,23 @@ public class RehabilitationProgramService {
     }
 
     @Transactional(readOnly = true)
-    public ProgramResponse get(Long programId) {
+    public ProgramResponse get(UUID programId) {
         return ProgramResponse.from(findProgram(programId));
     }
 
     @Transactional(readOnly = true)
-    public ProgramDetailResponse getDetails(Long programId) {
+    public ProgramDetailResponse getDetails(UUID programId) {
         RehabilitationProgram program = findProgram(programId);
         return ProgramDetailResponse.from(
                 program,
                 enrollmentRepository.countByProgram_IdAndStatusIn(
-                        programId, java.util.List.of("enrolled", "suspended")),
-                enrollmentRepository.countByProgram_IdAndStatus(programId, "completed")
+                        program.getId(), java.util.List.of("enrolled", "suspended")),
+                enrollmentRepository.countByProgram_IdAndStatus(program.getId(), "completed")
         );
     }
 
     @Transactional
-    public ProgramResponse update(Long programId, UpdateProgramRequest request, String username) {
+    public ProgramResponse update(UUID programId, UpdateProgramRequest request, String username) {
         RehabilitationProgram program = findProgram(programId);
         String oldValues = "name=" + program.getName() + ",instructor=" + program.getInstructor();
         program.updateDetails(
@@ -102,13 +103,13 @@ public class RehabilitationProgramService {
                 request.instructor().trim(),
                 request.schedule()
         );
-        auditService.record(username, "PROGRAM_UPDATED", "RehabProgram", program.getId(), oldValues,
+        auditService.record(username, "PROGRAM_UPDATED", "RehabProgram", program.getPublicUuid().toString(), oldValues,
                 "name=" + program.getName() + ",instructor=" + program.getInstructor());
         return ProgramResponse.from(program);
     }
 
     @Transactional
-    public ProgramResponse updateStatus(Long programId, UpdateProgramStatusRequest request,
+    public ProgramResponse updateStatus(UUID programId, UpdateProgramStatusRequest request,
                                         String username) {
         String status = normalizeStatus(request.status());
         if ((INACTIVE.equals(status) || COMPLETED.equals(status))
@@ -119,13 +120,13 @@ public class RehabilitationProgramService {
         RehabilitationProgram program = findProgram(programId);
         String oldStatus = program.getStatus();
         program.updateStatus(status);
-        auditService.record(username, "PROGRAM_STATUS_CHANGED", "RehabProgram", program.getId(),
+        auditService.record(username, "PROGRAM_STATUS_CHANGED", "RehabProgram", program.getPublicUuid().toString(),
                 "status=" + oldStatus, "status=" + status + ",reason=" + request.reason());
         return ProgramResponse.from(program);
     }
 
-    public RehabilitationProgram findProgram(Long programId) {
-        return programRepository.findById(programId)
+    public RehabilitationProgram findProgram(UUID programId) {
+        return programRepository.findByPublicUuid(programId)
                 .orElseThrow(ProgramNotFoundException::new);
     }
 

@@ -2,9 +2,10 @@ package com.pms.api.cell.dto;
 
 import com.pms.api.cell.entity.Cell;
 import java.util.List;
+import java.util.UUID;
 
 public record CellDetailResponse(
-        Long id,
+        UUID id,
         String name,
         String blockName,
         Integer cellNumber,
@@ -16,7 +17,7 @@ public record CellDetailResponse(
 ) {
     public static CellDetailResponse from(Cell cell, int occupancy, List<CellInmateSummary> inmates) {
         return new CellDetailResponse(
-                cell.getId(),
+                cell.getPublicUuid(),
                 cell.getName(),
                 cell.getBlockName(),
                 cell.getCellNumber(),

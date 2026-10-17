@@ -3,11 +3,12 @@ package com.pms.api.sentence.dto;
 import com.pms.api.sentence.entity.Sentence;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 public record SentenceResponse(
-        Long id,
-        Long caseId,
-        Long inmateId,
+        UUID id,
+        UUID caseId,
+        UUID inmateId,
         Integer duration,
         LocalDate startDate,
         LocalDate releaseDate,
@@ -18,9 +19,9 @@ public record SentenceResponse(
 
     public static SentenceResponse from(Sentence sentence) {
         return new SentenceResponse(
-                sentence.getId(),
-                sentence.getCaseId(),
-                sentence.getInmateId(),
+                sentence.getPublicUuid(),
+                sentence.getCase() == null ? null : sentence.getCase().getPublicUuid(),
+                sentence.getInmate() == null ? null : sentence.getInmate().getPublicUuid(),
                 sentence.getDuration(),
                 sentence.getStartDate(),
                 sentence.getReleaseDate(),

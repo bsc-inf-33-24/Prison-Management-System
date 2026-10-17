@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 // Maps directly onto V5__discipline_tables_creation.sql's "Incident" table.
 // Column-for-column with that migration on purpose — see IncidentInmate for
@@ -28,6 +29,9 @@ public class Incident {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "incident_id")
     private Long id;
+
+    @Column(name = "public_uuid", nullable = false, updatable = false, unique = true)
+    private UUID publicUuid = UUID.randomUUID();
 
     @Column(name = "incident_date")
     private LocalDate incidentDate;
@@ -72,6 +76,10 @@ public class Incident {
 
     public Long getId() {
         return id;
+    }
+
+    public UUID getPublicUuid() {
+        return publicUuid;
     }
 
     public LocalDate getIncidentDate() {

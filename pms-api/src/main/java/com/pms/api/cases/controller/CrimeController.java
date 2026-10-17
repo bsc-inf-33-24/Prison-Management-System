@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -57,14 +58,14 @@ public class CrimeController {
     @Operation(summary = "Get a crime catalog entry")
     @GetMapping("/crimes/{crimeId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CASE_OFFICER')")
-    public CrimeResponse get(@PathVariable Long crimeId) {
+    public CrimeResponse get(@PathVariable UUID crimeId) {
         return crimeService.get(crimeId);
     }
 
     @Operation(summary = "Update a crime catalog entry")
     @PutMapping("/crimes/{crimeId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public CrimeResponse update(@PathVariable Long crimeId, @Valid @RequestBody CrimeRequest request) {
+    public CrimeResponse update(@PathVariable UUID crimeId, @Valid @RequestBody CrimeRequest request) {
         return crimeService.update(crimeId, request);
     }
 }

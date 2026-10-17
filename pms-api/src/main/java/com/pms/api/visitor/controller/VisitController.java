@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -50,7 +51,7 @@ public class VisitController {
     @Operation(summary = "Get a visit by ID", description = "Find a specific visit with linked visitor and inmate details.")
     @GetMapping("/visits/{visitId}")
     @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
-    public VisitResponse getVisit(@PathVariable Long visitId) {
+    public VisitResponse getVisit(@PathVariable UUID visitId) {
         return visitService.getVisit(visitId);
     }
 
@@ -58,16 +59,16 @@ public class VisitController {
     @GetMapping("/visits")
     @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
     public Page<VisitResponse> searchVisits(
-            @RequestParam(required = false) Long visitId,
-            @RequestParam(required = false) Long visitorId,
+            @RequestParam(required = false) UUID visitId,
+            @RequestParam(required = false) UUID visitorId,
             @RequestParam(required = false) String visitorName,
             @RequestParam(required = false) String visitorIdNumber,
-            @RequestParam(required = false) Long inmateId,
+            @RequestParam(required = false) UUID inmateId,
             @RequestParam(required = false) String inmateNumber,
             @RequestParam(required = false) String inmateName,
             @RequestParam(required = false) OffsetDateTime visitDateFrom,
             @RequestParam(required = false) OffsetDateTime visitDateTo,
-            @RequestParam(required = false) Long loggedBy,
+            @RequestParam(required = false) UUID loggedBy,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sort) {
@@ -79,7 +80,7 @@ public class VisitController {
     @GetMapping("/inmates/{inmateId}/visits")
     @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
     public Page<VisitHistoryResponse> getInmateVisitHistory(
-            @PathVariable Long inmateId,
+            @PathVariable UUID inmateId,
             @RequestParam(required = false) String visitorName,
             @RequestParam(required = false) String visitorIdNumber,
             @RequestParam(required = false) OffsetDateTime visitDateFrom,
@@ -93,7 +94,7 @@ public class VisitController {
     @Operation(summary = "Update a visit", description = "Correct the visit time and duration without changing the linked visitor or inmate.")
     @PutMapping("/visits/{visitId}")
     @PreAuthorize("hasRole('VISITOR_OFFICER')")
-    public VisitResponse updateVisit(@PathVariable Long visitId,
+    public VisitResponse updateVisit(@PathVariable UUID visitId,
                                     @Valid @RequestBody UpdateVisitRequest request,
                                     @AuthenticationPrincipal UserDetails currentUser) {
         return visitService.updateVisit(visitId, request, currentUser.getUsername());

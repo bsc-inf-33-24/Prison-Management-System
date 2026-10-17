@@ -12,6 +12,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -48,10 +49,15 @@ public class UserService implements UserDetailsService {
         if (userRepository.existsByUsername(username)) {
             throw new UsernameAlreadyExistsException();
         }
+        String email = request.email();
+        if (email != null && userRepository.existsByEmailIgnoreCase(email)) {
+            throw new EmailAlreadyExistsException();
+        }
 
         User user = new User(
                 request.fullName().trim(),
                 username,
+                email,
                 passwordEncoder.encode(request.password()),
                 request.role().trim(),
                 Set.of()
@@ -59,7 +65,7 @@ public class UserService implements UserDetailsService {
         try {
             return UserResponse.from(userRepository.save(user));
         } catch (DataIntegrityViolationException exception) {
-            throw new UsernameAlreadyExistsException();
+            throw new UserIdentityAlreadyExistsException();
         }
     }
 
@@ -85,7 +91,8 @@ public class UserService implements UserDetailsService {
             String value = "%" + escapeLike(search.trim()).toLowerCase(Locale.ROOT) + "%";
             specification = specification.and((root, query, cb) -> cb.or(
                     cb.like(cb.lower(root.get("fullName")), value, '!'),
-                    cb.like(cb.lower(root.get("username")), value, '!')));
+                    cb.like(cb.lower(root.get("username")), value, '!'),
+                    cb.like(cb.lower(root.get("email")), value, '!')));
         }
         return PageResponse.from(userRepository.findAll(specification, pageable).map(UserResponse::from));
     }
@@ -95,26 +102,26 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional(readOnly = true)
-    public UserResponse findById(Long userId) {
+    public UserResponse findById(UUID userId) {
         return UserResponse.from(getUser(userId));
     }
 
     @Transactional
-    public UserResponse deactivate(Long userId) {
+    public UserResponse deactivate(UUID userId) {
         User user = getUser(userId);
         user.deactivate();
         return UserResponse.from(user);
     }
 
     @Transactional
-    public UserResponse reactivate(Long userId) {
+    public UserResponse reactivate(UUID userId) {
         User user = getUser(userId);
         user.reactivate();
         return UserResponse.from(user);
     }
 
     @Transactional
-    public UserResponse updateRole(Long userId, UpdateRoleRequest request) {
+    public UserResponse updateRole(UUID userId, UpdateRoleRequest request) {
         validateRole(request.role());
         User user = getUser(userId);
         user.replaceRoleAndPermissions(request.role().trim(),
@@ -130,7 +137,7 @@ public class UserService implements UserDetailsService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, noRollbackFor = UsernameNotFoundException.class)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Invalid username or password."));
@@ -146,8 +153,8 @@ public class UserService implements UserDetailsService {
                 !user.isLoginLocked(), authorities);
     }
 
-    public User getUser(Long userId) {
-        return userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+    public User getUser(UUID userId) {
+        return userRepository.findByPublicUuid(userId).orElseThrow(UserNotFoundException::new);
     }
 
     public static void validateRole(String role) {
@@ -162,5 +169,7 @@ public class UserService implements UserDetailsService {
 
     public static class UserNotFoundException extends RuntimeException { }
     public static class UsernameAlreadyExistsException extends RuntimeException { }
+    public static class EmailAlreadyExistsException extends RuntimeException { }
+    public static class UserIdentityAlreadyExistsException extends RuntimeException { }
     public static class InvalidRoleException extends RuntimeException { }
 }

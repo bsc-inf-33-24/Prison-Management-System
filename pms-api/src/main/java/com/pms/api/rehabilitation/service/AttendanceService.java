@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.UUID;
 
 import java.time.LocalDate;
 
@@ -53,20 +54,20 @@ public class AttendanceService {
                 recordedBy
         );
         AttendanceRecord saved = attendanceRepository.save(attendance);
-        auditService.record(recordedBy, "ATTENDANCE_CREATED", "AttendanceRecord", saved.getId(), null,
-                "enrollmentId=" + enrollment.getId() + ",present=" + saved.getPresent());
+        auditService.record(recordedBy, "ATTENDANCE_CREATED", "AttendanceRecord", saved.getPublicUuid().toString(), null,
+                "enrollmentId=" + enrollment.getPublicUuid() + ",present=" + saved.getPresent());
         return AttendanceResponse.from(saved);
     }
 
     @Transactional
-    public AttendanceResponse update(Long attendanceId, UpdateAttendanceRequest request,
+    public AttendanceResponse update(UUID attendanceId, UpdateAttendanceRequest request,
                                      String username) {
-        AttendanceRecord attendance = attendanceRepository.findById(attendanceId)
+        AttendanceRecord attendance = attendanceRepository.findByPublicUuid(attendanceId)
                 .orElseThrow(AttendanceNotFoundException::new);
         validateAttendanceAllowed(attendance.getEnrollment());
         String oldValue = attendance.getPresent();
         attendance.updateAttendance(toDatabaseValue(request.attendanceStatus()), request.remarks());
-        auditService.record(username, "ATTENDANCE_UPDATED", "AttendanceRecord", attendance.getId(),
+        auditService.record(username, "ATTENDANCE_UPDATED", "AttendanceRecord", attendance.getPublicUuid().toString(),
                 "present=" + oldValue, "present=" + attendance.getPresent());
         return AttendanceResponse.from(attendance);
     }
@@ -77,19 +78,22 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AttendanceResponse> list(Long enrollmentId, Long inmateId, Long programId,
+    public Page<AttendanceResponse> list(UUID enrollmentId, UUID inmateId, UUID programId,
                                          String attendanceStatus, LocalDate sessionDateFrom,
                                          LocalDate sessionDateTo, Pageable pageable) {
         Specification<AttendanceRecord> specification =
                 Specification.where((Specification<AttendanceRecord>) null);
-        if (enrollmentId != null) {
-            specification = specification.and(AttendanceSpecifications.enrollmentId(enrollmentId));
+        Long internalEnrollmentId = enrollmentId == null ? null : enrollmentService.findEnrollment(enrollmentId).getId();
+        Long internalInmateId = inmateId == null ? null : enrollmentService.getInmateId(inmateId);
+        Long internalProgramId = programId == null ? null : enrollmentService.getProgramId(programId);
+        if (internalEnrollmentId != null) {
+            specification = specification.and(AttendanceSpecifications.enrollmentId(internalEnrollmentId));
         }
-        if (inmateId != null) {
-            specification = specification.and(AttendanceSpecifications.inmateId(inmateId));
+        if (internalInmateId != null) {
+            specification = specification.and(AttendanceSpecifications.inmateId(internalInmateId));
         }
-        if (programId != null) {
-            specification = specification.and(AttendanceSpecifications.programId(programId));
+        if (internalProgramId != null) {
+            specification = specification.and(AttendanceSpecifications.programId(internalProgramId));
         }
         if (attendanceStatus != null && !attendanceStatus.isBlank()) {
             specification = specification.and(AttendanceSpecifications.statusIs(attendanceStatus));
@@ -104,9 +108,10 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AttendanceResponse> history(Long enrollmentId, Pageable pageable) {
+    public Page<AttendanceResponse> history(UUID enrollmentId, Pageable pageable) {
         enrollmentService.findEnrollment(enrollmentId);
-        return attendanceRepository.findByEnrollment_IdOrderBySessionDateDescIdDesc(enrollmentId, pageable)
+        return attendanceRepository.findByEnrollment_IdOrderBySessionDateDescIdDesc(
+                enrollmentService.findEnrollment(enrollmentId).getId(), pageable)
                 .map(AttendanceResponse::from);
     }
 

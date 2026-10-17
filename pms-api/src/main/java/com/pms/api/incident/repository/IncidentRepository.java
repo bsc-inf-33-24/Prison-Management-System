@@ -5,9 +5,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface IncidentRepository extends JpaRepository<Incident, Long> {
+
+    Optional<Incident> findByPublicUuid(UUID publicUuid);
 
     // Atomic, concurrency-safe outcome recording. This UPDATE only matches a
     // row (and returns 1) if the incident is still "open" at the moment it

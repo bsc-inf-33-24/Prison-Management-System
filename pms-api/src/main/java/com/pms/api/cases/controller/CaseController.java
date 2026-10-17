@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.time.LocalDate;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -51,8 +52,8 @@ public class CaseController {
     @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List case records")
     public PageResponse<CaseResponse> listCases(@RequestParam(required = false) String status,
-                                                @RequestParam(required = false) Long inmateId,
-                                                @RequestParam(required = false) Long crimeId,
+                                                @RequestParam(required = false) UUID inmateId,
+                                                @RequestParam(required = false) UUID crimeId,
                                                 @RequestParam(required = false) LocalDate caseStartDateFrom,
                                                 @RequestParam(required = false) LocalDate caseStartDateTo,
                                                 @RequestParam(required = false) Integer page,
@@ -65,28 +66,28 @@ public class CaseController {
     @GetMapping("/cases/{caseId}")
     @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Get a case record")
-    public CaseResponse getCase(@PathVariable Long caseId) {
+    public CaseResponse getCase(@PathVariable UUID caseId) {
         return caseService.getCase(caseId);
     }
 
     @PutMapping("/cases/{caseId}")
     @PreAuthorize("hasAnyRole('CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update a case record")
-    public CaseResponse updateCase(@PathVariable Long caseId, @Valid @RequestBody CaseRequest request) {
+    public CaseResponse updateCase(@PathVariable UUID caseId, @Valid @RequestBody CaseRequest request) {
         return caseService.updateCase(caseId, request);
     }
 
     @PatchMapping("/cases/{caseId}/status")
     @PreAuthorize("hasAnyRole('CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update case status")
-    public CaseResponse updateStatus(@PathVariable Long caseId, @Valid @RequestBody CaseStatusRequest request) {
+    public CaseResponse updateStatus(@PathVariable UUID caseId, @Valid @RequestBody CaseStatusRequest request) {
         return caseService.updateStatus(caseId, request);
     }
 
     @GetMapping("/inmates/{inmateId}/cases")
     @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List inmate cases")
-    public PageResponse<CaseResponse> getCasesForInmate(@PathVariable Long inmateId,
+    public PageResponse<CaseResponse> getCasesForInmate(@PathVariable UUID inmateId,
                                                         @RequestParam(required = false) String status,
                                                         @RequestParam(required = false) Integer page,
                                                         @RequestParam(required = false) Integer size,

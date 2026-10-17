@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/rehabilitation/attendance")
@@ -53,7 +54,7 @@ public class AttendanceController {
     @PreAuthorize("hasRole('REHABILITATION_OFFICER')")
     @Operation(summary = "Update attendance")
     public AttendanceResponse update(
-            @PathVariable Long attendanceId,
+            @PathVariable UUID attendanceId,
             @Valid @RequestBody UpdateAttendanceRequest request,
             @AuthenticationPrincipal UserDetails currentUser) {
         return attendanceService.update(attendanceId, request, currentUser.getUsername());
@@ -63,9 +64,9 @@ public class AttendanceController {
     @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER', 'RECORDS_OFFICER')")
     @Operation(summary = "List and search attendance records")
     public Page<AttendanceResponse> list(
-            @RequestParam(required = false) Long enrollmentId,
-            @RequestParam(required = false) Long inmateId,
-            @RequestParam(required = false) Long programId,
+            @RequestParam(required = false) UUID enrollmentId,
+            @RequestParam(required = false) UUID inmateId,
+            @RequestParam(required = false) UUID programId,
             @RequestParam(required = false) String attendanceStatus,
             @RequestParam(required = false) LocalDate sessionDateFrom,
             @RequestParam(required = false) LocalDate sessionDateTo,

@@ -66,21 +66,21 @@ class CaseSentenceManagementIntegrationTest {
                 "Theft", "Property theft", "Property"));
 
         CaseResponse createdCase = caseService.createCase(
-                new CaseRequest(inmate.getId(), "CASE-1001", "County Court",
-                        LocalDate.of(2025, 1, 3), LocalDate.of(2025, 1, 17), Set.of(crime.getId())),
+                new CaseRequest(inmate.getPublicUuid(), "CASE-1001", "County Court",
+                        LocalDate.of(2025, 1, 3), LocalDate.of(2025, 1, 17), Set.of(crime.getPublicUuid())),
                 caseOfficer.getUsername());
 
         SentenceResponse createdSentence = sentenceService.create(new SentenceRequest(
-                createdCase.id(), inmate.getId(), 12, LocalDate.of(2025, 1, 5),
+                createdCase.id(), inmate.getPublicUuid(), 12, LocalDate.of(2025, 1, 5),
                 LocalDate.of(2025, 1, 16), "active"));
 
         assertThat(createdCase.id()).isNotNull();
-        assertThat(createdCase.inmate().id()).isEqualTo(inmate.getId());
+        assertThat(createdCase.inmate().id()).isEqualTo(inmate.getPublicUuid());
         assertThat(createdCase.crimes()).hasSize(1);
         assertThat(createdSentence.caseId()).isEqualTo(createdCase.id());
-        assertThat(createdSentence.inmateId()).isEqualTo(inmate.getId());
+        assertThat(createdSentence.inmateId()).isEqualTo(inmate.getPublicUuid());
         assertThat(createdSentence.status()).isEqualTo("active");
-        assertThat(caseRepository.findById(createdCase.id()).orElseThrow().getStatus()).isEqualTo(CaseStatus.ONGOING);
+        assertThat(caseRepository.findByPublicUuid(createdCase.id()).orElseThrow().getStatus()).isEqualTo(CaseStatus.ONGOING);
     }
 
     @Test
@@ -95,12 +95,12 @@ class CaseSentenceManagementIntegrationTest {
                 "Fraud", "Credit fraud", "Financial"));
 
         CaseResponse createdCase = caseService.createCase(
-                new CaseRequest(inmateOne.getId(), "CASE-2002", "District Court",
-                        LocalDate.of(2025, 2, 1), LocalDate.of(2025, 2, 15), Set.of(crime.getId())),
+                new CaseRequest(inmateOne.getPublicUuid(), "CASE-2002", "District Court",
+                        LocalDate.of(2025, 2, 1), LocalDate.of(2025, 2, 15), Set.of(crime.getPublicUuid())),
                 caseOfficer.getUsername());
 
         assertThrows(SentenceService.InvalidSentenceRequestException.class, () -> sentenceService.create(new SentenceRequest(
-                createdCase.id(), inmateTwo.getId(), 6,
+                createdCase.id(), inmateTwo.getPublicUuid(), 6,
                 LocalDate.of(2025, 2, 3), LocalDate.of(2025, 2, 9), "active")));
     }
 
@@ -113,17 +113,17 @@ class CaseSentenceManagementIntegrationTest {
                 "Assault", "Simple assault", "Violent"));
 
         CaseResponse createdCase = caseService.createCase(
-                new CaseRequest(inmate.getId(), "CASE-3003", "High Court",
-                        LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 20), Set.of(crime.getId())),
+                new CaseRequest(inmate.getPublicUuid(), "CASE-3003", "High Court",
+                        LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 20), Set.of(crime.getPublicUuid())),
                 caseOfficer.getUsername());
 
         caseService.updateStatus(createdCase.id(), new CaseStatusRequest("closed", "Conviction confirmed"));
         assertThrows(SentenceService.InvalidSentenceRequestException.class, () -> sentenceService.create(new SentenceRequest(
-                createdCase.id(), inmate.getId(), 12,
+                createdCase.id(), inmate.getPublicUuid(), 12,
                 LocalDate.of(2025, 3, 11), LocalDate.of(2025, 3, 10), "completed")));
 
         assertThrows(SentenceService.InvalidSentenceRequestException.class, () -> sentenceService.create(new SentenceRequest(
-                createdCase.id(), inmate.getId(), 12,
+                createdCase.id(), inmate.getPublicUuid(), 12,
                 LocalDate.of(2025, 3, 11), LocalDate.of(2025, 3, 10), "completed")));
     }
 
@@ -136,8 +136,8 @@ class CaseSentenceManagementIntegrationTest {
                 "Drug offence", "Possession", "Drug"));
 
         CaseResponse createdCase = caseService.createCase(
-                new CaseRequest(inmate.getId(), "CASE-4004", "Appeal Court",
-                        LocalDate.of(2025, 4, 1), LocalDate.of(2025, 4, 30), Set.of(crime.getId())),
+                new CaseRequest(inmate.getPublicUuid(), "CASE-4004", "Appeal Court",
+                        LocalDate.of(2025, 4, 1), LocalDate.of(2025, 4, 30), Set.of(crime.getPublicUuid())),
                 caseOfficer.getUsername());
 
         assertThrows(CaseService.InvalidCaseRequestException.class,

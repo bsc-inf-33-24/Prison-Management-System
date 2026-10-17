@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
+import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -62,10 +63,10 @@ public class CellService {
 
     @Audited
     @Transactional
-    public CellAllocationResponse allocate(Long inmateId, AllocateCellRequest request) {
-        Inmate inmate = inmateRepository.findById(inmateId)
+    public CellAllocationResponse allocate(UUID inmateId, AllocateCellRequest request) {
+        Inmate inmate = inmateRepository.findByPublicUuid(inmateId)
                 .orElseThrow(InmateNotFoundException::new);
-        Cell cell = cellRepository.findByIdForUpdate(request.cellId())
+        Cell cell = cellRepository.findByPublicUuid(request.cellId())
                 .orElseThrow(CellNotFoundException::new);
 
         validateAllocation(inmate, cell);
@@ -89,15 +90,15 @@ public class CellService {
 
     @Audited
     @Transactional
-    public CellMoveResponse move(Long inmateId, AllocateCellRequest request) {
-        Inmate inmate = inmateRepository.findById(inmateId)
+    public CellMoveResponse move(UUID inmateId, AllocateCellRequest request) {
+        Inmate inmate = inmateRepository.findByPublicUuid(inmateId)
                 .orElseThrow(InmateNotFoundException::new);
 
-        CellAllocation currentAllocation = cellAllocationRepository.findByInmateId(inmateId)
+        CellAllocation currentAllocation = cellAllocationRepository.findByInmateId(inmate.getId())
                 .orElseThrow(CellAllocationNotFoundException::new);
 
         Cell currentCell = currentAllocation.getCell();
-        Cell targetCell = cellRepository.findByIdForUpdate(request.cellId())
+        Cell targetCell = cellRepository.findByPublicUuid(request.cellId())
                 .orElseThrow(CellNotFoundException::new);
 
         if (currentCell.getId().equals(targetCell.getId())) {
@@ -117,9 +118,9 @@ public class CellService {
         cellAllocationRepository.saveAndFlush(currentAllocation);
 
         return new CellMoveResponse(
-                inmateId,
-                currentCell.getId(),
-                targetCell.getId(),
+                inmate.getPublicUuid(),
+                currentCell.getPublicUuid(),
+                targetCell.getPublicUuid(),
                 currentAllocation.getAllocatedAt(),
                 currentCellOccupancy - 1,
                 targetCellOccupancy + 1
@@ -152,13 +153,13 @@ public class CellService {
     }
 
     @Transactional(readOnly = true)
-    public CellDetailResponse getCell(Long cellId) {
-        Cell cell = cellRepository.findById(cellId).orElseThrow(CellNotFoundException::new);
-        int occupancy = Math.toIntExact(cellAllocationRepository.countByCellId(cellId));
-        List<CellInmateSummary> inmates = cellAllocationRepository.findByCell_IdOrderByAllocatedAtAsc(cellId)
+    public CellDetailResponse getCell(UUID cellId) {
+        Cell cell = cellRepository.findByPublicUuid(cellId).orElseThrow(CellNotFoundException::new);
+        int occupancy = Math.toIntExact(cellAllocationRepository.countByCellId(cell.getId()));
+        List<CellInmateSummary> inmates = cellAllocationRepository.findByCell_IdOrderByAllocatedAtAsc(cell.getId())
                 .stream()
                 .map(allocation -> new CellInmateSummary(
-                        allocation.getInmate().getId(),
+                        allocation.getInmate().getPublicUuid(),
                         allocation.getInmate().getInmateNumber(),
                         allocation.getInmate().getFirstName(),
                         allocation.getInmate().getLastName()))

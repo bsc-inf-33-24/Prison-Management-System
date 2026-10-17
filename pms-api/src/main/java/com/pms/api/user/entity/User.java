@@ -17,7 +17,9 @@ import org.hibernate.annotations.BatchSize;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Table(
@@ -45,11 +47,17 @@ public class User {
     @Column(name = "user_id")
     private Long id;
 
+    @Column(name = "public_uuid", nullable = false, updatable = false, unique = true)
+    private UUID publicUuid = UUID.randomUUID();
+
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
     @Column(name = "username", nullable = false, length = 16)
     private String username;
+
+    @Column(name = "email", length = 254)
+    private String email;
 
     @JsonIgnore
     @Column(name = "password_hash", nullable = false, length = 255)
@@ -86,8 +94,14 @@ public class User {
     }
 
     public User(String fullName, String username, String passwordHash, String role, Set<String> permissions) {
+        this(fullName, username, null, passwordHash, role, permissions);
+    }
+
+    public User(String fullName, String username, String email, String passwordHash, String role,
+                Set<String> permissions) {
         this.fullName = fullName;
         this.username = username;
+        this.email = email == null ? null : email.trim().toLowerCase(Locale.ROOT);
         this.passwordHash = passwordHash;
         this.role = role;
         replacePermissions(permissions);
@@ -97,12 +111,20 @@ public class User {
         return id;
     }
 
+    public UUID getPublicUuid() {
+        return publicUuid;
+    }
+
     public String getFullName() {
         return fullName;
     }
 
     public String getUsername() {
         return username;
+    }
+
+    public String getEmail() {
+        return email;
     }
 
     @JsonIgnore

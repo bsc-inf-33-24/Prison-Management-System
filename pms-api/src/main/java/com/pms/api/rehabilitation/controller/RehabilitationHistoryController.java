@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -35,7 +36,7 @@ public class RehabilitationHistoryController {
     @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER', 'RECORDS_OFFICER')")
     @Operation(summary = "Get an inmate's rehabilitation history")
     public Page<EnrollmentResponse> inmateHistory(
-            @PathVariable Long inmateId,
+            @PathVariable UUID inmateId,
             @PageableDefault(size = 20, sort = "enrollmentDate") Pageable pageable) {
         RehabilitationPageable.validate(pageable,
                 java.util.Set.of("id", "enrollmentDate", "status"));
@@ -46,7 +47,7 @@ public class RehabilitationHistoryController {
     @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER', 'RECORDS_OFFICER')")
     @Operation(summary = "Get attendance history for an enrollment")
     public Page<AttendanceResponse> enrollmentAttendance(
-            @PathVariable Long enrollmentId,
+            @PathVariable UUID enrollmentId,
             @PageableDefault(size = 20, sort = "sessionDate,desc") Pageable pageable) {
         RehabilitationPageable.validate(pageable,
                 java.util.Set.of("id", "sessionDate"));

@@ -11,6 +11,7 @@ import com.pms.api.common.pagination.PaginationProperties;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -80,13 +81,13 @@ public class InmateService {
     }
 
     @Transactional(readOnly = true)
-    public InmateResponse get(Long inmateId) {
+    public InmateResponse get(UUID inmateId) {
         return InmateResponse.from(findInmate(inmateId));
     }
 
     @Audited
     @Transactional
-    public InmateResponse update(Long inmateId, InmateRequest request) {
+    public InmateResponse update(UUID inmateId, InmateRequest request) {
         Inmate inmate = findInmate(inmateId);
         inmate.updateDetails(
                 request.inmateNumber().trim(),
@@ -111,8 +112,8 @@ public class InmateService {
         }
     }
 
-    private Inmate findInmate(Long inmateId) {
-        return inmateRepository.findById(inmateId).orElseThrow(InmateNotFoundException::new);
+    private Inmate findInmate(UUID inmateId) {
+        return inmateRepository.findByPublicUuid(inmateId).orElseThrow(InmateNotFoundException::new);
     }
 
     private static boolean violatesInmateNumberConstraint(Throwable exception) {
