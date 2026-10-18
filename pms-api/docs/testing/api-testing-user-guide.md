@@ -2,7 +2,18 @@
 
 This guide explains what to enter when manually testing the implemented APIs with Swagger UI, cURL, or Postman.
 
-The current API uses numeric IDs. Always use IDs returned by create requests; do not assume that IDs start at `1`. UUID support is not implemented yet.
+The API uses UUIDs for public resource IDs. Copy each ID returned by a create request into later paths and request bodies.
+
+For a shorter role-specific checklist, use the individual guides:
+
+- [Super Admin](roles/super-admin.md)
+- [Records Officer](roles/records-officer.md)
+- [Disciplinary Officer](roles/disciplinary-officer.md)
+- [Case Officer](roles/case-officer.md)
+- [Visitor Officer](roles/visitor-officer.md)
+- [Rehabilitation Officer](roles/rehabilitation-officer.md)
+- [Medical Officer](roles/medical-officer.md)
+- [Duty Officer](roles/duty-officer.md)
 
 ## 1. Test setup
 
