@@ -16,7 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -63,7 +63,7 @@ public class CrimeController {
     }
 
     @Operation(summary = "Update a crime catalog entry")
-    @PutMapping("/crimes/{crimeId}")
+    @PatchMapping("/crimes/{crimeId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public CrimeResponse update(@PathVariable UUID crimeId, @Valid @RequestBody CrimeRequest request) {
         return crimeService.update(crimeId, request);
