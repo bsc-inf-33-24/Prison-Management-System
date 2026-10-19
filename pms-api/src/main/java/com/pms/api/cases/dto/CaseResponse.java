@@ -1,7 +1,6 @@
 package com.pms.api.cases.dto;
 
 import com.pms.api.cases.entity.Case;
-import com.pms.api.cases.entity.Crime;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.sentence.dto.SentenceResponse;
 import java.time.Instant;
@@ -14,13 +13,12 @@ public record CaseResponse(
         UUID id,
         String caseNumber,
         String court,
+        String crimes,
         LocalDate caseStartDate,
         LocalDate caseEndDate,
         String status,
         Long remainingDays,
         InmateSummary inmate,
-        List<CrimeSummary> crimes,
-        List<SentenceResponse> sentences,
         Instant createdAt,
         Instant updatedAt,
         UUID createdBy
@@ -35,10 +33,7 @@ public record CaseResponse(
                 caseEntity.getStatus().name().toLowerCase(),
                 remainingDays(caseEntity),
                 InmateSummary.from(caseEntity.getInmate()),
-                caseEntity.getCrimes().stream().map(CrimeSummary::from).collect(Collectors.toList()),
-                caseEntity.getSentences() == null ? List.of() : caseEntity.getSentences().stream()
-                        .map(SentenceResponse::from)
-                        .toList(),
+                caseEntity.getCrimes(),
                 caseEntity.getCreatedAt(),
                 caseEntity.getUpdatedAt(),
                 caseEntity.getCreatedBy() == null ? null : caseEntity.getCreatedBy().getPublicUuid()
@@ -59,17 +54,6 @@ public record CaseResponse(
                     inmate.getInmateNumber(),
                     inmate.getFirstName(),
                     inmate.getLastName()
-            );
-        }
-    }
-
-    public record CrimeSummary(UUID id, String offenceName, String description, String category) {
-        public static CrimeSummary from(Crime crime) {
-            return new CrimeSummary(
-                    crime.getPublicUuid(),
-                    crime.getOffenceName(),
-                    crime.getDescription(),
-                    crime.getCategory()
             );
         }
     }

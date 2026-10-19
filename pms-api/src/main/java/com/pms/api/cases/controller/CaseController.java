@@ -84,7 +84,7 @@ public class CaseController {
         return caseService.updateStatus(caseId, request);
     }
 
-    @GetMapping("/inmates/{inmateId}/cases")
+    @GetMapping("/cases/{inmateId}")
     @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List inmate cases")
     public PageResponse<CaseResponse> getCasesForInmate(@PathVariable UUID inmateId,

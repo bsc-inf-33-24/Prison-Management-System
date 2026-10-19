@@ -5,9 +5,7 @@ import com.pms.api.cases.dto.CaseResponse;
 import com.pms.api.cases.dto.CaseStatusRequest;
 import com.pms.api.cases.entity.Case;
 import com.pms.api.cases.entity.CaseStatus;
-import com.pms.api.cases.entity.Crime;
 import com.pms.api.cases.repository.CaseRepository;
-import com.pms.api.cases.repository.CrimeRepository;
 import com.pms.api.common.audit.Audited;
 import com.pms.api.common.pagination.PageResponse;
 import com.pms.api.common.pagination.PageableValidator;
@@ -34,18 +32,15 @@ public class CaseService {
 
     private final CaseRepository caseRepository;
     private final InmateRepository inmateRepository;
-    private final CrimeRepository crimeRepository;
     private final UserRepository userRepository;
     private final PaginationProperties paginationProperties;
 
     public CaseService(CaseRepository caseRepository,
                        InmateRepository inmateRepository,
-                       CrimeRepository crimeRepository,
                        UserRepository userRepository,
                        PaginationProperties paginationProperties) {
         this.caseRepository = caseRepository;
         this.inmateRepository = inmateRepository;
-        this.crimeRepository = crimeRepository;
         this.userRepository = userRepository;
         this.paginationProperties = paginationProperties;
     }
@@ -58,14 +53,11 @@ public class CaseService {
         Inmate inmate = inmateRepository.findByPublicUuid(request.inmateId())
                 .orElseThrow(InmateNotFoundException::new);
 
-        List<Crime> crimes = getValidCrimes(request.crimeIds());
-
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalStateException("Authenticated user no longer exists."));
 
-        Case newCase = new Case(inmate, request.caseNumber().trim(), request.court().trim(),
+        Case newCase = new Case(inmate, request.caseNumber().trim(), request.court().trim(),request.crimes(),
                 request.caseStartDate(), request.caseEndDate(), user);
-        newCase.replaceCrimes(new LinkedHashSet<>(crimes));
 
         return CaseResponse.from(caseRepository.saveAndFlush(newCase));
     }
@@ -80,10 +72,11 @@ public class CaseService {
                                                 LocalDate caseStartDateFrom, LocalDate caseStartDateTo,
                                                 Integer page, Integer size, List<String> sort) {
         Pageable pageable = PageableValidator.create(page, size, sort,
-                Set.of("id", "caseNumber", "caseStartDate", "caseEndDate", "status"),
-                Sort.by(Sort.Order.desc("caseStartDate"), Sort.Order.desc("id")), paginationProperties);
+                    Set.of("id", "caseNumber", "caseStartDate", "caseEndDate", "status"),
+                    Sort.by(Sort.Order.desc("caseStartDate"), Sort.Order.desc("id")), paginationProperties);
+
         Long internalInmateId = inmateId == null ? null : inmateRepository.findByPublicUuid(inmateId).map(Inmate::getId).orElse(-1L);
-        Long internalCrimeId = crimeId == null ? null : crimeRepository.findByPublicUuid(crimeId).map(Crime::getId).orElse(-1L);
+        
         Specification<Case> specification = caseSpecification(status, internalInmateId, internalCrimeId,
                 caseStartDateFrom, caseStartDateTo);
         return PageResponse.from(caseRepository.findAll(specification, pageable).map(CaseResponse::from));
@@ -111,12 +104,7 @@ public class CaseService {
         if (inmateId != null) {
             specification = specification.and((root, query, cb) -> cb.equal(root.get("inmate").get("id"), inmateId));
         }
-        if (crimeId != null) {
-            specification = specification.and((root, query, cb) -> {
-                query.distinct(true);
-                return cb.equal(root.join("crimes").get("id"), crimeId);
-            });
-        }
+        
         if (startDateFrom != null) {
             specification = specification.and((root, query, cb) ->
                     cb.greaterThanOrEqualTo(root.get("caseStartDate"), startDateFrom));
@@ -134,10 +122,9 @@ public class CaseService {
         Case existing = findCase(caseId);
         validateRequest(request);
 
-        existing.updateDetails(request.caseNumber().trim(), request.court().trim(),
+        existing.updateDetails(request.caseNumber().trim(), request.court().trim(),request.crimes(),
                 request.caseStartDate(), request.caseEndDate());
 
-        existing.replaceCrimes(new LinkedHashSet<>(getValidCrimes(request.crimeIds())));
         return CaseResponse.from(caseRepository.saveAndFlush(existing));
     }
 
@@ -164,29 +151,10 @@ public class CaseService {
         return CaseResponse.from(caseRepository.saveAndFlush(existing));
     }
 
-    private List<Crime> getValidCrimes(Set<UUID> crimeIds) {
-        if (crimeIds == null || crimeIds.isEmpty()) {
-            return List.of();
-        }
-
-        if (crimeIds.stream().anyMatch(id -> id == null)) {
-            throw new InvalidCaseRequestException();
-        }
-
-        List<Crime> crimes = crimeIds.stream()
-                .map(crimeRepository::findByPublicUuid)
-                .flatMap(Optional::stream)
-                .toList();
-        if (crimes.size() != crimeIds.size()) {
-            throw new CrimeNotFoundException();
-        }
-
-        return crimes;
-    }
-
     private static void validateRequest(CaseRequest request) {
         if (request == null || request.inmateId() == null || request.caseNumber() == null
-                || request.caseNumber().isBlank() || request.court() == null || request.court().isBlank()
+                || request.caseNumber().isBlank() || request.court() == null || request.court().isBlank() 
+                || request.crimes() == null || request.crimes().isBlank()
                 || request.caseStartDate() == null || request.caseEndDate() == null) {
             throw new InvalidCaseRequestException();
         }
