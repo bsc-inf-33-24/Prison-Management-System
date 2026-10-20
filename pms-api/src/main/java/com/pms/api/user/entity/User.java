@@ -183,6 +183,12 @@ public class User {
         invalidateAuthentication();
     }
 
+    public void updateDetails(String fullName, String username, String email) {
+        if (fullName != null) this.fullName = fullName;
+        if (username != null) this.username = username;
+        if (email != null) this.email = email.trim().toLowerCase(Locale.ROOT);
+    }
+
     public boolean isActive() {
         return ACTIVE.equals(status);
     }

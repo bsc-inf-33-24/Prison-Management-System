@@ -1,6 +1,7 @@
 package com.pms.api.inmate.controller;
 
 import com.pms.api.inmate.dto.InmateRequest;
+import com.pms.api.inmate.dto.UpdateInmateDetailsRequest;
 import com.pms.api.inmate.dto.InmateResponse;
 import com.pms.api.inmate.service.InmateService;
 import com.pms.api.common.pagination.PageResponse;
@@ -15,7 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -62,10 +63,11 @@ public class InmateController {
         return inmateService.get(inmateId);
     }
 
-    @PutMapping("/{inmateId}")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PatchMapping("/{inmateId}")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update an inmate record")
-    public InmateResponse update(@PathVariable UUID inmateId, @Valid @RequestBody InmateRequest request) {
+    public InmateResponse update(@PathVariable UUID inmateId,
+                                 @Valid @RequestBody UpdateInmateDetailsRequest request) {
         return inmateService.update(inmateId, request);
     }
 }

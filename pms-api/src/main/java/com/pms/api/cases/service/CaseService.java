@@ -3,6 +3,7 @@ package com.pms.api.cases.service;
 import com.pms.api.cases.dto.CaseRequest;
 import com.pms.api.cases.dto.CaseResponse;
 import com.pms.api.cases.dto.CaseStatusRequest;
+import com.pms.api.cases.dto.UpdateCaseDetailsRequest;
 import com.pms.api.cases.entity.Case;
 import com.pms.api.cases.entity.CaseStatus;
 import com.pms.api.cases.repository.CaseRepository;
@@ -118,14 +119,33 @@ public class CaseService {
 
     @Audited
     @Transactional
-    public CaseResponse updateCase(UUID caseId, CaseRequest request) {
+    public CaseResponse updateCase(UUID caseId, UpdateCaseDetailsRequest request) {
         Case existing = findCase(caseId);
-        validateRequest(request);
+        if (request == null) {
+            throw new InvalidCaseRequestException();
+        }
+        String caseNumber = updateText(request.caseNumber(), existing.getCaseNumber());
+        String court = updateText(request.court(), existing.getCourt());
+        LocalDate startDate = request.caseStartDate() == null ? existing.getCaseStartDate() : request.caseStartDate();
+        LocalDate endDate = request.caseEndDate() == null ? existing.getCaseEndDate() : request.caseEndDate();
+        if (startDate.isAfter(endDate)) {
+            throw new InvalidCaseRequestException();
+        }
 
-        existing.updateDetails(request.caseNumber().trim(), request.court().trim(),request.crimes(),
-                request.caseStartDate(), request.caseEndDate());
-
+        existing.updateDetails(caseNumber, court, startDate, endDate);
+        
         return CaseResponse.from(caseRepository.saveAndFlush(existing));
+    }
+
+    private static String updateText(String value, String currentValue) {
+        if (value == null) {
+            return currentValue;
+        }
+        String normalized = value.trim();
+        if (normalized.isEmpty()) {
+            throw new InvalidCaseRequestException();
+        }
+        return normalized;
     }
 
     @Audited

@@ -3,6 +3,7 @@ package com.pms.api.cases.controller;
 import com.pms.api.cases.dto.CaseRequest;
 import com.pms.api.cases.dto.CaseResponse;
 import com.pms.api.cases.dto.CaseStatusRequest;
+import com.pms.api.cases.dto.UpdateCaseDetailsRequest;
 import com.pms.api.cases.service.CaseService;
 import com.pms.api.common.pagination.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,7 +21,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -70,10 +70,11 @@ public class CaseController {
         return caseService.getCase(caseId);
     }
 
-    @PutMapping("/cases/{caseId}")
+    @PatchMapping("/cases/{caseId}")
     @PreAuthorize("hasAnyRole('CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update a case record")
-    public CaseResponse updateCase(@PathVariable UUID caseId, @Valid @RequestBody CaseRequest request) {
+    public CaseResponse updateCase(@PathVariable UUID caseId,
+                                   @Valid @RequestBody UpdateCaseDetailsRequest request) {
         return caseService.updateCase(caseId, request);
     }
 

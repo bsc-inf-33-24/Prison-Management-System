@@ -1,7 +1,7 @@
 package com.pms.api.user.controller;
 
 import com.pms.api.user.dto.CreateUserRequest;
-import com.pms.api.user.dto.UpdateRoleRequest;
+import com.pms.api.user.dto.UpdateUserDetailsRequest;
 import com.pms.api.user.dto.UserResponse;
 import com.pms.api.user.service.UserService;
 import com.pms.api.common.pagination.PageResponse;
@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/users")
 @PreAuthorize("hasRole('SUPER_ADMIN')")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "User management", description = "Create, activate, deactivate, and manage user roles.")
+@Tag(name = "User management", description = "Create users and update user details, status, roles, and permissions.")
 public class UserController {
 
     private final UserService userService;
@@ -62,6 +61,13 @@ public class UserController {
         return userService.findById(userId);
     }
 
+    @PatchMapping("/{userId}")
+    @Operation(summary = "Update a user's details")
+    public UserResponse updateDetails(@PathVariable UUID userId,
+                                      @Valid @RequestBody UpdateUserDetailsRequest request) {
+        return userService.updateDetails(userId, request);
+    }
+
     @PatchMapping("/{userId}/deactivate")
     @Operation(summary = "Deactivate a user")
     public UserResponse deactivate(@PathVariable UUID userId) {
@@ -72,12 +78,6 @@ public class UserController {
     @Operation(summary = "Reactivate a user")
     public UserResponse reactivate(@PathVariable UUID userId) {
         return userService.reactivate(userId);
-    }
-
-    @PutMapping("/{userId}/role")
-    @Operation(summary = "Update a user's role")
-    public UserResponse updateRole(@PathVariable UUID userId, @Valid @RequestBody UpdateRoleRequest request) {
-        return userService.updateRole(userId, request);
     }
 
 }
