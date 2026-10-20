@@ -7,6 +7,7 @@ import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.sentence.dto.SentenceRequest;
 import com.pms.api.sentence.dto.SentenceResponse;
+import com.pms.api.sentence.dto.UpdateSentenceDetailsRequest;
 import com.pms.api.sentence.entity.Sentence;
 import com.pms.api.sentence.repository.SentenceRepository;
 import com.pms.api.common.pagination.PageResponse;
@@ -102,20 +103,29 @@ public class SentenceService {
 
     @Audited
     @Transactional
-    public SentenceResponse update(UUID sentenceId, SentenceRequest request) {
-        validateRequest(request);
+    public SentenceResponse update(UUID sentenceId, UpdateSentenceDetailsRequest request) {
+        if (request == null) {
+            throw new InvalidSentenceRequestException();
+        }
         Sentence sentence = findSentence(sentenceId);
-        Case caseEntity = findCase(request.caseId());
-        Inmate inmate = findInmate(request.inmateId());
+        Case caseEntity = request.caseId() == null ? sentence.getCase() : findCase(request.caseId());
+        Inmate inmate = request.inmateId() == null ? sentence.getInmate() : findInmate(request.inmateId());
+        Integer duration = request.duration() == null ? sentence.getDuration() : request.duration();
+        LocalDate startDate = request.startDate() == null ? sentence.getStartDate() : request.startDate();
+        LocalDate releaseDate = request.releaseDate() == null ? sentence.getReleaseDate() : request.releaseDate();
+        String status = request.status() == null ? sentence.getStatus() : request.status();
+        if (duration <= 0 || (releaseDate != null && releaseDate.isBefore(startDate))) {
+            throw new InvalidSentenceRequestException();
+        }
         ensureCaseAndInmateMatch(caseEntity, inmate);
         ensureSentenceAllowedForCase(caseEntity);
         sentence.updateDetails(
                 caseEntity,
                 inmate,
-                request.duration(),
-                request.startDate(),
-                request.releaseDate(),
-                request.status()
+                duration,
+                startDate,
+                releaseDate,
+                status
         );
         return SentenceResponse.from(sentenceRepository.saveAndFlush(sentence));
     }

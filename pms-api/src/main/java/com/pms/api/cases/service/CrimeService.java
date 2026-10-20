@@ -2,6 +2,7 @@ package com.pms.api.cases.service;
 
 import com.pms.api.cases.dto.CrimeRequest;
 import com.pms.api.cases.dto.CrimeResponse;
+import com.pms.api.cases.dto.UpdateCrimeDetailsRequest;
 import com.pms.api.cases.entity.Crime;
 import com.pms.api.cases.repository.CrimeRepository;
 import com.pms.api.common.audit.Audited;
@@ -67,11 +68,32 @@ public class CrimeService {
 
     @Audited
     @Transactional
-    public CrimeResponse update(UUID crimeId, CrimeRequest request) {
-        validate(request);
+    public CrimeResponse update(UUID crimeId, UpdateCrimeDetailsRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("One or more request fields are invalid.");
+        }
         Crime crime = findCrime(crimeId);
-        crime.update(request.offenceName().trim(), request.description() == null ? "" : request.description().trim(), request.category().trim());
+        String offenceName = updateText(request.offenceName(), crime.getOffenceName());
+        String category = updateText(request.category(), crime.getCategory());
+        String description = request.description() == null
+                ? crime.getDescription()
+                : request.description().trim();
+        if (offenceName.length() > 150 || category.length() > 100 || description.length() > 500) {
+            throw new IllegalArgumentException("One or more request fields are invalid.");
+        }
+        crime.update(offenceName, description, category);
         return CrimeResponse.from(crimeRepository.saveAndFlush(crime));
+    }
+
+    private static String updateText(String value, String currentValue) {
+        if (value == null) {
+            return currentValue;
+        }
+        String normalized = value.trim();
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException("One or more request fields are invalid.");
+        }
+        return normalized;
     }
 
     private static void validate(CrimeRequest request) {
