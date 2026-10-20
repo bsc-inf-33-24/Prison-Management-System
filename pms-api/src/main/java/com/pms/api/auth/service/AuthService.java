@@ -51,7 +51,7 @@ public class AuthService {
 
     @Transactional(noRollbackFor = org.springframework.security.core.AuthenticationException.class)
     public LoginResult login(AuthRequest request) {
-        String login = request.username().trim();
+        String login = request.email() == null ? request.username().trim() : request.email();
         User knownUser = userRepository.findByUsername(login)
                 .or(() -> userRepository.findByEmailIgnoreCase(login))
                 .orElse(null);

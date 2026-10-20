@@ -54,7 +54,21 @@ class ApiVersioningAndSwaggerTest {
         JsonNode createUserSchema = document.at("/components/schemas/CreateUserRequest");
         assertThat(createUserSchema.at("/properties/email").isObject()).isTrue();
         assertThat(createUserSchema.path("required").toString()).doesNotContain("email");
-        assertThat(document.at("/components/schemas/AuthRequest/properties/username/description").asText())
-                .contains("Username or email");
+        assertThat(createUserSchema.at("/properties/email/description").asText())
+                .contains("Optional", "Omit", "valid");
+        assertThat(document.at("/paths/~1api~1v1~1users/post/requestBody/content/application~1json/examples/User with email/value/email").asText())
+                .isEqualTo("records.officer@example.test");
+        JsonNode userChoices = document.at("/paths/~1api~1v1~1users/post/requestBody/content/application~1json/schema/oneOf");
+        assertThat(userChoices.toString()).contains("CreateUserWithEmailRequest", "CreateUserWithoutEmailRequest");
+        assertThat(document.at("/paths/~1api~1v1~1users/post/requestBody/content/application~1json/examples/User without email/value/email").isMissingNode())
+                .isTrue();
+        JsonNode authSchema = document.at("/components/schemas/AuthRequest");
+        assertThat(authSchema.at("/properties/email/description").asText())
+                .contains("Optional", "email", "username");
+        assertThat(authSchema.path("required").toString()).doesNotContain("email");
+        assertThat(document.at("/paths/~1api~1v1~1auth~1login/post/requestBody/content/application~1json/examples/Log in with email/value/email").asText())
+                .isEqualTo("records.officer@example.test");
+        JsonNode loginChoices = document.at("/paths/~1api~1v1~1auth~1login/post/requestBody/content/application~1json/schema/oneOf");
+        assertThat(loginChoices.toString()).contains("UsernameLoginRequest", "EmailLoginRequest");
     }
 }

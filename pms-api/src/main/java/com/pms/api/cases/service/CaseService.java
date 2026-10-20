@@ -21,7 +21,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.time.LocalDate;
-import java.util.Locale;
 import java.util.UUID;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
