@@ -16,7 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -77,7 +77,7 @@ public class SentenceController {
         return sentenceService.list(inmateId, null, status, startDateFrom, startDateTo, page, size, sort);
     }
 
-    @PutMapping("/sentences/{sentenceId}")
+    @PatchMapping("/sentences/{sentenceId}")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update a sentence record")
     public SentenceResponse update(@PathVariable UUID sentenceId,

@@ -1,7 +1,7 @@
 package com.pms.api.user.service;
 
 import com.pms.api.user.dto.CreateUserRequest;
-import com.pms.api.user.dto.UpdateRoleRequest;
+import com.pms.api.user.dto.UpdateUserDetailsRequest;
 import com.pms.api.user.dto.UserResponse;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
@@ -121,11 +121,40 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
-    public UserResponse updateRole(UUID userId, UpdateRoleRequest request) {
-        validateRole(request.role());
+    public UserResponse updateDetails(UUID userId, UpdateUserDetailsRequest request) {
         User user = getUser(userId);
-        user.replaceRoleAndPermissions(request.role().trim(),
-                request.permissions() == null ? Set.of() : new LinkedHashSet<>(request.permissions()));
+        String fullName = request.fullName() == null ? null : request.fullName().trim();
+        String username = request.username() == null ? null : request.username().trim();
+        String email = request.email();
+        String role = request.role() == null ? null : request.role().trim();
+
+        if (role != null) {
+            validateRole(role);
+        }
+
+        if (fullName != null && fullName.isEmpty()) {
+            throw new IllegalArgumentException("Full name must not be blank.");
+        }
+        if (username != null && username.isEmpty()) {
+            throw new IllegalArgumentException("Username must not be blank.");
+        }
+
+        if (username != null && !username.equals(user.getUsername())
+                && userRepository.existsByUsername(username)) {
+            throw new UsernameAlreadyExistsException();
+        }
+        if (email != null && !email.equalsIgnoreCase(user.getEmail())
+                && userRepository.existsByEmailIgnoreCase(email)) {
+            throw new EmailAlreadyExistsException();
+        }
+
+        user.updateDetails(fullName, username, email);
+        if (role != null || request.permissions() != null) {
+            user.replaceRoleAndPermissions(role == null ? user.getRole() : role,
+                    request.permissions() == null
+                            ? user.getPermissions()
+                            : new LinkedHashSet<>(request.permissions()));
+        }
         return UserResponse.from(user);
     }
 

@@ -15,7 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -62,7 +62,7 @@ public class InmateController {
         return inmateService.get(inmateId);
     }
 
-    @PutMapping("/{inmateId}")
+    @PatchMapping("/{inmateId}")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "Update an inmate record")
     public InmateResponse update(@PathVariable UUID inmateId, @Valid @RequestBody InmateRequest request) {
