@@ -3,6 +3,7 @@ package com.pms.api.cases.controller;
 import com.pms.api.cases.dto.CaseRequest;
 import com.pms.api.cases.dto.CaseResponse;
 import com.pms.api.cases.dto.CaseStatusRequest;
+import com.pms.api.cases.dto.UpdateCaseDetailsRequest;
 import com.pms.api.cases.service.CaseService;
 import com.pms.api.common.pagination.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -72,7 +73,8 @@ public class CaseController {
     @PatchMapping("/cases/{caseId}")
     @PreAuthorize("hasAnyRole('CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update a case record")
-    public CaseResponse updateCase(@PathVariable UUID caseId, @Valid @RequestBody CaseRequest request) {
+    public CaseResponse updateCase(@PathVariable UUID caseId,
+                                   @Valid @RequestBody UpdateCaseDetailsRequest request) {
         return caseService.updateCase(caseId, request);
     }
 

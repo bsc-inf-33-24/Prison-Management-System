@@ -1,6 +1,7 @@
 package com.pms.api.inmate.controller;
 
 import com.pms.api.inmate.dto.InmateRequest;
+import com.pms.api.inmate.dto.UpdateInmateDetailsRequest;
 import com.pms.api.inmate.dto.InmateResponse;
 import com.pms.api.inmate.service.InmateService;
 import com.pms.api.common.pagination.PageResponse;
@@ -63,9 +64,10 @@ public class InmateController {
     }
 
     @PatchMapping("/{inmateId}")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update an inmate record")
-    public InmateResponse update(@PathVariable UUID inmateId, @Valid @RequestBody InmateRequest request) {
+    public InmateResponse update(@PathVariable UUID inmateId,
+                                 @Valid @RequestBody UpdateInmateDetailsRequest request) {
         return inmateService.update(inmateId, request);
     }
 }
