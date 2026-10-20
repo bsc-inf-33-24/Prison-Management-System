@@ -78,7 +78,7 @@ public class CaseService {
 
         Long internalInmateId = inmateId == null ? null : inmateRepository.findByPublicUuid(inmateId).map(Inmate::getId).orElse(-1L);
         
-        Specification<Case> specification = caseSpecification(status, internalInmateId, internalCrimeId,
+        Specification<Case> specification = caseSpecification(status, internalInmateId,
                 caseStartDateFrom, caseStartDateTo);
         return PageResponse.from(caseRepository.findAll(specification, pageable).map(CaseResponse::from));
     }
@@ -89,8 +89,7 @@ public class CaseService {
         return listCases(status, inmateId, null, null, null, page, size, sort);
     }
 
-    private static Specification<Case> caseSpecification(String status, Long inmateId, Long crimeId,
-                                                          LocalDate startDateFrom, LocalDate startDateTo) {
+    private static Specification<Case> caseSpecification(String status, Long inmateId, LocalDate startDateFrom, LocalDate startDateTo) {
         if (startDateFrom != null && startDateTo != null && startDateFrom.isAfter(startDateTo)) {
             throw new IllegalArgumentException("The case start date range is invalid.");
         }
@@ -125,7 +124,8 @@ public class CaseService {
             throw new InvalidCaseRequestException();
         }
         String caseNumber = updateText(request.caseNumber(), existing.getCaseNumber());
-        String court = updateText(request.court(), existing.getCourt());
+        String court = updateText(request.court(), existing.getCourt());\
+        String crimes = updateText(request.crimes(), existing.getCrimes());
         LocalDate startDate = request.caseStartDate() == null ? existing.getCaseStartDate() : request.caseStartDate();
         LocalDate endDate = request.caseEndDate() == null ? existing.getCaseEndDate() : request.caseEndDate();
         if (startDate.isAfter(endDate)) {

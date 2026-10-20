@@ -13,6 +13,6 @@ public record CaseRequest(
         @NotBlank(message = "court is required") @Size(max = 150) String court,
         @NotBlank(message = "crimes is required") String crimes,
         @NotNull(message = "caseStartDate is required") LocalDate caseStartDate,
-        @NotNull(message = "caseEndDate is required") LocalDate caseEndDate,
+        @NotNull(message = "caseEndDate is required") LocalDate caseEndDate
 ) {
 }

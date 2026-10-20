@@ -9,10 +9,14 @@ import java.util.UUID;
 public record UpdateCaseDetailsRequest(
         @Size(min = 1, max = 80, message = "Case number must not be blank and must not exceed 80 characters.")
         String caseNumber,
+
         @Size(min = 1, max = 150, message = "Court must not be blank and must not exceed 150 characters.")
         String court,
+
+        @Size(min = 1, message = "Crimes must not be blank.")
+        String crimes,
+
         LocalDate caseStartDate,
         LocalDate caseEndDate,
-        Set<UUID> crimeIds
 ) {
 }
