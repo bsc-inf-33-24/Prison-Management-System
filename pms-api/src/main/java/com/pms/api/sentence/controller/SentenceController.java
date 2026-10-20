@@ -1,6 +1,7 @@
 package com.pms.api.sentence.controller;
 
 import com.pms.api.sentence.dto.SentenceRequest;
+import com.pms.api.sentence.dto.UpdateSentenceDetailsRequest;
 import com.pms.api.sentence.dto.SentenceResponse;
 import com.pms.api.sentence.service.SentenceService;
 import com.pms.api.common.pagination.PageResponse;
@@ -81,7 +82,7 @@ public class SentenceController {
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'CASE_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update a sentence record")
     public SentenceResponse update(@PathVariable UUID sentenceId,
-                                   @Valid @RequestBody SentenceRequest request) {
+                                   @Valid @RequestBody UpdateSentenceDetailsRequest request) {
         return sentenceService.update(sentenceId, request);
     }
 }

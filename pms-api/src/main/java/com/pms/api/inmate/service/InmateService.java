@@ -3,6 +3,7 @@ package com.pms.api.inmate.service;
 import com.pms.api.common.audit.Audited;
 import com.pms.api.inmate.dto.InmateRequest;
 import com.pms.api.inmate.dto.InmateResponse;
+import com.pms.api.inmate.dto.UpdateInmateDetailsRequest;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.common.pagination.PageResponse;
@@ -87,18 +88,34 @@ public class InmateService {
 
     @Audited
     @Transactional
-    public InmateResponse update(UUID inmateId, InmateRequest request) {
+    public InmateResponse update(UUID inmateId, UpdateInmateDetailsRequest request) {
         Inmate inmate = findInmate(inmateId);
+        String inmateNumber = updateValue(request.inmateNumber(), inmate.getInmateNumber());
+        String firstName = updateValue(request.firstName(), inmate.getFirstName());
+        String lastName = updateValue(request.lastName(), inmate.getLastName());
+        String gender = updateValue(request.gender(), inmate.getGender());
+        String classification = updateValue(request.classification(), inmate.getClassification());
         inmate.updateDetails(
-                request.inmateNumber().trim(),
-                request.firstName().trim(),
-                request.lastName().trim(),
-                request.dateOfBirth(),
-                request.gender().trim(),
-                request.admissionDate(),
-                request.classification().trim()
+                inmateNumber,
+                firstName,
+                lastName,
+                request.dateOfBirth() == null ? inmate.getDateOfBirth() : request.dateOfBirth(),
+                gender,
+                request.admissionDate() == null ? inmate.getAdmissionDate() : request.admissionDate(),
+                classification
         );
         return save(inmate);
+    }
+
+    private static String updateValue(String requestedValue, String currentValue) {
+        if (requestedValue == null) {
+            return currentValue;
+        }
+        String normalized = requestedValue.trim();
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException("Updated text fields must not be blank.");
+        }
+        return normalized;
     }
 
     private InmateResponse save(Inmate inmate) {

@@ -1,6 +1,7 @@
 package com.pms.api.cases.controller;
 
 import com.pms.api.cases.dto.CrimeRequest;
+import com.pms.api.cases.dto.UpdateCrimeDetailsRequest;
 import com.pms.api.cases.dto.CrimeResponse;
 import com.pms.api.cases.service.CrimeService;
 import com.pms.api.common.pagination.PageResponse;
@@ -65,7 +66,8 @@ public class CrimeController {
     @Operation(summary = "Update a crime catalog entry")
     @PatchMapping("/crimes/{crimeId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public CrimeResponse update(@PathVariable UUID crimeId, @Valid @RequestBody CrimeRequest request) {
+    public CrimeResponse update(@PathVariable UUID crimeId,
+                                @Valid @RequestBody UpdateCrimeDetailsRequest request) {
         return crimeService.update(crimeId, request);
     }
 }
