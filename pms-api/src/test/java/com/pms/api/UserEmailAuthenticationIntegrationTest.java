@@ -80,6 +80,7 @@ class UserEmailAuthenticationIntegrationTest {
         assertFalse(response.has("passwordHash"));
 
         login(username, "Records123!").andExpect(status().isOk());
+        loginByEmail(email, "Records123!").andExpect(status().isOk());
         login(email, "Records123!").andExpect(status().isOk());
         login(email.toUpperCase(java.util.Locale.ROOT), "Records123!").andExpect(status().isOk());
         login("  " + email.toUpperCase(java.util.Locale.ROOT) + "  ", "Records123!")
@@ -234,6 +235,15 @@ class UserEmailAuthenticationIntegrationTest {
     private ResultActions login(String login, String password) throws Exception {
         ObjectNode request = objectMapper.createObjectNode();
         request.put("username", login);
+        request.put("password", password);
+        return mockMvc.perform(post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)));
+    }
+
+    private ResultActions loginByEmail(String email, String password) throws Exception {
+        ObjectNode request = objectMapper.createObjectNode();
+        request.put("email", email);
         request.put("password", password);
         return mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)

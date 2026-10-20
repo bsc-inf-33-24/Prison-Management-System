@@ -1,11 +1,16 @@
 package com.pms.api.user.controller;
 
 import com.pms.api.user.dto.CreateUserRequest;
+import com.pms.api.user.dto.CreateUserWithEmailRequest;
+import com.pms.api.user.dto.CreateUserWithoutEmailRequest;
 import com.pms.api.user.dto.UpdateUserDetailsRequest;
 import com.pms.api.user.dto.UserResponse;
 import com.pms.api.user.service.UserService;
 import com.pms.api.common.pagination.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -38,7 +43,31 @@ public class UserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create a user")
+    @Operation(summary = "Create a user", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Email is optional. Remove the email property or set it to null for a user without an email.",
+            content = @Content(schema = @Schema(oneOf = {
+                            CreateUserWithEmailRequest.class,
+                            CreateUserWithoutEmailRequest.class
+                    }),
+                    examples = {
+                            @ExampleObject(name = "User with email", value = """
+                                    {
+                                      "fullName": "Records Officer",
+                                      "username": "records01",
+                                      "email": "records.officer@example.test",
+                                      "password": "Records123!",
+                                      "role": "Records Officer"
+                                    }
+                                    """),
+                            @ExampleObject(name = "User without email", value = """
+                                    {
+                                      "fullName": "Records Officer",
+                                      "username": "records01",
+                                      "password": "Records123!",
+                                      "role": "Records Officer"
+                                    }
+                                    """)
+                    })))
     public UserResponse create(@Valid @RequestBody CreateUserRequest request) {
         return userService.create(request);
     }
