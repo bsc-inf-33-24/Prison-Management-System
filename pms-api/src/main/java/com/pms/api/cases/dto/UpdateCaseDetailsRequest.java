@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
 
-/** Optional case fields; null values are left unchanged. An empty crimeIds set clears linked crimes. */
+//** Optional case fields; null values are left unchanged.
 public record UpdateCaseDetailsRequest(
         @Size(min = 1, max = 80, message = "Case number must not be blank and must not exceed 80 characters.")
         String caseNumber,
@@ -17,6 +17,6 @@ public record UpdateCaseDetailsRequest(
         String crimes,
 
         LocalDate caseStartDate,
-        LocalDate caseEndDate,
+        LocalDate caseEndDate
 ) {
 }

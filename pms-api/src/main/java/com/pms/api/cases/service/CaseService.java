@@ -69,8 +69,7 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<CaseResponse> listCases(String status, UUID inmateId, UUID crimeId,
-                                                LocalDate caseStartDateFrom, LocalDate caseStartDateTo,
+    public PageResponse<CaseResponse> listCases(String status, UUID inmateId, LocalDate caseStartDateFrom, LocalDate caseStartDateTo,
                                                 Integer page, Integer size, List<String> sort) {
         Pageable pageable = PageableValidator.create(page, size, sort,
                     Set.of("id", "caseNumber", "caseStartDate", "caseEndDate", "status"),
@@ -86,7 +85,7 @@ public class CaseService {
     @Transactional(readOnly = true)
     public PageResponse<CaseResponse> getCasesForInmate(UUID inmateId, String status,
                                                         Integer page, Integer size, List<String> sort) {
-        return listCases(status, inmateId, null, null, null, page, size, sort);
+        return listCases(status, inmateId, null, null, page, size, sort);
     }
 
     private static Specification<Case> caseSpecification(String status, Long inmateId, LocalDate startDateFrom, LocalDate startDateTo) {
@@ -124,7 +123,7 @@ public class CaseService {
             throw new InvalidCaseRequestException();
         }
         String caseNumber = updateText(request.caseNumber(), existing.getCaseNumber());
-        String court = updateText(request.court(), existing.getCourt());\
+        String court = updateText(request.court(), existing.getCourt());
         String crimes = updateText(request.crimes(), existing.getCrimes());
         LocalDate startDate = request.caseStartDate() == null ? existing.getCaseStartDate() : request.caseStartDate();
         LocalDate endDate = request.caseEndDate() == null ? existing.getCaseEndDate() : request.caseEndDate();
@@ -132,7 +131,7 @@ public class CaseService {
             throw new InvalidCaseRequestException();
         }
 
-        existing.updateDetails(caseNumber, court, startDate, endDate);
+        existing.updateDetails(caseNumber, court, crimes, startDate, endDate);
         
         return CaseResponse.from(caseRepository.saveAndFlush(existing));
     }

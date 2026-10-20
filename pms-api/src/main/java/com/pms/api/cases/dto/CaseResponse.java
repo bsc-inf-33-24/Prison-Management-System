@@ -2,11 +2,8 @@ package com.pms.api.cases.dto;
 
 import com.pms.api.cases.entity.Case;
 import com.pms.api.inmate.entity.Inmate;
-import com.pms.api.sentence.dto.SentenceResponse;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
 import java.util.UUID;
 
 public record CaseResponse(
@@ -28,12 +25,12 @@ public record CaseResponse(
                 caseEntity.getPublicUuid(),
                 caseEntity.getCaseNumber(),
                 caseEntity.getCourt(),
+                caseEntity.getCrimes(),
                 caseEntity.getCaseStartDate(),
                 caseEntity.getCaseEndDate(),
                 caseEntity.getStatus().name().toLowerCase(),
                 remainingDays(caseEntity),
                 InmateSummary.from(caseEntity.getInmate()),
-                caseEntity.getCrimes(),
                 caseEntity.getCreatedAt(),
                 caseEntity.getUpdatedAt(),
                 caseEntity.getCreatedBy() == null ? null : caseEntity.getCreatedBy().getPublicUuid()

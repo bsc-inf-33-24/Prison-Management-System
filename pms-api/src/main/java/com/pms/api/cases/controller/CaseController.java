@@ -53,14 +53,13 @@ public class CaseController {
     @Operation(summary = "List case records")
     public PageResponse<CaseResponse> listCases(@RequestParam(required = false) String status,
                                                 @RequestParam(required = false) UUID inmateId,
-                                                @RequestParam(required = false) UUID crimeId,
                                                 @RequestParam(required = false) LocalDate caseStartDateFrom,
                                                 @RequestParam(required = false) LocalDate caseStartDateTo,
-                                                @RequestParam(required = false) Integer page,
-                                                @RequestParam(required = false) Integer size,
+                                                //@RequestParam(required = false) Integer page,
+                                                //@RequestParam(required = false) Integer size,
                                                 @RequestParam(required = false) List<String> sort) {
-        return caseService.listCases(status, inmateId, crimeId, caseStartDateFrom, caseStartDateTo,
-                page, size, sort);
+        return caseService.listCases(status, inmateId, caseStartDateFrom, caseStartDateTo,
+                null, null, sort);
     }
 
     @GetMapping("/cases/{caseId}")
@@ -90,9 +89,9 @@ public class CaseController {
     @Operation(summary = "List inmate cases")
     public PageResponse<CaseResponse> getCasesForInmate(@PathVariable UUID inmateId,
                                                         @RequestParam(required = false) String status,
-                                                        @RequestParam(required = false) Integer page,
-                                                        @RequestParam(required = false) Integer size,
+                                                        //@RequestParam(required = false) Integer page,
+                                                        //@RequestParam(required = false) Integer size,
                                                         @RequestParam(required = false) List<String> sort) {
-        return caseService.getCasesForInmate(inmateId, status, page, size, sort);
+        return caseService.getCasesForInmate(inmateId, status, null, null, sort);
     }
 }
