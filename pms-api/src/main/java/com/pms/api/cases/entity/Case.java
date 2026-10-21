@@ -45,6 +45,9 @@ public class Case extends BaseEntity {
     @Column(name = "court", nullable = false, length = 150)
     private String court;
 
+    @Column(name = "crimes", nullable = false, columnDefinition = "text")
+    private String crimes;
+
     @Column(name = "case_start_date", nullable = false)
     private LocalDate caseStartDate;
 
@@ -59,28 +62,15 @@ public class Case extends BaseEntity {
     @JoinColumn(name = "created_by", nullable = false, updatable = false)
     private User createdBy;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @BatchSize(size = 20)
-    @JoinTable(
-            name = "case_crimes",
-            joinColumns = @JoinColumn(name = "case_id"),
-            inverseJoinColumns = @JoinColumn(name = "crime_id"),
-            uniqueConstraints = @UniqueConstraint(name = "uk_case_crimes_case_crime", columnNames = {"case_id", "crime_id"})
-    )
-    private Set<Crime> crimes = new LinkedHashSet<>();
-
-    @OneToMany(mappedBy = "caseEntity", fetch = FetchType.LAZY)
-    @BatchSize(size = 20)
-    private Set<Sentence> sentences = new LinkedHashSet<>();
-
     protected Case() {
     }
 
-    public Case(Inmate inmate, String caseNumber, String court, LocalDate caseStartDate,
+    public Case(Inmate inmate, String caseNumber, String court, String crimes, LocalDate caseStartDate,
                 LocalDate caseEndDate, User createdBy) {
         this.inmate = inmate;
         this.caseNumber = caseNumber;
         this.court = court;
+        this.crimes = crimes;
         this.caseStartDate = caseStartDate;
         this.caseEndDate = caseEndDate;
         this.createdBy = createdBy;
@@ -103,6 +93,10 @@ public class Case extends BaseEntity {
         return court;
     }
 
+    public String getCrimes() {
+        return crimes;
+    }
+
     public LocalDate getCaseStartDate() {
         return caseStartDate;
     }
@@ -119,17 +113,10 @@ public class Case extends BaseEntity {
         return createdBy;
     }
 
-    public Set<Crime> getCrimes() {
-        return crimes;
-    }
-
-    public Set<Sentence> getSentences() {
-        return sentences;
-    }
-
-    public void updateDetails(String caseNumber, String court, LocalDate caseStartDate, LocalDate caseEndDate) {
+    public void updateDetails(String caseNumber, String court, String crimes, LocalDate caseStartDate, LocalDate caseEndDate) {
         this.caseNumber = caseNumber;
         this.court = court;
+        this.crimes = crimes;
         this.caseStartDate = caseStartDate;
         this.caseEndDate = caseEndDate;
     }
@@ -138,10 +125,7 @@ public class Case extends BaseEntity {
         this.status = status;
     }
 
-    public void replaceCrimes(Set<Crime> crimes) {
-        this.crimes.clear();
-        if (crimes != null) {
-            this.crimes.addAll(crimes);
-        }
+    public void replaceCrimes(String crimes) {
+        this.crimes = crimes;
     }
 }

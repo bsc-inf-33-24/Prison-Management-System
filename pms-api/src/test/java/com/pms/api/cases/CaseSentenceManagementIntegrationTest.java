@@ -8,7 +8,6 @@ import com.pms.api.cases.dto.CaseResponse;
 import com.pms.api.cases.dto.CaseStatusRequest;
 import com.pms.api.cases.entity.CaseStatus;
 import com.pms.api.cases.repository.CaseRepository;
-import com.pms.api.cases.repository.CrimeRepository;
 import com.pms.api.cases.service.CaseService;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
@@ -43,9 +42,6 @@ class CaseSentenceManagementIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
-    private CrimeRepository crimeRepository;
-
-    @Autowired
     private CaseRepository caseRepository;
 
     private User caseOfficer;
@@ -62,12 +58,10 @@ class CaseSentenceManagementIntegrationTest {
         Inmate inmate = inmateRepository.saveAndFlush(new Inmate(
                 uniqueInmateNumber(), "Alice", "Jones", LocalDate.of(1995, 1, 10),
                 "Female", LocalDate.of(2024, 1, 1), "Minimum", "Main Facility"));
-        var crime = crimeRepository.saveAndFlush(new com.pms.api.cases.entity.Crime(
-                "Theft", "Property theft", "Property"));
 
         CaseResponse createdCase = caseService.createCase(
                 new CaseRequest(inmate.getPublicUuid(), "CASE-1001", "County Court",
-                        LocalDate.of(2025, 1, 3), LocalDate.of(2025, 1, 17), Set.of(crime.getPublicUuid())),
+                        "Theft: Property theft", LocalDate.of(2025, 1, 3), LocalDate.of(2025, 1, 17)),
                 caseOfficer.getUsername());
 
         SentenceResponse createdSentence = sentenceService.create(new SentenceRequest(
@@ -76,7 +70,7 @@ class CaseSentenceManagementIntegrationTest {
 
         assertThat(createdCase.id()).isNotNull();
         assertThat(createdCase.inmate().id()).isEqualTo(inmate.getPublicUuid());
-        assertThat(createdCase.crimes()).hasSize(1);
+        assertThat(createdCase.crimes()).isEqualTo("Theft: Property theft");
         assertThat(createdSentence.caseId()).isEqualTo(createdCase.id());
         assertThat(createdSentence.inmateId()).isEqualTo(inmate.getPublicUuid());
         assertThat(createdSentence.status()).isEqualTo("active");
@@ -91,12 +85,10 @@ class CaseSentenceManagementIntegrationTest {
         Inmate inmateTwo = inmateRepository.saveAndFlush(new Inmate(
                 uniqueInmateNumber(), "Bobby", "Brown", LocalDate.of(1991, 7, 6),
                 "Male", LocalDate.of(2023, 7, 1), "Medium", "Main Facility"));
-        var crime = crimeRepository.saveAndFlush(new com.pms.api.cases.entity.Crime(
-                "Fraud", "Credit fraud", "Financial"));
 
         CaseResponse createdCase = caseService.createCase(
                 new CaseRequest(inmateOne.getPublicUuid(), "CASE-2002", "District Court",
-                        LocalDate.of(2025, 2, 1), LocalDate.of(2025, 2, 15), Set.of(crime.getPublicUuid())),
+                        "Fraud: Credit fraud", LocalDate.of(2025, 2, 1), LocalDate.of(2025, 2, 15)),
                 caseOfficer.getUsername());
 
         assertThrows(SentenceService.InvalidSentenceRequestException.class, () -> sentenceService.create(new SentenceRequest(
@@ -109,22 +101,20 @@ class CaseSentenceManagementIntegrationTest {
         Inmate inmate = inmateRepository.saveAndFlush(new Inmate(
                 uniqueInmateNumber(), "Carla", "Davis", LocalDate.of(1988, 8, 8),
                 "Female", LocalDate.of(2024, 8, 1), "Minimum", "Main Facility"));
-        var crime = crimeRepository.saveAndFlush(new com.pms.api.cases.entity.Crime(
-                "Assault", "Simple assault", "Violent"));
 
         CaseResponse createdCase = caseService.createCase(
                 new CaseRequest(inmate.getPublicUuid(), "CASE-3003", "High Court",
-                        LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 20), Set.of(crime.getPublicUuid())),
+                        "Assault: Simple assault", LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 20)),
                 caseOfficer.getUsername());
+
+        assertThrows(SentenceService.InvalidSentenceRequestException.class, () -> sentenceService.create(new SentenceRequest(
+                createdCase.id(), inmate.getPublicUuid(), 12,
+                LocalDate.of(2025, 3, 11), LocalDate.of(2025, 3, 10), "completed")));
 
         caseService.updateStatus(createdCase.id(), new CaseStatusRequest("closed", "Conviction confirmed"));
         assertThrows(SentenceService.InvalidSentenceRequestException.class, () -> sentenceService.create(new SentenceRequest(
                 createdCase.id(), inmate.getPublicUuid(), 12,
-                LocalDate.of(2025, 3, 11), LocalDate.of(2025, 3, 10), "completed")));
-
-        assertThrows(SentenceService.InvalidSentenceRequestException.class, () -> sentenceService.create(new SentenceRequest(
-                createdCase.id(), inmate.getPublicUuid(), 12,
-                LocalDate.of(2025, 3, 11), LocalDate.of(2025, 3, 10), "completed")));
+                LocalDate.of(2025, 3, 11), LocalDate.of(2025, 3, 20), "completed")));
     }
 
     @Test
@@ -132,12 +122,10 @@ class CaseSentenceManagementIntegrationTest {
         Inmate inmate = inmateRepository.saveAndFlush(new Inmate(
                 uniqueInmateNumber(), "Darren", "Mills", LocalDate.of(1992, 9, 10),
                 "Male", LocalDate.of(2024, 9, 1), "Medium", "Main Facility"));
-        var crime = crimeRepository.saveAndFlush(new com.pms.api.cases.entity.Crime(
-                "Drug offence", "Possession", "Drug"));
 
         CaseResponse createdCase = caseService.createCase(
                 new CaseRequest(inmate.getPublicUuid(), "CASE-4004", "Appeal Court",
-                        LocalDate.of(2025, 4, 1), LocalDate.of(2025, 4, 30), Set.of(crime.getPublicUuid())),
+                        "Drug offence: Possession", LocalDate.of(2025, 4, 1), LocalDate.of(2025, 4, 30)),
                 caseOfficer.getUsername());
 
         assertThrows(CaseService.InvalidCaseRequestException.class,
