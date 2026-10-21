@@ -141,11 +141,13 @@ Other inmate inputs:
 
 ```text
 GET  /api/v1/inmates?search=John&classification=medium&gender=Male&facility=Test%20Facility&page=0&size=20&sort=lastName,asc
-GET  /api/v1/inmates/{inmateId}
-PUT  /api/v1/inmates/{inmateId}
+GET   /api/v1/inmates/{inmateUuid}
+PATCH /api/v1/inmates/{inmateUuid}
 ```
 
 The update body is the same as creation. Test duplicate inmate number, future birth date, missing fields, invalid IDs, and wrong roles.
+
+Names are not unique: create multiple inmates with the same or similar names and different inmate numbers. `inmateNumber` is trimmed at both ends and compared case-sensitively, so a duplicate surrounded by whitespace still returns `409 Conflict` with `An inmate with that inmate number already exists.` Case variants are allowed. A failed duplicate create or update must not increase the inmate count or change the other inmate. Successful responses expose a UUID in `id`; the numeric database key is never returned.
 
 ### Create cells
 
