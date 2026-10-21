@@ -27,7 +27,7 @@ Each persisted resource has two identifier concepts:
 
 - The UUID is the public API identifier. Use it in URL path variables, request-body references, query filters, and response objects.
 - The sequential numeric ID may remain an internal database key. Clients must not use or depend on it.
-- `inmateNumber` is a separate business identifier. It is required and unique, but it is not the API resource identifier.
+- `inmateNumber` is a separate business identifier. It is required and unique, but it is not the API resource identifier. Leading and trailing whitespace is trimmed; comparisons are case-sensitive.
 
 For example, an inmate may have:
 
@@ -66,11 +66,13 @@ The records officer or super administrator submits the required inmate profile:
 
 The service creates the inmate in the `inmates` table and assigns a public UUID. The current facility is taken from server configuration rather than trusted from the request body.
 
+The API entity maps to the lowercase `inmates` table created by migration `V11__inmates.sql`. The older `Inmate` table from `V2__inmate_and_custody_tables_creation.sql` is a legacy schema table and is not used by the current inmate API.
+
 Important rules:
 
 - `inmateNumber` is required and unique.
-- First names and last names are not unique and may be shared by multiple inmates.
-- A duplicate inmate number returns a conflict response.
+- First names, last names, and full names are not unique and may be shared by multiple inmates. Names do not generate or determine inmate numbers.
+- A duplicate inmate number returns `409 Conflict` with `An inmate with that inmate number already exists.` The same trimmed number conflicts even if surrounding spaces differ; letter case remains significant (`INM-1` and `inm-1` are distinct).
 - The newly created inmate UUID is used in all subsequent workflows.
 
 Useful follow-up endpoint:

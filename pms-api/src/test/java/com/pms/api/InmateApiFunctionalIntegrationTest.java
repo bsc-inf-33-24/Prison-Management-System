@@ -4,9 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
+import com.pms.api.inmate.repository.InmateRepository;
 import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
@@ -48,6 +49,9 @@ class InmateApiFunctionalIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private InmateRepository inmateRepository;
+
     private String recordsOfficerToken;
 
     @BeforeEach
@@ -71,15 +75,15 @@ class InmateApiFunctionalIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.id").isString())
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.currentFacility").value("Main Facility"))
                 .andExpect(jsonPath("$.firstName").value("Jane"))
                 .andReturn();
 
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
-        assertNotNull(response.path("id").longValue());
-        assertTrue(response.path("id").longValue() != 987654);
+        assertNotNull(UUID.fromString(response.path("id").asText()));
+        assertFalse(response.path("id").isNumber());
         assertTrue(!response.path("createdAt").asText().startsWith("2000-"));
     }
 
@@ -87,6 +91,7 @@ class InmateApiFunctionalIntegrationTest {
     void databaseUniqueConstraintReturnsConflictOnDuplicateInmateNumber() throws Exception {
         ObjectNode request = validRequest(uniqueInmateNumber(), "Unique", "Number");
         JsonNode existing = createInmate(request);
+        long countBeforeDuplicate = inmateRepository.count();
 
         mockMvc.perform(post(INMATES_PATH)
                         .header("Authorization", bearerToken())
@@ -96,16 +101,51 @@ class InmateApiFunctionalIntegrationTest {
                 .andExpect(jsonPath("$.status").value(409))
                 .andExpect(jsonPath("$.error").value("Conflict"))
                 .andExpect(jsonPath("$.message").value("An inmate with that inmate number already exists."));
+        assertEquals(countBeforeDuplicate, inmateRepository.count());
 
         JsonNode anotherInmate = createInmate(validRequest(uniqueInmateNumber(), "Different", "Inmate"));
+        long countBeforeConflict = inmateRepository.count();
         ObjectNode duplicateUpdate = validRequest(request.path("inmateNumber").asText(), "Different", "Inmate");
-        mockMvc.perform(put(INMATES_PATH + "/" + anotherInmate.path("id").asLong())
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(INMATES_PATH + "/" + anotherInmate.path("id").asText())
                         .header("Authorization", bearerToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(duplicateUpdate)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409));
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value("An inmate with that inmate number already exists."));
+        assertEquals(countBeforeConflict, inmateRepository.count());
         assertNotNull(existing.path("id"));
+    }
+
+    @Test
+    void identicalAndSimilarNamesAreAllowedWhenNumbersDiffer() throws Exception {
+        JsonNode first = createInmate(validRequest("INM-000245", "John", "Banda"));
+        JsonNode identical = createInmate(validRequest("INM-000246", "John", "Banda"));
+        JsonNode similar = createInmate(validRequest("INM-000247", "Jon", "Banda"));
+        assertNotEquals(first.path("id").asText(), identical.path("id").asText());
+        assertNotEquals(identical.path("id").asText(), similar.path("id").asText());
+        assertEquals("John", identical.path("firstName").asText());
+        assertNotNull(UUID.fromString(first.path("id").asText()));
+    }
+
+    @Test
+    void trimsNumbersAndTreatsCaseAsSignificant() throws Exception {
+        createInmate(validRequest("  CASE-" + uniqueInmateNumber() + "  ", "Case", "Trim"));
+        String number = "CASE-" + uniqueInmateNumber();
+        createInmate(validRequest(number, "Case", "Sensitive"));
+        createInmate(validRequest(number.toLowerCase(java.util.Locale.ROOT), "Case", "Sensitive"));
+
+        long countBeforeConflict = inmateRepository.count();
+        mockMvc.perform(post(INMATES_PATH)
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest(" " + number + " ", "Duplicate", "Number"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value("An inmate with that inmate number already exists."));
+        assertEquals(countBeforeConflict, inmateRepository.count());
     }
 
     @Test
@@ -114,7 +154,7 @@ class InmateApiFunctionalIntegrationTest {
         JsonNode created = createInmate(createRequest);
         String originalCreatedAt = created.path("createdAt").asText();
         String originalUpdatedAt = created.path("updatedAt").asText();
-        long inmateId = created.path("id").asLong();
+        String inmateId = created.path("id").asText();
 
         ObjectNode updateRequest = validRequest(uniqueInmateNumber(), "After", "Update");
         updateRequest.put("id", 123456);
@@ -122,7 +162,7 @@ class InmateApiFunctionalIntegrationTest {
         updateRequest.put("createdAt", "2001-01-01T00:00:00Z");
         updateRequest.put("updatedAt", "2001-01-01T00:00:00Z");
 
-        mockMvc.perform(put(INMATES_PATH + "/" + inmateId)
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(INMATES_PATH + "/" + inmateId)
                         .header("Authorization", bearerToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
@@ -206,7 +246,7 @@ class InmateApiFunctionalIntegrationTest {
 
     @Test
     void allowedRoleGetsNotFoundForUnknownInmateId() throws Exception {
-        mockMvc.perform(get(INMATES_PATH + "/999999999999")
+        mockMvc.perform(get(INMATES_PATH + "/" + UUID.randomUUID())
                         .header("Authorization", bearerToken()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))

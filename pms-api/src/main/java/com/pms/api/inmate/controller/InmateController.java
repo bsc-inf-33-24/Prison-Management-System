@@ -6,6 +6,8 @@ import com.pms.api.inmate.dto.InmateResponse;
 import com.pms.api.inmate.service.InmateService;
 import com.pms.api.common.pagination.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -38,7 +40,12 @@ public class InmateController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
-    @Operation(summary = "Enroll an inmate")
+    @Operation(summary = "Enroll an inmate",
+            description = "Inmate names may be shared. The required inmateNumber is trimmed and must be unique; comparisons are case-sensitive. Returns the inmate's public UUID.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Inmate created; response id is the public UUID."),
+            @ApiResponse(responseCode = "409", description = "The inmate number is already in use.")
+    })
     public InmateResponse enroll(@Valid @RequestBody InmateRequest request) {
         return inmateService.enroll(request);
     }
@@ -65,7 +72,9 @@ public class InmateController {
 
     @PatchMapping("/{inmateId}")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
-    @Operation(summary = "Update an inmate record")
+    @Operation(summary = "Update an inmate record",
+            description = "Updates inmate details. Names may be shared. A supplied inmateNumber is trimmed, case-sensitive, and must remain unique across inmates.")
+    @ApiResponses(@ApiResponse(responseCode = "409", description = "The inmate number is already in use by another inmate."))
     public InmateResponse update(@PathVariable UUID inmateId,
                                  @Valid @RequestBody UpdateInmateDetailsRequest request) {
         return inmateService.update(inmateId, request);
