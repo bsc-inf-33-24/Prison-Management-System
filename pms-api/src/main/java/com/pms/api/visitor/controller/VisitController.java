@@ -5,6 +5,7 @@ import com.pms.api.visitor.dto.VisitHistoryResponse;
 import com.pms.api.visitor.dto.VisitRequest;
 import com.pms.api.visitor.dto.VisitResponse;
 import com.pms.api.visitor.service.VisitService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 @SecurityRequirement(name = "bearerAuth")
+@Tag(name = "7. Visits Management")
 public class VisitController {
 
     private final VisitService visitService;

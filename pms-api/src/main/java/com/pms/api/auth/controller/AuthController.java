@@ -26,7 +26,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@Tag(name = "Authentication")
+@Tag(name = "1. Authentication")
 public class AuthController {
 
     private final AuthService authService;
