@@ -1,4 +1,7 @@
+
 package com.pms.api.common.error;
+
+import com.pms.api.common.audit.AuditService;
 
 import com.pms.api.auth.service.AuthService;
 import com.pms.api.cases.service.CaseService;
@@ -30,6 +33,9 @@ import com.pms.api.auth.service.UnavailableRecoveryTokenDelivery;
 public class ApiExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AuditService auditService;
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidationFailure() {
@@ -82,7 +88,30 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiError> handleAccessDenied() {
+    public ResponseEntity<ApiError> handleAccessDenied(
+            AccessDeniedException exception,
+            jakarta.servlet.http.HttpServletRequest request) {
+
+        if (auditService != null) {
+            try {
+                org.springframework.security.core.Authentication authentication =
+                        org.springframework.security.core.context.SecurityContextHolder
+                                .getContext().getAuthentication();
+
+                String username = authentication != null && authentication.isAuthenticated()
+                        ? authentication.getName()
+                        : null;
+
+                auditService.recordSecurityEvent(
+                        username,
+                        "ACCESS_DENIED",
+                        request.getRequestURI(),
+                        "Insufficient role or permission.");
+            } catch (RuntimeException auditException) {
+                LOGGER.warn("Could not record denied-access audit event.");
+            }
+        }
+
         return problem(HttpStatus.FORBIDDEN, "You are not authorized to access this resource.");
     }
 
@@ -97,10 +126,14 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler(AuthService.PasswordReuseException.class)
-    public ResponseEntity<ApiError> handlePasswordReuse() { return problem(HttpStatus.BAD_REQUEST, "The new password must differ from the current password."); }
+    public ResponseEntity<ApiError> handlePasswordReuse() {
+        return problem(HttpStatus.BAD_REQUEST, "The new password must differ from the current password.");
+    }
 
     @ExceptionHandler(AuthService.InvalidResetTokenException.class)
-    public ResponseEntity<ApiError> handleInvalidResetToken() { return problem(HttpStatus.BAD_REQUEST, "The password reset request is invalid or expired."); }
+    public ResponseEntity<ApiError> handleInvalidResetToken() {
+        return problem(HttpStatus.BAD_REQUEST, "The password reset request is invalid or expired.");
+    }
 
     @ExceptionHandler(PasswordPolicy.WeakPasswordException.class)
     public ResponseEntity<ApiError> handleWeakPassword() {
@@ -109,7 +142,9 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler(UnavailableRecoveryTokenDelivery.RecoveryDeliveryUnavailableException.class)
-    public ResponseEntity<ApiError> handleRecoveryDeliveryUnavailable() { return problem(HttpStatus.SERVICE_UNAVAILABLE, "Password recovery is temporarily unavailable."); }
+    public ResponseEntity<ApiError> handleRecoveryDeliveryUnavailable() {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Password recovery is temporarily unavailable.");
+    }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrityViolation() {
@@ -258,8 +293,11 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpectedException(Exception exception) {
-        LOGGER.error("Unexpected API error ({})", exception.getClass().getName());
-        return problem(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+        LOGGER.error("Unexpected API error", exception);
+        return problem(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred."
+        );
     }
 
     private ResponseEntity<ApiError> problem(HttpStatus status, String message) {
