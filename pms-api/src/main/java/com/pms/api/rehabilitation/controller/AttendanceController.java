@@ -31,7 +31,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/rehabilitation/attendance")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "Rehabilitation Attendance", description = "Record, update, search, and review attendance")
+@Tag(name = "11. Rehabilitation Attendance", description = "Record, update, search, and review attendance")
 public class AttendanceController {
 
     private final AttendanceService attendanceService;

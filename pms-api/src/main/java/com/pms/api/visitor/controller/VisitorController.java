@@ -3,6 +3,7 @@ package com.pms.api.visitor.controller;
 import com.pms.api.visitor.dto.VisitorRequest;
 import com.pms.api.visitor.dto.VisitorResponse;
 import com.pms.api.visitor.service.VisitorService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -27,6 +28,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1")
 @SecurityRequirement(name = "bearerAuth")
+@Tag(name = "8. Visitors Management")
 public class VisitorController {
 
     private final VisitorService visitorService;

@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "Sentence management", description = "Create, review, and update inmate sentence records.")
+@Tag(name = "9. Sentence management", description = "Create, review, and update inmate sentence records.")
 public class SentenceController {
 
     private final SentenceService sentenceService;

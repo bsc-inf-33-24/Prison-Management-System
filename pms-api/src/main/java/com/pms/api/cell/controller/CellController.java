@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "Cell allocation and custody", description = "Manage cell inventory and inmate cell allocation.")
+@Tag(name = "4. Cell allocation and custody", description = "Manage cell inventory and inmate cell allocation.")
 public class CellController {
 
     private final CellService cellService;

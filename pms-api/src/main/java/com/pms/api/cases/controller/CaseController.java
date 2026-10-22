@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "Case management", description = "Create and manage inmate case records and case progression.")
+@Tag(name = "6. Case management", description = "Create and manage inmate case records and case progression.")
 public class CaseController {
 
     private final CaseService caseService;

@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/inmates")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "Inmate enrollment and inmate records", description = "Enroll inmates and manage inmate records and custody information.")
+@Tag(name = "3. Inmate enrollment and inmate records", description = "Enroll inmates and manage inmate records and custody information.")
 public class InmateController {
 
     private final InmateService inmateService;

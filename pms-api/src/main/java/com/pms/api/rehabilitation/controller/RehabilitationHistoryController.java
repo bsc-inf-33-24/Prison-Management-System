@@ -20,7 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "Rehabilitation History", description = "View inmate participation and enrollment attendance history")
+@Tag(name = "13. Rehabilitation History", description = "View inmate participation and enrollment attendance history")
 public class RehabilitationHistoryController {
 
     private final EnrollmentService enrollmentService;
