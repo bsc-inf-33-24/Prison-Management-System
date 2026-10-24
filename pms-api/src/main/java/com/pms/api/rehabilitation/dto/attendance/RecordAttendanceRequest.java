@@ -8,7 +8,8 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public record RecordAttendanceRequest(
-        @NotNull UUID enrollmentId,
+        @NotNull UUID inmateId,
+        @NotNull UUID programId,
         @NotNull LocalDate sessionDate,
         @NotBlank String attendanceStatus,
         @Size(max = 10000) String remarks

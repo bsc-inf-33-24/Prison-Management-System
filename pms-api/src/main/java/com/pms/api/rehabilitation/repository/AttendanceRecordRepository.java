@@ -16,6 +16,4 @@ public interface AttendanceRecordRepository
 
     boolean existsByEnrollment_IdAndSessionDate(Long enrollmentId, java.time.LocalDate sessionDate);
 
-    Page<AttendanceRecord> findByEnrollment_IdOrderBySessionDateDescIdDesc(
-            Long enrollmentId, Pageable pageable);
 }

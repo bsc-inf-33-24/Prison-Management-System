@@ -8,7 +8,9 @@ import java.util.UUID;
 public record EnrollmentResponse(
         UUID id,
         UUID inmateId,
+        String inmateName,
         UUID programId,
+        String programName,
         LocalDate enrollmentDate,
         String status
 ) {
@@ -16,7 +18,9 @@ public record EnrollmentResponse(
         return new EnrollmentResponse(
                 enrollment.getPublicUuid(),
                 enrollment.getInmate().getPublicUuid(),
+                enrollment.getInmate().getFirstName() + " " + enrollment.getInmate().getLastName(),
                 enrollment.getProgram().getPublicUuid(),
+                enrollment.getProgram().getName(),
                 enrollment.getEnrollmentDate(),
                 enrollment.getStatus()
         );

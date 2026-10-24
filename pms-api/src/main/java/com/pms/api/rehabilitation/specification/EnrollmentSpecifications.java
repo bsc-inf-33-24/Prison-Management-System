@@ -3,7 +3,6 @@ package com.pms.api.rehabilitation.specification;
 import com.pms.api.rehabilitation.entity.Enrollment;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.time.LocalDate;
 
 public final class EnrollmentSpecifications {
 
@@ -20,14 +19,6 @@ public final class EnrollmentSpecifications {
 
     public static Specification<Enrollment> statusIs(String status) {
         return (root, query, cb) -> cb.equal(root.get("status"), status);
-    }
-
-    public static Specification<Enrollment> enrollmentDateFrom(LocalDate date) {
-        return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("enrollmentDate"), date);
-    }
-
-    public static Specification<Enrollment> enrollmentDateTo(LocalDate date) {
-        return (root, query, cb) -> cb.lessThanOrEqualTo(root.get("enrollmentDate"), date);
     }
 
     public static Specification<Enrollment> inmateNameContains(String value) {

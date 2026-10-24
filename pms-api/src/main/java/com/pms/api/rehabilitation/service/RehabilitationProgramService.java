@@ -2,20 +2,24 @@ package com.pms.api.rehabilitation.service;
 
 import com.pms.api.common.audit.AuditService;
 import com.pms.api.rehabilitation.dto.program.CreateProgramRequest;
-import com.pms.api.rehabilitation.dto.program.ProgramResponse;
 import com.pms.api.rehabilitation.dto.program.ProgramDetailResponse;
+import com.pms.api.rehabilitation.dto.program.EnrolledInmateResponse;
+import com.pms.api.rehabilitation.dto.program.ProgramResponse;
 import com.pms.api.rehabilitation.dto.program.UpdateProgramRequest;
-import com.pms.api.rehabilitation.dto.program.UpdateProgramStatusRequest;
 import com.pms.api.rehabilitation.entity.RehabilitationProgram;
 import com.pms.api.rehabilitation.exception.RehabilitationExceptions.ProgramNotFoundException;
-import com.pms.api.rehabilitation.repository.RehabilitationProgramRepository;
 import com.pms.api.rehabilitation.repository.EnrollmentRepository;
+import com.pms.api.rehabilitation.repository.ProgramEnrollmentProjection;
+import com.pms.api.rehabilitation.repository.RehabilitationProgramRepository;
 import com.pms.api.rehabilitation.specification.ProgramSpecifications;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.UUID;
 
 @Service
@@ -61,7 +65,7 @@ public class RehabilitationProgramService {
     public Page<ProgramResponse> list(String name, String instructor, String status,
                                       String schedule, Pageable pageable) {
         Specification<RehabilitationProgram> specification =
-                Specification.where((Specification<RehabilitationProgram>) null);
+                Specification.unrestricted();
         if (name != null && !name.isBlank()) {
             specification = specification.and(ProgramSpecifications.nameContains(name));
         }
@@ -74,7 +78,18 @@ public class RehabilitationProgramService {
         if (schedule != null && !schedule.isBlank()) {
             specification = specification.and(ProgramSpecifications.scheduleContains(schedule));
         }
-        return programRepository.findAll(specification, pageable).map(ProgramResponse::from);
+        Page<RehabilitationProgram> programs = programRepository.findAll(specification, pageable);
+        List<Long> programIds = programs.getContent().stream().map(RehabilitationProgram::getId).toList();
+        Map<Long, List<EnrolledInmateResponse>> participantsByProgram = programIds.isEmpty()
+                ? Map.of()
+                : enrollmentRepository.findEnrolledParticipantsByProgramIds(programIds).stream()
+                        .collect(Collectors.groupingBy(
+                                ProgramEnrollmentProjection::getProgramId,
+                                Collectors.mapping(participant -> new EnrolledInmateResponse(
+                                                participant.getInmateId(), participant.getInmateName()),
+                                        Collectors.toList())));
+        return programs.map(program -> ProgramResponse.from(program,
+                participantsByProgram.getOrDefault(program.getId(), List.of())));
     }
 
     @Transactional(readOnly = true)
@@ -105,23 +120,6 @@ public class RehabilitationProgramService {
         );
         auditService.record(username, "PROGRAM_UPDATED", "RehabProgram", program.getPublicUuid().toString(), oldValues,
                 "name=" + program.getName() + ",instructor=" + program.getInstructor());
-        return ProgramResponse.from(program);
-    }
-
-    @Transactional
-    public ProgramResponse updateStatus(UUID programId, UpdateProgramStatusRequest request,
-                                        String username) {
-        String status = normalizeStatus(request.status());
-        if ((INACTIVE.equals(status) || COMPLETED.equals(status))
-                && (request.reason() == null || request.reason().isBlank())) {
-            throw new IllegalArgumentException("A reason is required for this program status.");
-        }
-
-        RehabilitationProgram program = findProgram(programId);
-        String oldStatus = program.getStatus();
-        program.updateStatus(status);
-        auditService.record(username, "PROGRAM_STATUS_CHANGED", "RehabProgram", program.getPublicUuid().toString(),
-                "status=" + oldStatus, "status=" + status + ",reason=" + request.reason());
         return ProgramResponse.from(program);
     }
 

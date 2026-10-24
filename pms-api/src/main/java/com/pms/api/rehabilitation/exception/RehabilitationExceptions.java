@@ -23,9 +23,6 @@ public final class RehabilitationExceptions {
     public static class DuplicateAttendanceException extends RuntimeException {
     }
 
-    public static class InvalidEnrollmentTransitionException extends RuntimeException {
-    }
-
     public static class AttendanceNotAllowedException extends RuntimeException {
     }
 

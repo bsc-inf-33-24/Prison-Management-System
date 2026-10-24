@@ -83,8 +83,4 @@ public class AttendanceRecord {
         return recordedBy;
     }
 
-    public void updateAttendance(String present, String remarks) {
-        this.present = present;
-        this.remarks = remarks;
-    }
 }
