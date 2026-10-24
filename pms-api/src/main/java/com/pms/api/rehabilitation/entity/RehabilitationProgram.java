@@ -83,7 +83,4 @@ public class RehabilitationProgram {
         this.schedule = schedule;
     }
 
-    public void updateStatus(String status) {
-        this.status = status;
-    }
 }

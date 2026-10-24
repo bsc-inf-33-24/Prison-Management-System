@@ -10,18 +10,15 @@ public final class AttendanceSpecifications {
     private AttendanceSpecifications() {
     }
 
-    public static Specification<AttendanceRecord> enrollmentId(Long id) {
-        return (root, query, cb) -> cb.equal(root.get("enrollment").get("id"), id);
-    }
-
     public static Specification<AttendanceRecord> inmateId(Long id) {
         return (root, query, cb) -> cb.equal(
                 root.get("enrollment").get("inmate").get("id"), id);
     }
 
-    public static Specification<AttendanceRecord> programId(Long id) {
-        return (root, query, cb) -> cb.equal(
-                root.get("enrollment").get("program").get("id"), id);
+    public static Specification<AttendanceRecord> programNameContains(String name) {
+        String pattern = "%" + ProgramSpecifications.escape(name.trim().toLowerCase()) + "%";
+        return (root, query, cb) -> cb.like(
+                cb.lower(root.get("enrollment").get("program").get("name")), pattern, '!');
     }
 
     public static Specification<AttendanceRecord> statusIs(String status) {

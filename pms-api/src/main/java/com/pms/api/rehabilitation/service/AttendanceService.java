@@ -2,12 +2,12 @@ package com.pms.api.rehabilitation.service;
 
 import com.pms.api.common.audit.AuditService;
 import com.pms.api.rehabilitation.dto.attendance.AttendanceResponse;
+import com.pms.api.rehabilitation.dto.attendance.BulkRecordAttendanceRequest;
+import com.pms.api.rehabilitation.dto.attendance.RecordAttendanceEntryRequest;
 import com.pms.api.rehabilitation.dto.attendance.RecordAttendanceRequest;
-import com.pms.api.rehabilitation.dto.attendance.UpdateAttendanceRequest;
 import com.pms.api.rehabilitation.entity.AttendanceRecord;
 import com.pms.api.rehabilitation.entity.Enrollment;
 import com.pms.api.rehabilitation.exception.RehabilitationExceptions.AttendanceNotAllowedException;
-import com.pms.api.rehabilitation.exception.RehabilitationExceptions.AttendanceNotFoundException;
 import com.pms.api.rehabilitation.exception.RehabilitationExceptions.DuplicateAttendanceException;
 import com.pms.api.rehabilitation.repository.AttendanceRecordRepository;
 import com.pms.api.rehabilitation.specification.AttendanceSpecifications;
@@ -16,6 +16,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import java.time.LocalDate;
@@ -37,7 +40,7 @@ public class AttendanceService {
 
     @Transactional
     public AttendanceResponse create(RecordAttendanceRequest request, String recordedBy) {
-        Enrollment enrollment = enrollmentService.findEnrollment(request.enrollmentId());
+        Enrollment enrollment = enrollmentService.findActiveEnrollment(request.inmateId(), request.programId());
         validateAttendanceDate(enrollment, request.sessionDate());
         validateAttendanceAllowed(enrollment);
 
@@ -60,40 +63,38 @@ public class AttendanceService {
     }
 
     @Transactional
-    public AttendanceResponse update(UUID attendanceId, UpdateAttendanceRequest request,
-                                     String username) {
-        AttendanceRecord attendance = attendanceRepository.findByPublicUuid(attendanceId)
-                .orElseThrow(AttendanceNotFoundException::new);
-        validateAttendanceAllowed(attendance.getEnrollment());
-        String oldValue = attendance.getPresent();
-        attendance.updateAttendance(toDatabaseValue(request.attendanceStatus()), request.remarks());
-        auditService.record(username, "ATTENDANCE_UPDATED", "AttendanceRecord", attendance.getPublicUuid().toString(),
-                "present=" + oldValue, "present=" + attendance.getPresent());
-        return AttendanceResponse.from(attendance);
+    public List<AttendanceResponse> createBulk(BulkRecordAttendanceRequest request, String recordedBy) {
+        Set<UUID> inmateIds = new HashSet<>();
+        for (RecordAttendanceEntryRequest record : request.records()) {
+            if (!inmateIds.add(record.inmateId())) {
+                throw new DuplicateAttendanceException();
+            }
+        }
+
+        return request.records().stream()
+                .map(record -> create(new RecordAttendanceRequest(
+                        record.inmateId(), request.programId(), request.sessionDate(),
+                        record.attendanceStatus(), record.remarks()), recordedBy))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public Page<AttendanceResponse> list(Pageable pageable) {
-        return list(null, null, null, null, null, null, pageable);
+        return list(null, null, null, null, null, pageable);
     }
 
     @Transactional(readOnly = true)
-    public Page<AttendanceResponse> list(UUID enrollmentId, UUID inmateId, UUID programId,
+    public Page<AttendanceResponse> list(UUID inmateId, String programName,
                                          String attendanceStatus, LocalDate sessionDateFrom,
                                          LocalDate sessionDateTo, Pageable pageable) {
         Specification<AttendanceRecord> specification =
-                Specification.where((Specification<AttendanceRecord>) null);
-        Long internalEnrollmentId = enrollmentId == null ? null : enrollmentService.findEnrollment(enrollmentId).getId();
+                Specification.unrestricted();
         Long internalInmateId = inmateId == null ? null : enrollmentService.getInmateId(inmateId);
-        Long internalProgramId = programId == null ? null : enrollmentService.getProgramId(programId);
-        if (internalEnrollmentId != null) {
-            specification = specification.and(AttendanceSpecifications.enrollmentId(internalEnrollmentId));
-        }
         if (internalInmateId != null) {
             specification = specification.and(AttendanceSpecifications.inmateId(internalInmateId));
         }
-        if (internalProgramId != null) {
-            specification = specification.and(AttendanceSpecifications.programId(internalProgramId));
+        if (programName != null && !programName.isBlank()) {
+            specification = specification.and(AttendanceSpecifications.programNameContains(programName));
         }
         if (attendanceStatus != null && !attendanceStatus.isBlank()) {
             specification = specification.and(AttendanceSpecifications.statusIs(attendanceStatus));
@@ -105,14 +106,6 @@ public class AttendanceService {
             specification = specification.and(AttendanceSpecifications.sessionDateTo(sessionDateTo));
         }
         return attendanceRepository.findAll(specification, pageable).map(AttendanceResponse::from);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<AttendanceResponse> history(UUID enrollmentId, Pageable pageable) {
-        enrollmentService.findEnrollment(enrollmentId);
-        return attendanceRepository.findByEnrollment_IdOrderBySessionDateDescIdDesc(
-                enrollmentService.findEnrollment(enrollmentId).getId(), pageable)
-                .map(AttendanceResponse::from);
     }
 
     private static void validateAttendanceDate(Enrollment enrollment, LocalDate sessionDate) {
