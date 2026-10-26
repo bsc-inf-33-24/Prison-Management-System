@@ -1,12 +1,17 @@
 package com.pms.api.inmate.entity;
 
+import com.pms.api.cell.entity.CellAllocation;
 import com.pms.api.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 
@@ -48,11 +53,35 @@ public class Inmate extends BaseEntity {
     @Column(name = "current_facility", nullable = false, length = 100)
     private String currentFacility;
 
+    @Column(name = "offence", length = 500)
+    private String offence;
+
+    @Column(name = "sentence_duration_value")
+    private Integer sentenceDurationValue;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sentence_duration_unit", length = 20)
+    private SentenceDurationUnit sentenceDurationUnit;
+
+    @Column(name = "sentence_start_date")
+    private LocalDate sentenceStartDate;
+
+    @OneToOne(mappedBy = "inmate", fetch = FetchType.LAZY)
+    private CellAllocation cellAllocation;
+
     protected Inmate() {
     }
 
     public Inmate(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
                   String gender, LocalDate admissionDate, String classification, String currentFacility) {
+        this(inmateNumber, firstName, lastName, dateOfBirth, gender, admissionDate, classification,
+                currentFacility, null, null, null, null);
+    }
+
+    public Inmate(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
+                  String gender, LocalDate admissionDate, String classification, String currentFacility,
+                  String offence, Integer sentenceDurationValue, SentenceDurationUnit sentenceDurationUnit,
+                  LocalDate sentenceStartDate) {
         this.inmateNumber = inmateNumber;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -61,6 +90,10 @@ public class Inmate extends BaseEntity {
         this.admissionDate = admissionDate;
         this.classification = classification;
         this.currentFacility = currentFacility;
+        this.offence = offence;
+        this.sentenceDurationValue = sentenceDurationValue;
+        this.sentenceDurationUnit = sentenceDurationUnit;
+        this.sentenceStartDate = sentenceStartDate;
     }
 
     public Long getId() {
@@ -97,6 +130,26 @@ public class Inmate extends BaseEntity {
 
     public String getCurrentFacility() {
         return currentFacility;
+    }
+
+    public String getOffence() {
+        return offence;
+    }
+
+    public Integer getSentenceDurationValue() {
+        return sentenceDurationValue;
+    }
+
+    public SentenceDurationUnit getSentenceDurationUnit() {
+        return sentenceDurationUnit;
+    }
+
+    public LocalDate getSentenceStartDate() {
+        return sentenceStartDate;
+    }
+
+    public CellAllocation getCellAllocation() {
+        return cellAllocation;
     }
 
     public void updateDetails(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,

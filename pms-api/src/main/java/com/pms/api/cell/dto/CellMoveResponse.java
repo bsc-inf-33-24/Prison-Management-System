@@ -5,8 +5,8 @@ import java.util.UUID;
 
 public record CellMoveResponse(
         UUID inmateId,
-        UUID oldCellId,
-        UUID newCellId,
+        Long oldCellId,
+        Long newCellId,
         Instant allocatedAt,
         Integer oldCellOccupancy,
         Integer newCellOccupancy

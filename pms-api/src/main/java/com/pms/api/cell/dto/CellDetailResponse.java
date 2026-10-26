@@ -1,11 +1,12 @@
 package com.pms.api.cell.dto;
 
 import com.pms.api.cell.entity.Cell;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
-import java.util.UUID;
 
 public record CellDetailResponse(
-        UUID id,
+        @Schema(description = "Numeric database ID used as cellId in allocation requests and cell lookup paths.")
+        Long id,
         String name,
         String blockName,
         Integer cellNumber,
@@ -17,7 +18,7 @@ public record CellDetailResponse(
 ) {
     public static CellDetailResponse from(Cell cell, int occupancy, List<CellInmateSummary> inmates) {
         return new CellDetailResponse(
-                cell.getPublicUuid(),
+                cell.getId(),
                 cell.getName(),
                 cell.getBlockName(),
                 cell.getCellNumber(),

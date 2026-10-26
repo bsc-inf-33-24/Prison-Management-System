@@ -77,7 +77,7 @@ public class CellController {
     @GetMapping("/cells/{cellId}")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Get a cell")
-    public CellDetailResponse getCell(@PathVariable UUID cellId) {
+    public CellDetailResponse getCell(@PathVariable Long cellId) {
         return cellService.getCell(cellId);
     }
 }

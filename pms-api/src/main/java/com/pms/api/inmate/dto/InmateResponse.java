@@ -1,6 +1,7 @@
 package com.pms.api.inmate.dto;
 
 import com.pms.api.inmate.entity.Inmate;
+import com.pms.api.inmate.entity.SentenceDurationUnit;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -15,11 +16,22 @@ public record InmateResponse(
         LocalDate admissionDate,
         String classification,
         String currentFacility,
+        String offence,
+        Integer sentenceDurationValue,
+        SentenceDurationUnit sentenceDurationUnit,
+        LocalDate sentenceStartDate,
+        Long cellId,
         Instant createdAt,
         Instant updatedAt
 ) {
 
     public static InmateResponse from(Inmate inmate) {
+        return from(inmate, inmate.getCellAllocation() == null
+                ? null
+                : inmate.getCellAllocation().getCell().getId());
+    }
+
+    public static InmateResponse from(Inmate inmate, Long cellId) {
         return new InmateResponse(
                 inmate.getPublicUuid(),
                 inmate.getInmateNumber(),
@@ -30,6 +42,11 @@ public record InmateResponse(
                 inmate.getAdmissionDate(),
                 inmate.getClassification(),
                 inmate.getCurrentFacility(),
+                inmate.getOffence(),
+                inmate.getSentenceDurationValue(),
+                inmate.getSentenceDurationUnit(),
+                inmate.getSentenceStartDate(),
+                cellId,
                 inmate.getCreatedAt(),
                 inmate.getUpdatedAt()
         );

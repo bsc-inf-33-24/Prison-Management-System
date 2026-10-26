@@ -41,10 +41,11 @@ public class InmateController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Enroll an inmate",
-            description = "Inmate names may be shared. The required inmateNumber is trimmed and must be unique; comparisons are case-sensitive. Returns the inmate's public UUID.")
+            description = "Creates the inmate record and allocates the inmate to the selected cell in one transaction. The inmateNumber is trimmed and must be unique; comparisons are case-sensitive.")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Inmate created; response id is the public UUID."),
-            @ApiResponse(responseCode = "409", description = "The inmate number is already in use.")
+            @ApiResponse(responseCode = "201", description = "Inmate created and allocated to the selected cell."),
+            @ApiResponse(responseCode = "409", description = "The inmate number is already in use, or the cell is full or incompatible with the inmate classification."),
+            @ApiResponse(responseCode = "404", description = "The selected cell does not exist.")
     })
     public InmateResponse enroll(@Valid @RequestBody InmateRequest request) {
         return inmateService.enroll(request);

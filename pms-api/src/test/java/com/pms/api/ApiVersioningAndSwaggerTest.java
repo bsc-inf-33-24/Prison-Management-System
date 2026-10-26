@@ -37,8 +37,6 @@ class ApiVersioningAndSwaggerTest {
                 .contains("/api/v1/users")
                 .contains("/api/v1/inmates")
                 .contains("/api/v1/cells")
-                .contains("/api/v1/cases")
-                .contains("/api/v1/sentences")
                 .contains("/api/v1/incidents")
                 .contains("/api/v1/rehabilitation/programs")
                 .contains("/api/v1/rehabilitation/enrollments")
@@ -48,7 +46,8 @@ class ApiVersioningAndSwaggerTest {
                 .doesNotContain("\"/api/inmates\"")
                 .doesNotContain("\"/api/cells\"")
                 .doesNotContain("\"/api/incidents\"")
-                .doesNotContain("\"/api/sentences\"");
+                .doesNotContain("/api/v1/cases")
+                .doesNotContain("/api/v1/sentences");
 
         JsonNode document = objectMapper.readTree(docs);
         JsonNode createUserSchema = document.at("/components/schemas/CreateUserRequest");

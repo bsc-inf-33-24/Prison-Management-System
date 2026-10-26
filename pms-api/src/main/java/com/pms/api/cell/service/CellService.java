@@ -66,7 +66,7 @@ public class CellService {
     public CellAllocationResponse allocate(UUID inmateId, AllocateCellRequest request) {
         Inmate inmate = inmateRepository.findByPublicUuid(inmateId)
                 .orElseThrow(InmateNotFoundException::new);
-        Cell cell = cellRepository.findByPublicUuid(request.cellId())
+        Cell cell = cellRepository.findByIdForUpdate(request.cellId())
                 .orElseThrow(CellNotFoundException::new);
 
         validateAllocation(inmate, cell);
@@ -98,7 +98,7 @@ public class CellService {
                 .orElseThrow(CellAllocationNotFoundException::new);
 
         Cell currentCell = currentAllocation.getCell();
-        Cell targetCell = cellRepository.findByPublicUuid(request.cellId())
+        Cell targetCell = cellRepository.findByIdForUpdate(request.cellId())
                 .orElseThrow(CellNotFoundException::new);
 
         if (currentCell.getId().equals(targetCell.getId())) {
@@ -119,8 +119,8 @@ public class CellService {
 
         return new CellMoveResponse(
                 inmate.getPublicUuid(),
-                currentCell.getPublicUuid(),
-                targetCell.getPublicUuid(),
+                currentCell.getId(),
+                targetCell.getId(),
                 currentAllocation.getAllocatedAt(),
                 currentCellOccupancy - 1,
                 targetCellOccupancy + 1
@@ -153,8 +153,8 @@ public class CellService {
     }
 
     @Transactional(readOnly = true)
-    public CellDetailResponse getCell(UUID cellId) {
-        Cell cell = cellRepository.findByPublicUuid(cellId).orElseThrow(CellNotFoundException::new);
+    public CellDetailResponse getCell(Long cellId) {
+        Cell cell = cellRepository.findById(cellId).orElseThrow(CellNotFoundException::new);
         int occupancy = Math.toIntExact(cellAllocationRepository.countByCellId(cell.getId()));
         List<CellInmateSummary> inmates = cellAllocationRepository.findByCell_IdOrderByAllocatedAtAsc(cell.getId())
                 .stream()

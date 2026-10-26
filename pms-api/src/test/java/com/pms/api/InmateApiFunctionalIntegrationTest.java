@@ -13,6 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.pms.api.cell.entity.Cell;
+import com.pms.api.cell.repository.CellRepository;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
@@ -51,6 +53,9 @@ class InmateApiFunctionalIntegrationTest {
 
     @Autowired
     private InmateRepository inmateRepository;
+
+    @Autowired
+    private CellRepository cellRepository;
 
     private String recordsOfficerToken;
 
@@ -273,6 +278,9 @@ class InmateApiFunctionalIntegrationTest {
         request.put("gender", "Other");
         request.put("admissionDate", LocalDate.of(2025, 1, 1).toString());
         request.put("classification", "Minimum");
+        Cell cell = cellRepository.saveAndFlush(new Cell(
+                "ENR-" + UUID.randomUUID().toString().replace("-", ""), 1, 100, "Minimum"));
+        request.put("cellId", cell.getId());
         return request;
     }
 

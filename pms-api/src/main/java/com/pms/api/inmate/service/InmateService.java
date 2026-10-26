@@ -1,5 +1,8 @@
 package com.pms.api.inmate.service;
 
+import com.pms.api.cell.dto.AllocateCellRequest;
+import com.pms.api.cell.dto.CellAllocationResponse;
+import com.pms.api.cell.service.CellService;
 import com.pms.api.common.audit.Audited;
 import com.pms.api.inmate.dto.InmateRequest;
 import com.pms.api.inmate.dto.InmateResponse;
@@ -28,13 +31,16 @@ public class InmateService {
     private static final String INMATE_NUMBER_CONSTRAINT = "uk_inmates_inmate_number";
 
     private final InmateRepository inmateRepository;
+    private final CellService cellService;
     private final String facilityName;
     private final PaginationProperties paginationProperties;
 
     public InmateService(InmateRepository inmateRepository,
+                         CellService cellService,
                          @Value("${app.facility-name}") String facilityName,
                          PaginationProperties paginationProperties) {
         this.inmateRepository = inmateRepository;
+        this.cellService = cellService;
         this.facilityName = facilityName;
         this.paginationProperties = paginationProperties;
     }
@@ -50,9 +56,16 @@ public class InmateService {
                 request.gender().trim(),
                 request.admissionDate(),
                 request.classification().trim(),
-                facilityName
+                facilityName,
+                request.offence() == null ? null : request.offence().trim(),
+                request.sentenceDurationValue(),
+                request.sentenceDurationUnit(),
+                request.sentenceStartDate()
         );
-        return save(inmate);
+        Inmate saved = saveInmate(inmate);
+        CellAllocationResponse allocation = cellService.allocate(
+                saved.getPublicUuid(), new AllocateCellRequest(request.cellId()));
+        return InmateResponse.from(saved, allocation.cellId());
     }
 
     @Transactional(readOnly = true)
@@ -104,7 +117,7 @@ public class InmateService {
                 request.admissionDate() == null ? inmate.getAdmissionDate() : request.admissionDate(),
                 classification
         );
-        return save(inmate);
+        return InmateResponse.from(saveInmate(inmate));
     }
 
     private static String updateValue(String requestedValue, String currentValue) {
@@ -118,9 +131,9 @@ public class InmateService {
         return normalized;
     }
 
-    private InmateResponse save(Inmate inmate) {
+    private Inmate saveInmate(Inmate inmate) {
         try {
-            return InmateResponse.from(inmateRepository.saveAndFlush(inmate));
+            return inmateRepository.saveAndFlush(inmate);
         } catch (DataIntegrityViolationException exception) {
             if (violatesInmateNumberConstraint(exception)) {
                 throw new InmateNumberAlreadyExistsException();
