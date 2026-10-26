@@ -57,12 +57,11 @@ public class VisitController {
         return visitService.getVisit(visitId);
     }
 
-    @Operation(summary = "Search visits", description = "Filter visits by visitor, inmate, date range, and recording officer.")
+    @Operation(summary = "Search visits", description = "Filter visits by visitor details, inmate details, date range, and recording officer.")
     @GetMapping("/visits")
     @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
     public Page<VisitResponse> searchVisits(
             @RequestParam(required = false) UUID visitId,
-            @RequestParam(required = false) UUID visitorId,
             @RequestParam(required = false) String visitorName,
             @RequestParam(required = false) String visitorIdNumber,
             @RequestParam(required = false) UUID inmateId,
@@ -74,7 +73,7 @@ public class VisitController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sort) {
-        return visitService.searchVisits(visitId, visitorId, visitorName, visitorIdNumber, inmateId, inmateNumber,
+        return visitService.searchVisits(visitId, visitorName, visitorIdNumber, inmateId, inmateNumber,
                 inmateName, visitDateFrom, visitDateTo, loggedBy, page, size, sort);
     }
 
