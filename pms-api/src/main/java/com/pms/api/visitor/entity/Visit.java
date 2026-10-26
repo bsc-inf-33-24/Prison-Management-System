@@ -29,16 +29,18 @@ public class Visit {
     @Column(name = "public_uuid", nullable = false, updatable = false, unique = true)
     private UUID publicUuid = UUID.randomUUID();
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "visitor_id", nullable = false)
-    private Visitor visitor;
+    @Column(name = "visitor_full_name", nullable = false, length = 255)
+    private String visitorFullName;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "inmate_id", nullable = false)
     private Inmate inmate;
 
     @Column(name = "visit_datetime", nullable = false)
-    private OffsetDateTime visitDateTime;
+    private OffsetDateTime startDateTime;
+
+    @Column(name = "visit_end_datetime", nullable = false)
+    private OffsetDateTime endDateTime;
 
     @Column(name = "duration_minutes", nullable = false)
     private Integer durationMinutes;
@@ -56,12 +58,15 @@ public class Visit {
     protected Visit() {
     }
 
-    public Visit(Visitor visitor, Inmate inmate, OffsetDateTime visitDateTime, Integer durationMinutes, User loggedBy) {
-        this.visitor = visitor;
+    public Visit(Inmate inmate, OffsetDateTime startDateTime, OffsetDateTime endDateTime,
+                 Integer durationMinutes, User loggedBy,
+                 String visitorFullName) {
         this.inmate = inmate;
-        this.visitDateTime = visitDateTime;
+        this.startDateTime = startDateTime;
+        this.endDateTime = endDateTime;
         this.durationMinutes = durationMinutes;
         this.loggedBy = loggedBy;
+        this.visitorFullName = visitorFullName;
     }
 
     @PrePersist
@@ -84,16 +89,20 @@ public class Visit {
         return publicUuid;
     }
 
-    public Visitor getVisitor() {
-        return visitor;
+    public String getVisitorFullName() {
+        return visitorFullName;
     }
 
     public Inmate getInmate() {
         return inmate;
     }
 
-    public OffsetDateTime getVisitDateTime() {
-        return visitDateTime;
+    public OffsetDateTime getStartDateTime() {
+        return startDateTime;
+    }
+
+    public OffsetDateTime getEndDateTime() {
+        return endDateTime;
     }
 
     public Integer getDurationMinutes() {
@@ -112,8 +121,9 @@ public class Visit {
         return updatedAt;
     }
 
-    public void updateDetails(OffsetDateTime visitDateTime, Integer durationMinutes) {
-        this.visitDateTime = visitDateTime;
+    public void updateDetails(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Integer durationMinutes) {
+        this.startDateTime = startDateTime;
+        this.endDateTime = endDateTime;
         this.durationMinutes = durationMinutes;
     }
 }

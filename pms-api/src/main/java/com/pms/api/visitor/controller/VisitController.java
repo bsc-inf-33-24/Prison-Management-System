@@ -41,30 +41,28 @@ public class VisitController {
         this.visitService = visitService;
     }
 
-    @Operation(summary = "Record a visit", description = "Record visitor details, the inmate being visited, and the logging officer.")
+    @Operation(summary = "Record a visit", description = "Record visitor name, inmate, visit date, and start/end times; duration is calculated.")
     @PostMapping("/visits")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('VISITOR_OFFICER')")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
     public VisitResponse recordVisit(@Valid @RequestBody VisitRequest request,
                                     @AuthenticationPrincipal UserDetails currentUser) {
         return visitService.recordVisit(request, currentUser.getUsername());
     }
 
-    @Operation(summary = "Get a visit by ID", description = "Find a specific visit with its recorded visitor and inmate details.")
+    @Operation(summary = "Get a visit by ID", description = "Find a specific visit with its recorded visitor details.")
     @GetMapping("/visits/{visitId}")
     @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
     public VisitResponse getVisit(@PathVariable UUID visitId) {
         return visitService.getVisit(visitId);
     }
 
-    @Operation(summary = "Search visits", description = "Filter visits by visitor, inmate, date range, and recording officer.")
+    @Operation(summary = "Search visits", description = "Filter visits by recorded visitor details, inmate, date range, and recording officer.")
     @GetMapping("/visits")
     @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
     public Page<VisitResponse> searchVisits(
             @RequestParam(required = false) UUID visitId,
-            @RequestParam(required = false) UUID visitorId,
             @RequestParam(required = false) String visitorName,
-            @RequestParam(required = false) String visitorIdNumber,
             @RequestParam(required = false) UUID inmateId,
             @RequestParam(required = false) String inmateNumber,
             @RequestParam(required = false) String inmateName,
@@ -74,26 +72,25 @@ public class VisitController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sort) {
-        return visitService.searchVisits(visitId, visitorId, visitorName, visitorIdNumber, inmateId, inmateNumber,
+        return visitService.searchVisits(visitId, visitorName, inmateId, inmateNumber,
                 inmateName, visitDateFrom, visitDateTo, loggedBy, page, size, sort);
     }
 
-    @Operation(summary = "Get an inmate's visit history", description = "Returns visits associated with the specified inmate only.")
+    @Operation(summary = "Get an inmate's visit history", description = "Returns visits associated with the specified inmate, including each visitor's name.")
     @GetMapping("/inmates/{inmateId}/visits")
     @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
     public Page<VisitHistoryResponse> getInmateVisitHistory(
             @PathVariable UUID inmateId,
             @RequestParam(required = false) String visitorName,
-            @RequestParam(required = false) String visitorIdNumber,
             @RequestParam(required = false) OffsetDateTime visitDateFrom,
             @RequestParam(required = false) OffsetDateTime visitDateTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sort) {
-        return visitService.getInmateVisitHistory(inmateId, visitorName, visitorIdNumber, visitDateFrom, visitDateTo, page, size, sort);
+        return visitService.getInmateVisitHistory(inmateId, visitorName, visitDateFrom, visitDateTo, page, size, sort);
     }
 
-    @Operation(summary = "Update a visit", description = "Correct the visit time and duration without changing the linked visitor or inmate.")
+    @Operation(summary = "Update a visit", description = "Correct the visit start and end timestamps; duration is recalculated.")
     @PatchMapping("/visits/{visitId}")
     @PreAuthorize("hasRole('VISITOR_OFFICER')")
     public VisitResponse updateVisit(@PathVariable UUID visitId,
