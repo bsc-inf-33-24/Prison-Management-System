@@ -57,4 +57,16 @@ public class AuditLog {
         this.newValues = newValues;
         this.timestamp = Instant.now();
     }
+
+    public User getUser() {
+        return user;
+    }
+
+    public String getActionType() {
+        return actionType;
+    }
+
+    public String getEntityName() {
+        return entityName;
+    }
 }

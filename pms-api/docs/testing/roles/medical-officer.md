@@ -1,11 +1,20 @@
 # Medical Officer API test guide
 
-Create `medical01` with role `Medical Officer` and log in. The current API defines this role, but no controller endpoint grants it role-specific access. There are no medical-record endpoints implemented in the current controllers.
+Create a user with the `Medical Officer` role and log in. The role can record a medical visit and search an inmate's medical history.
 
-For now, use this account to verify role restrictions: a valid Medical Officer token should receive `403` on role-protected inmate, cell, case, incident, visitor, and rehabilitation endpoints. Authentication endpoints such as `POST /api/v1/auth/password/change` are available to an authenticated user:
+Record each visit separately with `POST /api/v1/medical-visits`:
 
 ```json
-{"currentPassword":"Medical123!","newPassword":"NewMedical123!"}
+{
+  "inmateId": "inmate-public-uuid",
+  "visitDate": "2026-10-26",
+  "sickness": "Persistent cough",
+  "diagnosis": "Upper respiratory tract infection",
+  "medicationsProvided": "Amoxicillin, 500 mg, three times daily",
+  "recommendations": "Complete the prescribed course and return if symptoms worsen."
+}
 ```
 
-If medical endpoints are added, this guide can be extended with their request bodies and positive tests.
+The authenticated Medical Officer is recorded from the login identity; the request cannot assign a different recorder. Retrieve a particular inmate's visit history by exact inmate number with `GET /api/v1/medical-visits?inmateNumber=...`. The response includes the inmate identity and visits ordered newest first, with date, sickness, diagnosis, medications, recommendations, and recording officer.
+
+Both endpoints are restricted to the `Medical Officer` role. Other authenticated roles should receive `403`; requests without a valid token should receive `401`.
