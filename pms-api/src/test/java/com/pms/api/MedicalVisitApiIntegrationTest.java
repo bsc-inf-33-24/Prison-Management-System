@@ -70,6 +70,7 @@ class MedicalVisitApiIntegrationTest {
 
         MvcResult historyResult = mockMvc.perform(get(MEDICAL_VISITS_PATH)
                         .param("inmateNumber", inmate.getInmateNumber())
+                        .param("name", "medical test")
                         .header("Authorization", "Bearer " + token))
                 .andReturn();
         assertEquals(200, historyResult.getResponse().getStatus());
@@ -85,6 +86,15 @@ class MedicalVisitApiIntegrationTest {
         assertEquals("Paracetamol", history.path("visits").get(0).path("medicationsProvided").asText());
         assertEquals("Review in 48 hours.", history.path("visits").get(0).path("recommendations").asText());
         assertEquals(medicalOfficer.getFullName(), history.path("visits").get(0).path("recordedBy").asText());
+
+        MvcResult nonMatchingHistory = mockMvc.perform(get(MEDICAL_VISITS_PATH)
+                        .param("inmateNumber", inmate.getInmateNumber())
+                        .param("name", "someone else")
+                        .header("Authorization", "Bearer " + token))
+                .andReturn();
+        assertEquals(200, nonMatchingHistory.getResponse().getStatus());
+        assertEquals(0, objectMapper.readTree(nonMatchingHistory.getResponse().getContentAsString())
+                .path("visits").size());
     }
 
     @Test
@@ -98,7 +108,7 @@ class MedicalVisitApiIntegrationTest {
                 .andReturn().getResponse().getStatus());
 
         for (String role : User.ALLOWED_ROLES) {
-            if ("Medical Officer".equals(role)) {
+            if ("Medical Officer".equals(role) || "Super Admin".equals(role)) {
                 continue;
             }
             String token = jwtService.generateToken(createUser(role));
@@ -107,6 +117,25 @@ class MedicalVisitApiIntegrationTest {
                             .param("inmateNumber", inmate.getInmateNumber())
                             .header("Authorization", "Bearer " + token))
                     .andReturn().getResponse().getStatus(), role + " cannot view medical history.");
+        }
+
+        @Test
+        void superAdminCanRecordAndSearchMedicalVisits() throws Exception {
+            Inmate inmate = createInmate();
+            String token = jwtService.generateToken(createUser("Super Admin"));
+
+            assertEquals(201, postVisit(token, medicalVisitRequest(
+                    inmate.getPublicUuid(), LocalDate.now(), "Cough", "Bronchitis"))
+                    .getResponse().getStatus());
+
+            MvcResult history = mockMvc.perform(get(MEDICAL_VISITS_PATH)
+                            .param("inmateNumber", inmate.getInmateNumber())
+                            .param("name", "MEDICAL")
+                            .header("Authorization", "Bearer " + token))
+                    .andReturn();
+            assertEquals(200, history.getResponse().getStatus());
+            assertEquals(1, objectMapper.readTree(history.getResponse().getContentAsString())
+                    .path("visits").size());
         }
     }
 

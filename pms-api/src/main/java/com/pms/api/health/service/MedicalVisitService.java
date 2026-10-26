@@ -48,14 +48,15 @@ public class MedicalVisitService {
     }
 
     @Transactional(readOnly = true)
-    public MedicalHistoryResponse getHistory(String inmateNumber) {
+    public MedicalHistoryResponse getHistory(String inmateNumber, String name) {
         if (inmateNumber == null || inmateNumber.isBlank()) {
             throw new IllegalArgumentException("Inmate number is required.");
         }
         Inmate inmate = inmateRepository.findByInmateNumber(inmateNumber.trim())
                 .orElseThrow(InmateNotFoundException::new);
         List<MedicalVisitResponse> visits = medicalVisitRepository
-                .findAllByInmateIdOrderByVisitDateDescIdDesc(inmate.getId())
+                .findByInmateIdAndInmateNameOrderByVisitDateDescIdDesc(
+                        inmate.getId(), normalizeOptionalText(name))
                 .stream()
                 .map(MedicalVisitResponse::from)
                 .toList();
