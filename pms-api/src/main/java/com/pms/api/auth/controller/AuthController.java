@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -59,6 +60,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
+    @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Log out", description = "Invalidates all currently issued access tokens for the authenticated user.")
     public ResponseEntity<Void> logout(@AuthenticationPrincipal UserDetails currentUser) {
@@ -80,6 +82,7 @@ public class AuthController {
     }
 
     @PostMapping("/password/change")
+    @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Change password", description = "Changes the authenticated user's password and invalidates existing access tokens.")
     public ResponseEntity<Void> changePassword(@AuthenticationPrincipal UserDetails currentUser,
