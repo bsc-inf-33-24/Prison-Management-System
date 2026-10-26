@@ -118,25 +118,25 @@ class MedicalVisitApiIntegrationTest {
                             .header("Authorization", "Bearer " + token))
                     .andReturn().getResponse().getStatus(), role + " cannot view medical history.");
         }
+    }
 
-        @Test
-        void superAdminCanRecordAndSearchMedicalVisits() throws Exception {
-            Inmate inmate = createInmate();
-            String token = jwtService.generateToken(createUser("Super Admin"));
+    @Test
+    void superAdminCanRecordAndSearchMedicalVisits() throws Exception {
+        Inmate inmate = createInmate();
+        String token = jwtService.generateToken(createUser("Super Admin"));
 
-            assertEquals(201, postVisit(token, medicalVisitRequest(
-                    inmate.getPublicUuid(), LocalDate.now(), "Cough", "Bronchitis"))
-                    .getResponse().getStatus());
+        assertEquals(201, postVisit(token, medicalVisitRequest(
+                inmate.getPublicUuid(), LocalDate.now(), "Cough", "Bronchitis"))
+                .getResponse().getStatus());
 
-            MvcResult history = mockMvc.perform(get(MEDICAL_VISITS_PATH)
-                            .param("inmateNumber", inmate.getInmateNumber())
-                            .param("name", "MEDICAL")
-                            .header("Authorization", "Bearer " + token))
-                    .andReturn();
-            assertEquals(200, history.getResponse().getStatus());
-            assertEquals(1, objectMapper.readTree(history.getResponse().getContentAsString())
-                    .path("visits").size());
-        }
+        MvcResult history = mockMvc.perform(get(MEDICAL_VISITS_PATH)
+                        .param("inmateNumber", inmate.getInmateNumber())
+                        .param("name", "MEDICAL")
+                        .header("Authorization", "Bearer " + token))
+                .andReturn();
+        assertEquals(200, history.getResponse().getStatus());
+        assertEquals(1, objectMapper.readTree(history.getResponse().getContentAsString())
+                .path("visits").size());
     }
 
     @Test
