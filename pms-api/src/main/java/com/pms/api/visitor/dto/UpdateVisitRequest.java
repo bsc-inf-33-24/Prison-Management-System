@@ -1,17 +1,22 @@
 package com.pms.api.visitor.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import java.time.OffsetDateTime;
 
 public record UpdateVisitRequest(
-        @NotNull(message = "visitDateTime is required")
+        @NotNull(message = "startDateTime is required")
         @JsonFormat(shape = JsonFormat.Shape.STRING)
-        OffsetDateTime visitDateTime,
-        @NotNull(message = "durationMinutes is required")
-        @Min(value = 0, message = "durationMinutes cannot be negative")
-        @Max(value = 1440, message = "durationMinutes exceeds the supported maximum") Integer durationMinutes
+        OffsetDateTime startDateTime,
+        @NotNull(message = "endDateTime is required")
+        @JsonFormat(shape = JsonFormat.Shape.STRING)
+        OffsetDateTime endDateTime
 ) {
+    @AssertTrue(message = "endDateTime must not be earlier than startDateTime.")
+    @JsonIgnore
+    public boolean isVisitTimeRangeValid() {
+        return startDateTime == null || endDateTime == null || !endDateTime.isBefore(startDateTime);
+    }
 }

@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
@@ -38,7 +37,6 @@ public record LogIncidentRequest(
     public record Participant(
 
             @NotNull(message = "Inmate ID is required.")
-            @Positive(message = "Inmate ID must be a positive number.")
             UUID inmateId,
 
             @Size(max = 255, message = "Role in incident must be at most 255 characters.")
