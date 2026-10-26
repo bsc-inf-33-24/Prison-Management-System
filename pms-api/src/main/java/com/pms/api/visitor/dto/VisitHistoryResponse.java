@@ -16,7 +16,7 @@ public record VisitHistoryResponse(
                 visit.getPublicUuid(),
                 visit.getVisitDateTime(),
                 visit.getDurationMinutes(),
-                VisitResponse.VisitorSummary.from(visit),
+                VisitResponse.VisitorSummary.from(visit.getVisitor()),
                 visit.getLoggedBy() != null ? visit.getLoggedBy().getFullName() : null
         );
     }
