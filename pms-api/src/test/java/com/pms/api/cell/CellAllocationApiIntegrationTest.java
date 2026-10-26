@@ -1,8 +1,6 @@
 package com.pms.api.cell;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -68,77 +66,16 @@ class CellAllocationApiIntegrationTest {
     }
 
     @Test
-    void allocateIntoMatchingCellAndListOccupancy() throws Exception {
-        Inmate inmate = inmateRepository.saveAndFlush(new Inmate(
-                uniqueInmateNumber(), "Alice", "Jones", LocalDate.of(1995, 1, 10),
-                "Female", LocalDate.of(2024, 1, 1), "Minimum", "Main Facility"));
-        Cell cell = cellRepository.saveAndFlush(new Cell("A", 1, 2, "Minimum"));
-
-        ObjectNode request = objectMapper.createObjectNode();
-        request.put("cellId", cell.getId());
-
-        mockMvc.perform(post("/api/inmates/" + inmate.getId() + "/cell-allocation")
-                        .header("Authorization", bearerToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.inmateId").value(inmate.getId()))
-                .andExpect(jsonPath("$.cellId").value(cell.getId()))
-                .andExpect(jsonPath("$.currentOccupancy").value(1))
-                .andExpect(jsonPath("$.availableSpaces").value(1));
-
-        mockMvc.perform(get("/api/cells")
-                        .header("Authorization", bearerToken()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].capacity").isNumber())
-                .andExpect(jsonPath("$[0].currentOccupancy").isNumber());
-    }
-
-    @Test
-    void rejectDuplicateAllocationAndWrongClassification() throws Exception {
-        Inmate inmate = inmateRepository.saveAndFlush(new Inmate(
-                uniqueInmateNumber(), "Bob", "Brown", LocalDate.of(1988, 5, 10),
-                "Male", LocalDate.of(2023, 7, 1), "Medium", "Main Facility"));
-        Cell matchingCell = cellRepository.saveAndFlush(new Cell("A", 2, 2, "Medium"));
-        cellAllocationRepository.saveAndFlush(new CellAllocation(inmate, matchingCell, Instant.now()));
-
-        ObjectNode request = objectMapper.createObjectNode();
-        request.put("cellId", matchingCell.getId());
-
-        mockMvc.perform(post("/api/inmates/" + inmate.getId() + "/cell-allocation")
-                        .header("Authorization", bearerToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409));
-
-        Inmate wrongClassificationInmate = inmateRepository.saveAndFlush(new Inmate(
-                uniqueInmateNumber(), "Charlie", "Black", LocalDate.of(1990, 3, 8),
-                "Male", LocalDate.of(2024, 6, 1), "Maximum", "Main Facility"));
-        Cell wrongCell = cellRepository.saveAndFlush(new Cell("B", 3, 1, "Medium"));
-
-        ObjectNode wrongRequest = objectMapper.createObjectNode();
-        wrongRequest.put("cellId", wrongCell.getId());
-
-        mockMvc.perform(post("/api/inmates/" + wrongClassificationInmate.getId() + "/cell-allocation")
-                        .header("Authorization", bearerToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(wrongRequest)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409));
-    }
-
-    @Test
     void moveInmateToNewCellAndItCannotExceedCapacity() throws Exception {
         Inmate inmate = inmateRepository.saveAndFlush(new Inmate(
                 uniqueInmateNumber(), "Dana", "White", LocalDate.of(1992, 9, 1),
-                "Female", LocalDate.of(2024, 4, 5), "Minimum", "Main Facility"));
-        Cell oldCell = cellRepository.saveAndFlush(new Cell("C", 4, 2, "Minimum"));
-        Cell newCell = cellRepository.saveAndFlush(new Cell("C", 5, 2, "Minimum"));
+                "Female", LocalDate.of(2024, 4, 5)));
+        Cell oldCell = cellRepository.saveAndFlush(new Cell("C", 4, 2));
+        Cell newCell = cellRepository.saveAndFlush(new Cell("C", 5, 2));
         cellAllocationRepository.saveAndFlush(new CellAllocation(inmate, oldCell, Instant.now()));
 
         ObjectNode moveRequest = objectMapper.createObjectNode();
-        moveRequest.put("cellId", newCell.getId());
+        moveRequest.put("cellId", newCell.getPublicUuid().toString());
 
         mockMvc.perform(put("/api/inmates/" + inmate.getId() + "/cell-allocation")
                         .header("Authorization", bearerToken())
@@ -146,8 +83,8 @@ class CellAllocationApiIntegrationTest {
                         .content(objectMapper.writeValueAsString(moveRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.inmateId").value(inmate.getId()))
-                .andExpect(jsonPath("$.oldCellId").value(oldCell.getId()))
-                .andExpect(jsonPath("$.newCellId").value(newCell.getId()));
+                .andExpect(jsonPath("$.oldCellId").value(oldCell.getPublicUuid().toString()))
+                .andExpect(jsonPath("$.newCellId").value(newCell.getPublicUuid().toString()));
 
         assertThat(cellAllocationRepository.findByInmateId(inmate.getId())).isPresent();
         assertThat(cellAllocationRepository.findByInmateId(inmate.getId()).get().getCell().getId()).isEqualTo(newCell.getId());

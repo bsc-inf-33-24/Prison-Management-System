@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.pms.api.cell.entity.Cell;
+import com.pms.api.cell.repository.CellRepository;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
@@ -48,6 +50,9 @@ class InmateApiSecurityIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CellRepository cellRepository;
 
     @Autowired
     private JwtService jwtService;
@@ -177,7 +182,9 @@ class InmateApiSecurityIntegrationTest {
         request.put("dateOfBirth", "1990-01-01");
         request.put("gender", "Other");
         request.put("admissionDate", "2025-01-01");
-        request.put("classification", "Minimum");
+        Cell cell = cellRepository.saveAndFlush(new Cell(
+                "SEC-" + UUID.randomUUID().toString().replace("-", ""), 1, 100));
+        request.put("cellId", cell.getPublicUuid().toString());
         try {
             return objectMapper.writeValueAsString(request);
         } catch (java.io.IOException exception) {

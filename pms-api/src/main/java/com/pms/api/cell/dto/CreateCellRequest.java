@@ -12,8 +12,6 @@ public record CreateCellRequest(
         Integer cellNumber,
         @NotNull(message = "capacity is required.")
         @Positive(message = "capacity must be a positive number.")
-        Integer capacity,
-        @NotBlank(message = "classification is required.")
-        String classification
+        Integer capacity
 ) {
 }

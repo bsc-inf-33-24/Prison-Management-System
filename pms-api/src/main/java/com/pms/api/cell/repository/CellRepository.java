@@ -16,7 +16,7 @@ public interface CellRepository extends JpaRepository<Cell, Long>, JpaSpecificat
     Optional<Cell> findByPublicUuid(UUID publicUuid);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select c from Cell c where c.id = :id")
-    Optional<Cell> findByIdForUpdate(@Param("id") Long id);
+    @Query("select c from Cell c where c.publicUuid = :publicUuid")
+    Optional<Cell> findByPublicUuidForUpdate(@Param("publicUuid") UUID publicUuid);
 
 }

@@ -23,9 +23,6 @@ public record UpdateInmateDetailsRequest(
         @Size(min = 1, max = 20, message = "Gender must not be blank and must not exceed 20 characters.")
         String gender,
 
-        LocalDate admissionDate,
-
-        @Size(min = 1, max = 50, message = "Classification must not be blank and must not exceed 50 characters.")
-        String classification
+        LocalDate admissionDate
 ) {
 }

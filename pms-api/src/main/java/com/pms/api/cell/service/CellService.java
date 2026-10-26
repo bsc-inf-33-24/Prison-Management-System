@@ -54,8 +54,7 @@ public class CellService {
         Cell cell = new Cell(
                 request.blockName().trim(),
                 request.cellNumber(),
-                request.capacity(),
-                request.classification().trim()
+                request.capacity()
         );
         Cell saved = cellRepository.saveAndFlush(cell);
         return CellResponse.from(saved, 0);
@@ -66,10 +65,8 @@ public class CellService {
     public CellAllocationResponse allocate(UUID inmateId, AllocateCellRequest request) {
         Inmate inmate = inmateRepository.findByPublicUuid(inmateId)
                 .orElseThrow(InmateNotFoundException::new);
-        Cell cell = cellRepository.findByPublicUuid(request.cellId())
+        Cell cell = cellRepository.findByPublicUuidForUpdate(request.cellId())
                 .orElseThrow(CellNotFoundException::new);
-
-        validateAllocation(inmate, cell);
 
         long occupancy = cellAllocationRepository.countByCellId(cell.getId());
         if (occupancy >= cell.getCapacity()) {
@@ -98,14 +95,12 @@ public class CellService {
                 .orElseThrow(CellAllocationNotFoundException::new);
 
         Cell currentCell = currentAllocation.getCell();
-        Cell targetCell = cellRepository.findByPublicUuid(request.cellId())
+        Cell targetCell = cellRepository.findByPublicUuidForUpdate(request.cellId())
                 .orElseThrow(CellNotFoundException::new);
 
         if (currentCell.getId().equals(targetCell.getId())) {
             throw new CellAlreadyAssignedToSameCellException();
         }
-
-        validateAllocation(inmate, targetCell);
 
         int currentCellOccupancy = Math.toIntExact(cellAllocationRepository.countByCellId(currentCell.getId()));
         int targetCellOccupancy = Math.toIntExact(cellAllocationRepository.countByCellId(targetCell.getId()));
@@ -128,19 +123,15 @@ public class CellService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<CellResponse> listCells(String blockName, String classification,
+    public PageResponse<CellResponse> listCells(String blockName,
                                                  Integer page, Integer size, List<String> sort) {
         Pageable pageable = PageableValidator.create(page, size, sort,
                 Set.of("id", "blockName", "cellNumber", "capacity"),
                 Sort.by(Sort.Order.asc("id")), paginationProperties);
-        Specification<Cell> specification = Specification.where((Specification<Cell>) null);
+        Specification<Cell> specification = Specification.unrestricted();
         if (blockName != null && !blockName.isBlank()) {
             specification = specification.and((root, query, cb) -> cb.equal(root.get("blockName"), blockName.trim()));
         }
-        if (classification != null && !classification.isBlank()) {
-            specification = specification.and((root, query, cb) -> cb.equal(root.get("classification"), classification.trim()));
-        }
-
         var cells = cellRepository.findAll(specification, pageable);
         List<Long> cellIds = cells.getContent().stream().map(Cell::getId).toList();
         Map<Long, Long> occupancyByCellId = new HashMap<>();
@@ -167,12 +158,6 @@ public class CellService {
         return CellDetailResponse.from(cell, occupancy, inmates);
     }
 
-    private void validateAllocation(Inmate inmate, Cell cell) {
-        if (!inmate.getClassification().equalsIgnoreCase(cell.getClassification())) {
-            throw new CellClassificationMismatchException();
-        }
-    }
-
     public static class CellNotFoundException extends RuntimeException {
     }
 
@@ -183,9 +168,6 @@ public class CellService {
     }
 
     public static class CellCapacityExceededException extends RuntimeException {
-    }
-
-    public static class CellClassificationMismatchException extends RuntimeException {
     }
 
     public static class CellAlreadyAllocatedException extends RuntimeException {

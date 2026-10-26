@@ -10,7 +10,6 @@ public record CellDetailResponse(
         String blockName,
         Integer cellNumber,
         Integer capacity,
-        String classification,
         Integer currentOccupancy,
         Integer availableSpaces,
         List<CellInmateSummary> inmates
@@ -22,7 +21,6 @@ public record CellDetailResponse(
                 cell.getBlockName(),
                 cell.getCellNumber(),
                 cell.getCapacity(),
-                cell.getClassification(),
                 occupancy,
                 Math.max(cell.getCapacity() - occupancy, 0),
                 inmates

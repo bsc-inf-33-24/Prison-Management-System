@@ -1,7 +1,6 @@
 package com.pms.api.cell.controller;
 
 import com.pms.api.cell.dto.AllocateCellRequest;
-import com.pms.api.cell.dto.CellAllocationResponse;
 import com.pms.api.cell.dto.CellDetailResponse;
 import com.pms.api.cell.dto.CellMoveResponse;
 import com.pms.api.cell.dto.CellResponse;
@@ -39,24 +38,15 @@ public class CellController {
     }
 
     @PostMapping("/cells")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a cell")
     public CellResponse createCell(@Valid @RequestBody CreateCellRequest request) {
         return cellService.createCell(request);
     }
 
-    @PostMapping("/inmates/{inmateId}/cell-allocation")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Allocate an inmate to a cell")
-    public CellAllocationResponse allocate(@PathVariable UUID inmateId,
-                                           @Valid @RequestBody AllocateCellRequest request) {
-        return cellService.allocate(inmateId, request);
-    }
-
     @PutMapping("/inmates/{inmateId}/cell-allocation")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Move an inmate to a different cell")
     public CellMoveResponse move(@PathVariable UUID inmateId,
                                 @Valid @RequestBody AllocateCellRequest request) {
@@ -67,11 +57,10 @@ public class CellController {
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List cells")
     public PageResponse<CellResponse> listCells(@RequestParam(required = false) String blockName,
-                                                @RequestParam(required = false) String classification,
                                                 @RequestParam(required = false) Integer page,
                                                 @RequestParam(required = false) Integer size,
                                                 @RequestParam(required = false) List<String> sort) {
-        return cellService.listCells(blockName, classification, page, size, sort);
+        return cellService.listCells(blockName, page, size, sort);
     }
 
     @GetMapping("/cells/{cellId}")
