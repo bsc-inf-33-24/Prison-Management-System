@@ -64,45 +64,17 @@ class VisitorApiFunctionalIntegrationTest {
     }
 
     @Test
-    void visitorCanBeRegisteredAndDuplicateIdentityIsRejected() throws Exception {
-        ObjectNode request = objectMapper.createObjectNode();
-        request.put("fullName", "Mary Banda");
-        request.put("idNumber", "NID-123456");
-        request.put("phone", "+265991234567");
-        request.put("relationshipToInmate", "Sister");
-
-        mockMvc.perform(post("/api/v1/visitors")
-                        .header("Authorization", bearer(visitorOfficerToken))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").isNumber())
-                .andExpect(jsonPath("$.fullName").value("Mary Banda"));
-
-        mockMvc.perform(post("/api/v1/visitors")
-                        .header("Authorization", bearer(visitorOfficerToken))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409));
-    }
-
-    @Test
-    void visitIsRecordedAgainstVisitorAndInmateAndVisibleInHistory() throws Exception {
+    void visitCanBeRecordedWithEmbeddedVisitorDetailsAndVisibleInHistory() throws Exception {
         Long inmateId = inmateRepository.saveAndFlush(
                 new Inmate("INV-1001", "Grace", "Chirwa", LocalDate.of(1990, 1, 15), "Female",
                         LocalDate.of(2024, 6, 1))).getId();
 
-        long visitorId = objectMapper.readTree(mockMvc.perform(post("/api/v1/visitors")
-                        .header("Authorization", bearer(visitorOfficerToken))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fullName\":\"John Banda\",\"idNumber\":\"NID-22222\",\"phone\":\"+265998877665\",\"relationshipToInmate\":\"Brother\"}"))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString()).path("id").asLong();
-
         ObjectNode visitRequest = objectMapper.createObjectNode();
-        visitRequest.put("visitorId", visitorId);
         visitRequest.put("inmateId", inmateId);
+        visitRequest.put("visitorFullName", "John Banda");
+        visitRequest.put("visitorIdNumber", "NID-22222");
+        visitRequest.put("visitorPhone", "+265998877665");
+        visitRequest.put("visitorRelationshipToInmate", "Brother");
         visitRequest.put("visitDateTime", "2026-10-10T14:30:00+02:00");
         visitRequest.put("durationMinutes", 60);
 
@@ -111,7 +83,8 @@ class VisitorApiFunctionalIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(visitRequest)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.visitor.id").value(visitorId))
+                .andExpect(jsonPath("$.visitor.fullName").value("John Banda"))
+                .andExpect(jsonPath("$.visitor.idNumber").value("NID-22222"))
                 .andExpect(jsonPath("$.inmate.id").value(inmateId));
 
         mockMvc.perform(get("/api/v1/inmates/{inmateId}/visits", inmateId)

@@ -29,9 +29,17 @@ public class Visit {
     @Column(name = "public_uuid", nullable = false, updatable = false, unique = true)
     private UUID publicUuid = UUID.randomUUID();
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "visitor_id", nullable = false)
-    private Visitor visitor;
+    @Column(name = "visitor_full_name", nullable = false, length = 255)
+    private String visitorFullName;
+
+    @Column(name = "visitor_id_number", nullable = false, length = 255)
+    private String visitorIdNumber;
+
+    @Column(name = "visitor_phone", length = 50)
+    private String visitorPhone;
+
+    @Column(name = "visitor_relationship_to_inmate", nullable = false, length = 255)
+    private String visitorRelationshipToInmate;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "inmate_id", nullable = false)
@@ -56,12 +64,17 @@ public class Visit {
     protected Visit() {
     }
 
-    public Visit(Visitor visitor, Inmate inmate, OffsetDateTime visitDateTime, Integer durationMinutes, User loggedBy) {
-        this.visitor = visitor;
+    public Visit(Inmate inmate, OffsetDateTime visitDateTime, Integer durationMinutes, User loggedBy,
+                 String visitorFullName, String visitorIdNumber, String visitorPhone,
+                 String visitorRelationshipToInmate) {
         this.inmate = inmate;
         this.visitDateTime = visitDateTime;
         this.durationMinutes = durationMinutes;
         this.loggedBy = loggedBy;
+        this.visitorFullName = visitorFullName;
+        this.visitorIdNumber = visitorIdNumber;
+        this.visitorPhone = visitorPhone;
+        this.visitorRelationshipToInmate = visitorRelationshipToInmate;
     }
 
     @PrePersist
@@ -84,8 +97,20 @@ public class Visit {
         return publicUuid;
     }
 
-    public Visitor getVisitor() {
-        return visitor;
+    public String getVisitorFullName() {
+        return visitorFullName;
+    }
+
+    public String getVisitorIdNumber() {
+        return visitorIdNumber;
+    }
+
+    public String getVisitorPhone() {
+        return visitorPhone;
+    }
+
+    public String getVisitorRelationshipToInmate() {
+        return visitorRelationshipToInmate;
     }
 
     public Inmate getInmate() {
@@ -112,8 +137,14 @@ public class Visit {
         return updatedAt;
     }
 
-    public void updateDetails(OffsetDateTime visitDateTime, Integer durationMinutes) {
+    public void updateDetails(OffsetDateTime visitDateTime, Integer durationMinutes,
+                              String visitorFullName, String visitorIdNumber, String visitorPhone,
+                              String visitorRelationshipToInmate) {
         this.visitDateTime = visitDateTime;
         this.durationMinutes = durationMinutes;
+        this.visitorFullName = visitorFullName;
+        this.visitorIdNumber = visitorIdNumber;
+        this.visitorPhone = visitorPhone;
+        this.visitorRelationshipToInmate = visitorRelationshipToInmate;
     }
 }

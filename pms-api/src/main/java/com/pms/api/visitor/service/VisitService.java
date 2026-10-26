@@ -12,9 +12,7 @@ import com.pms.api.visitor.dto.VisitHistoryResponse;
 import com.pms.api.visitor.dto.VisitRequest;
 import com.pms.api.visitor.dto.VisitResponse;
 import com.pms.api.visitor.entity.Visit;
-import com.pms.api.visitor.entity.Visitor;
 import com.pms.api.visitor.repository.VisitRepository;
-import com.pms.api.visitor.repository.VisitorRepository;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import java.time.OffsetDateTime;
@@ -33,20 +31,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class VisitService {
 
     private final VisitRepository visitRepository;
-    private final VisitorRepository visitorRepository;
     private final InmateRepository inmateRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
     private final ObjectMapper objectMapper;
 
     public VisitService(VisitRepository visitRepository,
-                       VisitorRepository visitorRepository,
                        InmateRepository inmateRepository,
                        UserRepository userRepository,
                        AuditService auditService,
                        ObjectMapper objectMapper) {
         this.visitRepository = visitRepository;
-        this.visitorRepository = visitorRepository;
         this.inmateRepository = inmateRepository;
         this.userRepository = userRepository;
         this.auditService = auditService;
@@ -58,10 +53,17 @@ public class VisitService {
         if (request == null) {
             throw new IllegalArgumentException("Visit details are required.");
         }
-        Visitor visitor = visitorRepository.findByPublicUuid(request.visitorId())
-                .orElseThrow(VisitorService.VisitorNotFoundException::new);
         Inmate inmate = inmateRepository.findByPublicUuid(request.inmateId())
                 .orElseThrow(() -> new InmateNotFoundException());
+        if (request.visitorFullName() == null || request.visitorFullName().isBlank()) {
+            throw new IllegalArgumentException("visitorFullName is required.");
+        }
+        if (request.visitorIdNumber() == null || request.visitorIdNumber().isBlank()) {
+            throw new IllegalArgumentException("visitorIdNumber is required.");
+        }
+        if (request.visitorRelationshipToInmate() == null || request.visitorRelationshipToInmate().isBlank()) {
+            throw new IllegalArgumentException("visitorRelationshipToInmate is required.");
+        }
         if (request.visitDateTime() == null) {
             throw new IllegalArgumentException("visitDateTime is required.");
         }
@@ -69,8 +71,11 @@ public class VisitService {
             throw new IllegalArgumentException("durationMinutes must be between 0 and 1440.");
         }
 
+        String visitorPhone = request.visitorPhone() == null || request.visitorPhone().isBlank() ? null : request.visitorPhone().trim();
         User user = userRepository.findByUsername(username).orElseThrow(UserNotFoundException::new);
-        Visit visit = new Visit(visitor, inmate, request.visitDateTime(), request.durationMinutes(), user);
+        Visit visit = new Visit(inmate, request.visitDateTime(), request.durationMinutes(), user,
+                request.visitorFullName().trim(), request.visitorIdNumber().trim(), visitorPhone,
+                request.visitorRelationshipToInmate().trim());
         Visit saved = visitRepository.saveAndFlush(visit);
         audit(username, "VISIT_CREATED", "Visit", saved.getPublicUuid().toString(), "{}", visitSummary(saved));
         return VisitResponse.from(saved);
@@ -82,7 +87,7 @@ public class VisitService {
     }
 
     @Transactional(readOnly = true)
-    public Page<VisitResponse> searchVisits(UUID visitId, UUID visitorId, String visitorName,
+    public Page<VisitResponse> searchVisits(UUID visitId, String visitorName,
                                           String visitorIdNumber, UUID inmateId, String inmateNumber,
                                           String inmateName, OffsetDateTime visitDateFrom,
                                           OffsetDateTime visitDateTo, UUID loggedBy, int page,
@@ -96,10 +101,6 @@ public class VisitService {
         if (visitId != null) {
             specification = specification.and(equalLong("id", visitRepository.findByPublicUuid(visitId)
                     .map(Visit::getId).orElse(-1L)));
-        }
-        if (visitorId != null) {
-            specification = specification.and(equalRelatedId("visitor", visitorRepository.findByPublicUuid(visitorId)
-                    .map(Visitor::getId).orElse(-1L)));
         }
         if (visitorName != null && !visitorName.isBlank()) {
             specification = specification.and(visitorNameContains(visitorName));
@@ -169,12 +170,26 @@ public class VisitService {
         if (request == null || request.visitDateTime() == null) {
             throw new IllegalArgumentException("visitDateTime is required.");
         }
+        if (request.visitorFullName() == null || request.visitorFullName().isBlank()) {
+            throw new IllegalArgumentException("visitorFullName is required.");
+        }
+        if (request.visitorIdNumber() == null || request.visitorIdNumber().isBlank()) {
+            throw new IllegalArgumentException("visitorIdNumber is required.");
+        }
+        if (request.visitorRelationshipToInmate() == null || request.visitorRelationshipToInmate().isBlank()) {
+            throw new IllegalArgumentException("visitorRelationshipToInmate is required.");
+        }
         if (request.durationMinutes() == null || request.durationMinutes() < 0 || request.durationMinutes() > 1440) {
             throw new IllegalArgumentException("durationMinutes must be between 0 and 1440.");
         }
 
-        Visit prior = new Visit(visit.getVisitor(), visit.getInmate(), visit.getVisitDateTime(), visit.getDurationMinutes(), visit.getLoggedBy());
-        visit.updateDetails(request.visitDateTime(), request.durationMinutes());
+        Visit prior = new Visit(visit.getInmate(), visit.getVisitDateTime(), visit.getDurationMinutes(), visit.getLoggedBy(),
+                visit.getVisitorFullName(), visit.getVisitorIdNumber(), visit.getVisitorPhone(),
+                visit.getVisitorRelationshipToInmate());
+        String visitorPhone = request.visitorPhone() == null || request.visitorPhone().isBlank() ? null : request.visitorPhone().trim();
+        visit.updateDetails(request.visitDateTime(), request.durationMinutes(),
+                request.visitorFullName().trim(), request.visitorIdNumber().trim(), visitorPhone,
+                request.visitorRelationshipToInmate().trim());
         Visit saved = visitRepository.saveAndFlush(visit);
         audit(username, "VISIT_UPDATED", "Visit", saved.getPublicUuid().toString(), visitSummary(prior), visitSummary(saved));
         return VisitResponse.from(saved);
@@ -202,18 +217,12 @@ public class VisitService {
 
     private static Specification<Visit> visitorNameContains(String value) {
         String pattern = "%" + escapeLikePattern(value.trim().toLowerCase()) + "%";
-        return (root, query, cb) -> {
-            Join<Object, Object> visitor = root.join("visitor", JoinType.LEFT);
-            return cb.like(cb.lower(visitor.get("fullName").as(String.class)), pattern, '\\');
-        };
+        return (root, query, cb) -> cb.like(cb.lower(root.get("visitorFullName").as(String.class)), pattern, '\\');
     }
 
     private static Specification<Visit> visitorIdNumberContains(String value) {
         String pattern = "%" + escapeLikePattern(value.trim().toLowerCase()) + "%";
-        return (root, query, cb) -> {
-            Join<Object, Object> visitor = root.join("visitor", JoinType.LEFT);
-            return cb.like(cb.lower(visitor.get("idNumber").as(String.class)), pattern, '\\');
-        };
+        return (root, query, cb) -> cb.like(cb.lower(root.get("visitorIdNumber").as(String.class)), pattern, '\\');
     }
 
     private static Specification<Visit> inmateNumberContains(String value) {
@@ -253,12 +262,11 @@ public class VisitService {
 
         String normalizedField = switch (field) {
             case "visitId" -> "id";
-            case "visitorId" -> "visitor.id";
             case "inmateId" -> "inmate.id";
             case "visitDateTime" -> "visitDateTime";
             case "loggedBy" -> "loggedBy.id";
-            case "visitorName" -> "visitor.fullName";
-            case "visitorIdNumber" -> "visitor.idNumber";
+            case "visitorName" -> "visitorFullName";
+            case "visitorIdNumber" -> "visitorIdNumber";
             case "inmateNumber" -> "inmate.inmateNumber";
             case "inmateName" -> "inmate.firstName";
             default -> defaultField;
