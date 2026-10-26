@@ -5,6 +5,7 @@ import com.pms.api.user.dto.UpdateUserDetailsRequest;
 import com.pms.api.user.dto.UserResponse;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
+import com.pms.api.common.audit.Audited;
 import com.pms.api.common.pagination.PageResponse;
 import com.pms.api.common.pagination.PageableValidator;
 import com.pms.api.common.pagination.PaginationProperties;
@@ -41,6 +42,7 @@ public class UserService implements UserDetailsService {
         this.paginationProperties = paginationProperties;
     }
 
+    @Audited
     @Transactional
     public UserResponse create(CreateUserRequest request) {
         String username = request.username().trim();
@@ -106,6 +108,7 @@ public class UserService implements UserDetailsService {
         return UserResponse.from(getUser(userId));
     }
 
+    @Audited
     @Transactional
     public UserResponse deactivate(UUID userId) {
         User user = getUser(userId);
@@ -113,6 +116,7 @@ public class UserService implements UserDetailsService {
         return UserResponse.from(user);
     }
 
+    @Audited
     @Transactional
     public UserResponse reactivate(UUID userId) {
         User user = getUser(userId);
@@ -120,6 +124,7 @@ public class UserService implements UserDetailsService {
         return UserResponse.from(user);
     }
 
+    @Audited
     @Transactional
     public UserResponse updateDetails(UUID userId, UpdateUserDetailsRequest request) {
         User user = getUser(userId);
