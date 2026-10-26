@@ -8,4 +8,6 @@ import java.util.Optional;
 
 public interface InmateRepository extends JpaRepository<Inmate, Long>, JpaSpecificationExecutor<Inmate> {
     Optional<Inmate> findByPublicUuid(UUID publicUuid);
+
+    Optional<Inmate> findByInmateNumber(String inmateNumber);
 }
