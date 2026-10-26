@@ -41,7 +41,7 @@ public class VisitController {
         this.visitService = visitService;
     }
 
-    @Operation(summary = "Record a visit", description = "Create a visit linking a visitor, an inmate, and the logging officer.")
+    @Operation(summary = "Record a visit", description = "Record visitor details, the inmate being visited, and the logging officer.")
     @PostMapping("/visits")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('VISITOR_OFFICER')")
@@ -50,7 +50,7 @@ public class VisitController {
         return visitService.recordVisit(request, currentUser.getUsername());
     }
 
-    @Operation(summary = "Get a visit by ID", description = "Find a specific visit with linked visitor and inmate details.")
+    @Operation(summary = "Get a visit by ID", description = "Find a specific visit with its recorded visitor and inmate details.")
     @GetMapping("/visits/{visitId}")
     @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
     public VisitResponse getVisit(@PathVariable UUID visitId) {

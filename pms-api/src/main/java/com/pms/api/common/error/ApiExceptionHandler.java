@@ -6,7 +6,6 @@ import com.pms.api.inmate.service.InmateService;
 import com.pms.api.incident.service.IncidentService;
 import com.pms.api.user.service.UserService;
 import com.pms.api.visitor.service.VisitService;
-import com.pms.api.visitor.service.VisitorService;
 import com.pms.api.common.pagination.InvalidPaginationException;
 import com.pms.api.common.pagination.InvalidSortException;
 import org.slf4j.Logger;
@@ -167,16 +166,6 @@ public class ApiExceptionHandler {
     @ExceptionHandler(CellService.CellAlreadyAssignedToSameCellException.class)
     public ResponseEntity<ApiError> handleCellAlreadyAssignedToSameCell() {
         return problem(HttpStatus.CONFLICT, "The inmate is already assigned to this cell.");
-    }
-
-    @ExceptionHandler(VisitorService.VisitorNotFoundException.class)
-    public ResponseEntity<ApiError> handleVisitorNotFound() {
-        return problem(HttpStatus.NOT_FOUND, "Visitor not found.");
-    }
-
-    @ExceptionHandler(VisitorService.DuplicateVisitorIdentityException.class)
-    public ResponseEntity<ApiError> handleDuplicateVisitorIdentity() {
-        return problem(HttpStatus.CONFLICT, "A visitor with that identity number already exists.");
     }
 
     @ExceptionHandler(VisitService.VisitNotFoundException.class)
