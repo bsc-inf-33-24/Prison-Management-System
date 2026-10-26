@@ -44,7 +44,7 @@ public class InmateController {
             description = "Creates the inmate record and allocates the inmate to the selected cell in one transaction. The inmateNumber is trimmed and must be unique; comparisons are case-sensitive.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Inmate created and allocated to the selected cell."),
-            @ApiResponse(responseCode = "409", description = "The inmate number is already in use, or the cell is full or incompatible with the inmate classification."),
+            @ApiResponse(responseCode = "409", description = "The inmate number is already in use or the selected cell is full."),
             @ApiResponse(responseCode = "404", description = "The selected cell does not exist.")
     })
     public InmateResponse enroll(@Valid @RequestBody InmateRequest request) {
@@ -55,13 +55,11 @@ public class InmateController {
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List inmate records")
     public PageResponse<InmateResponse> list(@RequestParam(required = false) String search,
-                                             @RequestParam(required = false) String classification,
                                              @RequestParam(required = false) String gender,
-                                             @RequestParam(required = false) String facility,
                                              @RequestParam(required = false) Integer page,
                                              @RequestParam(required = false) Integer size,
                                              @RequestParam(required = false) List<String> sort) {
-        return inmateService.list(search, classification, gender, facility, page, size, sort);
+        return inmateService.list(search, gender, page, size, sort);
     }
 
     @GetMapping("/{inmateId}")

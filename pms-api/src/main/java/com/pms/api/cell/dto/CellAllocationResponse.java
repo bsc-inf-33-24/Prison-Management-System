@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public record CellAllocationResponse(
         UUID inmateId,
-        Long cellId,
+        UUID cellId,
         Instant allocatedAt,
         Integer currentOccupancy,
         Integer availableSpaces
@@ -14,7 +14,7 @@ public record CellAllocationResponse(
     public static CellAllocationResponse from(CellAllocation allocation, int currentOccupancy, int availableSpaces) {
         return new CellAllocationResponse(
                 allocation.getInmate().getPublicUuid(),
-                allocation.getCell().getId(),
+                allocation.getCell().getPublicUuid(),
                 allocation.getAllocatedAt(),
                 currentOccupancy,
                 availableSpaces

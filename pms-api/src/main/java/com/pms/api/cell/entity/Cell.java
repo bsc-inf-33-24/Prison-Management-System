@@ -32,17 +32,13 @@ public class Cell extends BaseEntity {
     @Column(name = "capacity", nullable = false)
     private Integer capacity;
 
-    @Column(name = "classification", nullable = false, length = 50)
-    private String classification;
-
     protected Cell() {
     }
 
-    public Cell(String blockName, Integer cellNumber, Integer capacity, String classification) {
+    public Cell(String blockName, Integer cellNumber, Integer capacity) {
         this.blockName = blockName;
         this.cellNumber = cellNumber;
         this.capacity = capacity;
-        this.classification = classification;
     }
 
     public Long getId() {
@@ -59,10 +55,6 @@ public class Cell extends BaseEntity {
 
     public Integer getCapacity() {
         return capacity;
-    }
-
-    public String getClassification() {
-        return classification;
     }
 
     public String getName() {

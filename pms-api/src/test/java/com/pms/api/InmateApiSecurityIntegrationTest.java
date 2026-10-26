@@ -182,10 +182,9 @@ class InmateApiSecurityIntegrationTest {
         request.put("dateOfBirth", "1990-01-01");
         request.put("gender", "Other");
         request.put("admissionDate", "2025-01-01");
-        request.put("classification", "Minimum");
         Cell cell = cellRepository.saveAndFlush(new Cell(
-                "SEC-" + UUID.randomUUID().toString().replace("-", ""), 1, 100, "Minimum"));
-        request.put("cellId", cell.getId());
+                "SEC-" + UUID.randomUUID().toString().replace("-", ""), 1, 100));
+        request.put("cellId", cell.getPublicUuid().toString());
         try {
             return objectMapper.writeValueAsString(request);
         } catch (java.io.IOException exception) {

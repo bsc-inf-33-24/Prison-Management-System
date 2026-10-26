@@ -47,12 +47,6 @@ public class Inmate extends BaseEntity {
     @Column(name = "admission_date", nullable = false)
     private LocalDate admissionDate;
 
-    @Column(name = "classification", nullable = false, length = 50)
-    private String classification;
-
-    @Column(name = "current_facility", nullable = false, length = 100)
-    private String currentFacility;
-
     @Column(name = "offence", length = 500)
     private String offence;
 
@@ -76,21 +70,21 @@ public class Inmate extends BaseEntity {
     }
 
     public Inmate(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
-                  String gender, LocalDate admissionDate, String classification, String currentFacility) {
-        this(inmateNumber, firstName, lastName, dateOfBirth, gender, admissionDate, classification,
-                currentFacility, null, null, null, null);
+                  String gender, LocalDate admissionDate) {
+        this(inmateNumber, firstName, lastName, dateOfBirth, gender, admissionDate,
+                null, null, null, null, null);
     }
 
     public Inmate(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
-                  String gender, LocalDate admissionDate, String classification, String currentFacility,
+                  String gender, LocalDate admissionDate,
                   String offence, Integer sentenceDurationValue, SentenceDurationUnit sentenceDurationUnit,
                   LocalDate sentenceStartDate) {
-        this(inmateNumber, firstName, lastName, dateOfBirth, gender, admissionDate, classification, currentFacility,
+        this(inmateNumber, firstName, lastName, dateOfBirth, gender, admissionDate,
                 offence, sentenceDurationValue, sentenceDurationUnit, sentenceStartDate, null);
     }
 
     public Inmate(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
-                  String gender, LocalDate admissionDate, String classification, String currentFacility,
+                  String gender, LocalDate admissionDate,
                   String offence, Integer sentenceDurationValue, SentenceDurationUnit sentenceDurationUnit,
                   LocalDate sentenceStartDate, LocalDate sentenceEndDate) {
         this.inmateNumber = inmateNumber;
@@ -99,8 +93,6 @@ public class Inmate extends BaseEntity {
         this.dateOfBirth = dateOfBirth;
         this.gender = gender;
         this.admissionDate = admissionDate;
-        this.classification = classification;
-        this.currentFacility = currentFacility;
         this.offence = offence;
         this.sentenceDurationValue = sentenceDurationValue;
         this.sentenceDurationUnit = sentenceDurationUnit;
@@ -136,14 +128,6 @@ public class Inmate extends BaseEntity {
         return admissionDate;
     }
 
-    public String getClassification() {
-        return classification;
-    }
-
-    public String getCurrentFacility() {
-        return currentFacility;
-    }
-
     public String getOffence() {
         return offence;
     }
@@ -169,13 +153,12 @@ public class Inmate extends BaseEntity {
     }
 
     public void updateDetails(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
-                              String gender, LocalDate admissionDate, String classification) {
+                              String gender, LocalDate admissionDate) {
         this.inmateNumber = inmateNumber;
         this.firstName = firstName;
         this.lastName = lastName;
         this.dateOfBirth = dateOfBirth;
         this.gender = gender;
         this.admissionDate = admissionDate;
-        this.classification = classification;
     }
 }

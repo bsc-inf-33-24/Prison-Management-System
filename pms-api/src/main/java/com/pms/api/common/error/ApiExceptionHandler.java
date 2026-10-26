@@ -159,11 +159,6 @@ public class ApiExceptionHandler {
         return problem(HttpStatus.CONFLICT, "This cell is at full capacity.");
     }
 
-    @ExceptionHandler(CellService.CellClassificationMismatchException.class)
-    public ResponseEntity<ApiError> handleCellClassificationMismatch() {
-        return problem(HttpStatus.CONFLICT, "The inmate classification does not match the cell classification.");
-    }
-
     @ExceptionHandler(CellService.CellAlreadyAllocatedException.class)
     public ResponseEntity<ApiError> handleCellAlreadyAllocated() {
         return problem(HttpStatus.CONFLICT, "This inmate is already assigned to a cell.");

@@ -68,12 +68,11 @@ class InmateApiFunctionalIntegrationTest {
     }
 
     @Test
-    void enrollmentCreatesProfileAndIgnoresServerManagedFieldsInTheRequest() throws Exception {
+    void enrollmentCreatesProfileAndIgnoresUnknownFieldsInTheRequest() throws Exception {
         ObjectNode request = validRequest(uniqueInmateNumber(), "Jane", "Doe");
         request.put("sentenceStartDate", "2025-01-15");
         request.put("sentenceEndDate", "2030-01-14");
         request.put("id", 987654);
-        request.put("currentFacility", "Client-controlled facility");
         request.put("createdAt", "2000-01-01T00:00:00Z");
         request.put("updatedAt", "2000-01-01T00:00:00Z");
 
@@ -84,8 +83,8 @@ class InmateApiFunctionalIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isString())
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.currentFacility").value("Main Facility"))
                 .andExpect(jsonPath("$.firstName").value("Jane"))
+                .andExpect(jsonPath("$.currentFacility").doesNotExist())
                 .andExpect(jsonPath("$.sentenceStartDate").value("2025-01-15"))
                 .andExpect(jsonPath("$.sentenceEndDate").value("2030-01-14"))
                 .andReturn();
@@ -158,7 +157,7 @@ class InmateApiFunctionalIntegrationTest {
     }
 
     @Test
-    void updateChangesProfileAndNeverChangesCurrentFacilityOrCreatedAt() throws Exception {
+    void updateChangesProfileAndPreservesCreatedAt() throws Exception {
         ObjectNode createRequest = validRequest(uniqueInmateNumber(), "Before", "Update");
         JsonNode created = createInmate(createRequest);
         String originalCreatedAt = created.path("createdAt").asText();
@@ -167,7 +166,6 @@ class InmateApiFunctionalIntegrationTest {
 
         ObjectNode updateRequest = validRequest(uniqueInmateNumber(), "After", "Update");
         updateRequest.put("id", 123456);
-        updateRequest.put("currentFacility", "Another Facility");
         updateRequest.put("createdAt", "2001-01-01T00:00:00Z");
         updateRequest.put("updatedAt", "2001-01-01T00:00:00Z");
 
@@ -177,7 +175,7 @@ class InmateApiFunctionalIntegrationTest {
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.firstName").value("After"))
-                .andExpect(jsonPath("$.currentFacility").value("Main Facility"))
+                .andExpect(jsonPath("$.currentFacility").doesNotExist())
                 .andExpect(jsonPath("$.createdAt").value(originalCreatedAt))
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty())
                 .andExpect(result -> {
@@ -281,10 +279,9 @@ class InmateApiFunctionalIntegrationTest {
         request.put("dateOfBirth", LocalDate.of(1990, 1, 1).toString());
         request.put("gender", "Other");
         request.put("admissionDate", LocalDate.of(2025, 1, 1).toString());
-        request.put("classification", "Minimum");
         Cell cell = cellRepository.saveAndFlush(new Cell(
-                "ENR-" + UUID.randomUUID().toString().replace("-", ""), 1, 100, "Minimum"));
-        request.put("cellId", cell.getId());
+                "ENR-" + UUID.randomUUID().toString().replace("-", ""), 1, 100));
+        request.put("cellId", cell.getPublicUuid().toString());
         return request;
     }
 

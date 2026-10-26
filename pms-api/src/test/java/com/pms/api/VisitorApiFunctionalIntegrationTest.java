@@ -91,7 +91,7 @@ class VisitorApiFunctionalIntegrationTest {
     void visitIsRecordedAgainstVisitorAndInmateAndVisibleInHistory() throws Exception {
         Long inmateId = inmateRepository.saveAndFlush(
                 new Inmate("INV-1001", "Grace", "Chirwa", LocalDate.of(1990, 1, 15), "Female",
-                        LocalDate.of(2024, 6, 1), "Minimum", "Main Facility")).getId();
+                        LocalDate.of(2024, 6, 1))).getId();
 
         long visitorId = objectMapper.readTree(mockMvc.perform(post("/api/v1/visitors")
                         .header("Authorization", bearer(visitorOfficerToken))

@@ -45,7 +45,10 @@ class FlywayMigrationPostgresTest {
                     "incident_inmate", "cells", "cell_allocations", "cases", "crimes",
                     "case_crimes", "sentences", "sentence", "Case", "crime", "casecrime"));
             assertColumns(connection, "cells", Set.of("id", "block_name", "cell_number", "capacity",
-                    "classification", "created_at", "updated_at"));
+                    "created_at", "updated_at"));
+            assertColumnAbsent(connection, "cells", "classification");
+            assertColumnAbsent(connection, "inmates", "classification");
+            assertColumns(connection, "inmates", Set.of("current_facility"));
             assertColumns(connection, "cell_allocations", Set.of("id", "inmate_id", "cell_id",
                     "allocated_at", "created_at", "updated_at"));
             assertColumns(connection, "cases", Set.of("id", "inmate_id", "case_number", "court",
@@ -113,6 +116,12 @@ class FlywayMigrationPostgresTest {
             }
         }
         assertThat(columns).containsAll(expected);
+    }
+
+    private void assertColumnAbsent(Connection connection, String table, String column) throws Exception {
+        try (ResultSet result = connection.getMetaData().getColumns(null, "public", table, column)) {
+            assertThat(result.next()).isFalse();
+        }
     }
 
     private void assertForeignKey(Connection connection, String table, String column,

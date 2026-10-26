@@ -174,7 +174,7 @@ class IncidentApiSecurityIntegrationTest {
         return inmateRepository.saveAndFlush(new Inmate(
                 "SEC-" + UUID.randomUUID().toString().replace("-", "").substring(0, 20),
                 "Security", "Test", LocalDate.of(1990, 1, 1), "Other",
-                LocalDate.of(2025, 1, 1), "Minimum", "Main Facility"));
+                LocalDate.of(2025, 1, 1)));
     }
 
     private String incidentRequest(Long inmateId) {

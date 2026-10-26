@@ -1,11 +1,10 @@
 package com.pms.api.cell.dto;
 
 import com.pms.api.cell.entity.Cell;
-import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.UUID;
 
 public record CellResponse(
-        @Schema(description = "Numeric database ID used as cellId in allocation requests and cell lookup paths.")
-        Long id,
+        UUID id,
         String name,
         Integer capacity,
         Integer currentOccupancy,
@@ -14,7 +13,7 @@ public record CellResponse(
     public static CellResponse from(Cell cell, long occupancy) {
         int currentOccupancy = Math.toIntExact(occupancy);
         return new CellResponse(
-                cell.getId(),
+                cell.getPublicUuid(),
                 cell.getName(),
                 cell.getCapacity(),
                 currentOccupancy,

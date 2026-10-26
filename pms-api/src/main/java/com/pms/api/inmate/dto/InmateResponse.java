@@ -14,14 +14,12 @@ public record InmateResponse(
         LocalDate dateOfBirth,
         String gender,
         LocalDate admissionDate,
-        String classification,
-        String currentFacility,
         String offence,
         Integer sentenceDurationValue,
         SentenceDurationUnit sentenceDurationUnit,
         LocalDate sentenceStartDate,
         LocalDate sentenceEndDate,
-        Long cellId,
+        UUID cellId,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -29,10 +27,10 @@ public record InmateResponse(
     public static InmateResponse from(Inmate inmate) {
         return from(inmate, inmate.getCellAllocation() == null
                 ? null
-                : inmate.getCellAllocation().getCell().getId());
+                : inmate.getCellAllocation().getCell().getPublicUuid());
     }
 
-    public static InmateResponse from(Inmate inmate, Long cellId) {
+    public static InmateResponse from(Inmate inmate, UUID cellId) {
         return new InmateResponse(
                 inmate.getPublicUuid(),
                 inmate.getInmateNumber(),
@@ -41,8 +39,6 @@ public record InmateResponse(
                 inmate.getDateOfBirth(),
                 inmate.getGender(),
                 inmate.getAdmissionDate(),
-                inmate.getClassification(),
-                inmate.getCurrentFacility(),
                 inmate.getOffence(),
                 inmate.getSentenceDurationValue(),
                 inmate.getSentenceDurationUnit(),
