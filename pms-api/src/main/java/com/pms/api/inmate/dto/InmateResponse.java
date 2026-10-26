@@ -20,6 +20,7 @@ public record InmateResponse(
         Integer sentenceDurationValue,
         SentenceDurationUnit sentenceDurationUnit,
         LocalDate sentenceStartDate,
+        LocalDate sentenceEndDate,
         Long cellId,
         Instant createdAt,
         Instant updatedAt
@@ -46,6 +47,7 @@ public record InmateResponse(
                 inmate.getSentenceDurationValue(),
                 inmate.getSentenceDurationUnit(),
                 inmate.getSentenceStartDate(),
+                inmate.getSentenceEndDate(),
                 cellId,
                 inmate.getCreatedAt(),
                 inmate.getUpdatedAt()

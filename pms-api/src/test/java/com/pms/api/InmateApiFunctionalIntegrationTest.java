@@ -70,6 +70,8 @@ class InmateApiFunctionalIntegrationTest {
     @Test
     void enrollmentCreatesProfileAndIgnoresServerManagedFieldsInTheRequest() throws Exception {
         ObjectNode request = validRequest(uniqueInmateNumber(), "Jane", "Doe");
+        request.put("sentenceStartDate", "2025-01-15");
+        request.put("sentenceEndDate", "2030-01-14");
         request.put("id", 987654);
         request.put("currentFacility", "Client-controlled facility");
         request.put("createdAt", "2000-01-01T00:00:00Z");
@@ -84,6 +86,8 @@ class InmateApiFunctionalIntegrationTest {
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.currentFacility").value("Main Facility"))
                 .andExpect(jsonPath("$.firstName").value("Jane"))
+                .andExpect(jsonPath("$.sentenceStartDate").value("2025-01-15"))
+                .andExpect(jsonPath("$.sentenceEndDate").value("2030-01-14"))
                 .andReturn();
 
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());

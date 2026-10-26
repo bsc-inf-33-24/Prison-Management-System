@@ -60,7 +60,8 @@ public class InmateService {
                 request.offence() == null ? null : request.offence().trim(),
                 request.sentenceDurationValue(),
                 request.sentenceDurationUnit(),
-                request.sentenceStartDate()
+                request.sentenceStartDate(),
+                request.sentenceEndDate()
         );
         Inmate saved = saveInmate(inmate);
         CellAllocationResponse allocation = cellService.allocate(

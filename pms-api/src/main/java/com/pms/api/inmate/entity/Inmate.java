@@ -66,6 +66,9 @@ public class Inmate extends BaseEntity {
     @Column(name = "sentence_start_date")
     private LocalDate sentenceStartDate;
 
+    @Column(name = "sentence_end_date")
+    private LocalDate sentenceEndDate;
+
     @OneToOne(mappedBy = "inmate", fetch = FetchType.LAZY)
     private CellAllocation cellAllocation;
 
@@ -82,6 +85,14 @@ public class Inmate extends BaseEntity {
                   String gender, LocalDate admissionDate, String classification, String currentFacility,
                   String offence, Integer sentenceDurationValue, SentenceDurationUnit sentenceDurationUnit,
                   LocalDate sentenceStartDate) {
+        this(inmateNumber, firstName, lastName, dateOfBirth, gender, admissionDate, classification, currentFacility,
+                offence, sentenceDurationValue, sentenceDurationUnit, sentenceStartDate, null);
+    }
+
+    public Inmate(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
+                  String gender, LocalDate admissionDate, String classification, String currentFacility,
+                  String offence, Integer sentenceDurationValue, SentenceDurationUnit sentenceDurationUnit,
+                  LocalDate sentenceStartDate, LocalDate sentenceEndDate) {
         this.inmateNumber = inmateNumber;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -94,6 +105,7 @@ public class Inmate extends BaseEntity {
         this.sentenceDurationValue = sentenceDurationValue;
         this.sentenceDurationUnit = sentenceDurationUnit;
         this.sentenceStartDate = sentenceStartDate;
+        this.sentenceEndDate = sentenceEndDate;
     }
 
     public Long getId() {
@@ -146,6 +158,10 @@ public class Inmate extends BaseEntity {
 
     public LocalDate getSentenceStartDate() {
         return sentenceStartDate;
+    }
+
+    public LocalDate getSentenceEndDate() {
+        return sentenceEndDate;
     }
 
     public CellAllocation getCellAllocation() {

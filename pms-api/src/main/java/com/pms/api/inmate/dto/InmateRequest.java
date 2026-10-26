@@ -51,6 +51,8 @@ public record InmateRequest(
 
         LocalDate sentenceStartDate,
 
+        LocalDate sentenceEndDate,
+
         @NotNull
         @Positive
         Long cellId
