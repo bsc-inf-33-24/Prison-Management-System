@@ -98,7 +98,7 @@ class VisitorApiFunctionalIntegrationTest {
                 .andExpect(jsonPath("$.content[0].durationMinutes").value(60));
 
         String response = mockMvc.perform(get("/api/v1/visits")
-                        .param("inmateId", inmateId.toString())
+                        .param("inmateNumber", "INV-1001")
                         .header("Authorization", bearer(recordsOfficerToken)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
