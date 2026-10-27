@@ -37,7 +37,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @Import(TestcontainersConfiguration.class)
 class InmateApiFunctionalIntegrationTest {
 
-    private static final String INMATES_PATH = "/api/inmates";
+    private static final String INMATES_PATH = "/api/v1/inmates";
 
     @Autowired
     private MockMvc mockMvc;

@@ -77,12 +77,12 @@ class CellAllocationApiIntegrationTest {
         ObjectNode moveRequest = objectMapper.createObjectNode();
         moveRequest.put("cellId", newCell.getPublicUuid().toString());
 
-        mockMvc.perform(put("/api/inmates/" + inmate.getId() + "/cell-allocation")
+        mockMvc.perform(put("/api/v1/inmates/" + inmate.getPublicUuid() + "/cell-allocation")
                         .header("Authorization", bearerToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(moveRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.inmateId").value(inmate.getId()))
+                .andExpect(jsonPath("$.inmateId").value(inmate.getPublicUuid().toString()))
                 .andExpect(jsonPath("$.oldCellId").value(oldCell.getPublicUuid().toString()))
                 .andExpect(jsonPath("$.newCellId").value(newCell.getPublicUuid().toString()));
 

@@ -48,7 +48,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @Import(TestcontainersConfiguration.class)
 class IncidentApiSecurityIntegrationTest {
 
-    private static final String INCIDENTS_PATH = "/api/incidents";
+    private static final String INCIDENTS_PATH = "/api/v1/incidents";
     private static final Set<String> API_ERROR_FIELDS = Set.of("status", "error", "message");
 
     @Autowired
@@ -75,23 +75,23 @@ class IncidentApiSecurityIntegrationTest {
     @Test
     void onlyDisciplinaryOfficerCanLogIncidentsAndRecordOutcomes() throws Exception {
         Inmate inmate = createInmate();
-        String historyPath = "/api/inmates/" + inmate.getId() + "/incidents";
+        String historyPath = "/api/v1/inmates/" + inmate.getPublicUuid() + "/incidents";
 
         String disciplinaryOfficerToken = tokenForRole("Disciplinary Officer");
-        expectStatus(disciplinaryOfficerToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getId()), 201);
+        expectStatus(disciplinaryOfficerToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 201);
         expectStatus(disciplinaryOfficerToken, "GET", historyPath, null, 200);
 
         String superAdminToken = tokenForRole("Super Admin");
         // Super Admin may read history, but not log incidents or record outcomes.
         expectStatus(superAdminToken, "GET", historyPath, null, 200);
-        expectStatus(superAdminToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getId()), 403);
+        expectStatus(superAdminToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 403);
 
         for (String role : User.ALLOWED_ROLES) {
             if (role.equals("Disciplinary Officer") || role.equals("Super Admin")) {
                 continue;
             }
             String token = tokenForRole(role);
-            expectStatus(token, "POST", INCIDENTS_PATH, incidentRequest(inmate.getId()), 403);
+            expectStatus(token, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 403);
             expectStatus(token, "GET", historyPath, null, 403);
         }
     }
@@ -99,11 +99,11 @@ class IncidentApiSecurityIntegrationTest {
     @Test
     void rejectsMissingInvalidAndExpiredTokensOnEveryEndpoint() throws Exception {
         Inmate inmate = createInmate();
-        String historyPath = "/api/inmates/" + inmate.getId() + "/incidents";
+        String historyPath = "/api/v1/inmates/" + inmate.getPublicUuid() + "/incidents";
         String outcomePath = INCIDENTS_PATH + "/1/outcome";
 
         for (String token : new String[] { null, "not-a-valid-jwt", expiredToken() }) {
-            expectStatus(token, "POST", INCIDENTS_PATH, incidentRequest(inmate.getId()), 401);
+            expectStatus(token, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 401);
             expectStatus(token, "GET", historyPath, null, 401);
             expectStatus(token, "PATCH", outcomePath, outcomeRequest(), 401);
         }
@@ -117,7 +117,7 @@ class IncidentApiSecurityIntegrationTest {
         userRepository.saveAndFlush(user);
 
         Inmate inmate = createInmate();
-        expectStatus(token, "POST", INCIDENTS_PATH, incidentRequest(inmate.getId()), 401);
+        expectStatus(token, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 401);
     }
 
     @Test
@@ -177,13 +177,13 @@ class IncidentApiSecurityIntegrationTest {
                 LocalDate.of(2025, 1, 1)));
     }
 
-    private String incidentRequest(Long inmateId) {
+    private String incidentRequest(UUID inmateId) {
         ObjectNode request = objectMapper.createObjectNode();
         request.put("incidentDate", LocalDate.now().toString());
         request.put("description", "Security test incident.");
         ArrayNode participants = objectMapper.createArrayNode();
         ObjectNode participant = objectMapper.createObjectNode();
-        participant.put("inmateId", inmateId);
+        participant.put("inmateId", inmateId.toString());
         participant.put("roleInIncident", "Involved");
         participants.add(participant);
         request.set("participants", participants);
