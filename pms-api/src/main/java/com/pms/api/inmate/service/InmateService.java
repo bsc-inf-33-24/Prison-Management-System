@@ -52,8 +52,6 @@ public class InmateService {
                 request.gender().trim(),
                 request.admissionDate(),
                 request.offence() == null ? null : request.offence().trim(),
-                request.sentenceDurationValue(),
-                request.sentenceDurationUnit(),
                 request.sentenceStartDate(),
                 request.sentenceEndDate()
         );

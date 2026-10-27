@@ -2,13 +2,11 @@ package com.pms.api.inmate.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.pms.api.inmate.entity.SentenceDurationUnit;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -41,22 +39,19 @@ public record InmateRequest(
         @Size(min = 1, max = 500)
         String offence,
 
-        @Positive
-        Integer sentenceDurationValue,
-
-        SentenceDurationUnit sentenceDurationUnit,
-
+        @NotNull
         LocalDate sentenceStartDate,
 
+        @NotNull
         LocalDate sentenceEndDate,
 
         @NotNull
         UUID cellId
 ) {
-    @AssertTrue(message = "Sentence duration and unit must be supplied together.")
+    @AssertTrue(message = "Sentence end date must be on or after the start date.")
     @JsonIgnore
     @Schema(hidden = true)
     public boolean isSentenceDurationComplete() {
-        return (sentenceDurationValue == null) == (sentenceDurationUnit == null);
+        return sentenceStartDate == null || sentenceEndDate == null || !sentenceEndDate.isBefore(sentenceStartDate);
     }
 }

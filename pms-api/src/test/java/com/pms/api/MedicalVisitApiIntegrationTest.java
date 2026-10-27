@@ -172,7 +172,7 @@ class MedicalVisitApiIntegrationTest {
         return inmateRepository.saveAndFlush(new Inmate(
                 "MED-" + UUID.randomUUID().toString().replace("-", "").substring(0, 20),
                 "Medical", "Test", LocalDate.of(1990, 1, 1), "Other",
-                LocalDate.of(2025, 1, 1)));
+                LocalDate.of(2025, 1, 1), null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 1)));
     }
 
     private String medicalVisitRequest(UUID inmateId, LocalDate visitDate, String sickness, String diagnosis)

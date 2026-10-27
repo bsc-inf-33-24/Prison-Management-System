@@ -69,7 +69,7 @@ class CellAllocationApiIntegrationTest {
     void moveInmateToNewCellAndItCannotExceedCapacity() throws Exception {
         Inmate inmate = inmateRepository.saveAndFlush(new Inmate(
                 uniqueInmateNumber(), "Dana", "White", LocalDate.of(1992, 9, 1),
-                "Female", LocalDate.of(2024, 4, 5)));
+                "Female", LocalDate.of(2024, 4, 5), null, LocalDate.of(2024, 4, 5), LocalDate.of(2024, 4, 5)));
         Cell oldCell = cellRepository.saveAndFlush(new Cell("C", 4, 2));
         Cell newCell = cellRepository.saveAndFlush(new Cell("C", 5, 2));
         cellAllocationRepository.saveAndFlush(new CellAllocation(inmate, oldCell, Instant.now()));

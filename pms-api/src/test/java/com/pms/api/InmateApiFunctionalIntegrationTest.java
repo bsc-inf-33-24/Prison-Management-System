@@ -72,6 +72,8 @@ class InmateApiFunctionalIntegrationTest {
         ObjectNode request = validRequest(uniqueInmateNumber(), "Jane", "Doe");
         request.put("sentenceStartDate", "2025-01-15");
         request.put("sentenceEndDate", "2030-01-14");
+        request.put("sentenceDurationValue", 99);
+        request.put("sentenceDurationUnit", "DAYS");
         request.put("id", 987654);
         request.put("createdAt", "2000-01-01T00:00:00Z");
         request.put("updatedAt", "2000-01-01T00:00:00Z");
@@ -87,12 +89,39 @@ class InmateApiFunctionalIntegrationTest {
                 .andExpect(jsonPath("$.currentFacility").doesNotExist())
                 .andExpect(jsonPath("$.sentenceStartDate").value("2025-01-15"))
                 .andExpect(jsonPath("$.sentenceEndDate").value("2030-01-14"))
+                .andExpect(jsonPath("$.sentenceDurationValue").value(5))
+                .andExpect(jsonPath("$.sentenceDurationUnit").value("YEARS"))
                 .andReturn();
 
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
         assertNotNull(UUID.fromString(response.path("id").asText()));
         assertFalse(response.path("id").isNumber());
         assertTrue(!response.path("createdAt").asText().startsWith("2000-"));
+    }
+
+    @Test
+    void enrollmentRequiresBothSentenceDates() throws Exception {
+        ObjectNode request = validRequest(uniqueInmateNumber(), "Missing", "Date");
+        request.remove("sentenceEndDate");
+        mockMvc.perform(post(INMATES_PATH)
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("One or more request fields are invalid."));
+    }
+
+    @Test
+    void enrollmentRejectsSentenceEndBeforeStart() throws Exception {
+        ObjectNode request = validRequest(uniqueInmateNumber(), "Invalid", "Range");
+        request.put("sentenceStartDate", "2025-02-01");
+        request.put("sentenceEndDate", "2025-01-31");
+        mockMvc.perform(post(INMATES_PATH)
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("One or more request fields are invalid."));
     }
 
     @Test
@@ -279,6 +308,8 @@ class InmateApiFunctionalIntegrationTest {
         request.put("dateOfBirth", LocalDate.of(1990, 1, 1).toString());
         request.put("gender", "Other");
         request.put("admissionDate", LocalDate.of(2025, 1, 1).toString());
+        request.put("sentenceStartDate", "2025-01-01");
+        request.put("sentenceEndDate", "2025-01-01");
         Cell cell = cellRepository.saveAndFlush(new Cell(
                 "ENR-" + UUID.randomUUID().toString().replace("-", ""), 1, 100));
         request.put("cellId", cell.getPublicUuid().toString());
