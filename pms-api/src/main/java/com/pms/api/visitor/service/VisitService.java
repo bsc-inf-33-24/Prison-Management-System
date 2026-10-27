@@ -93,7 +93,7 @@ public class VisitService {
         validatePage(page, size);
         validateDateRange(visitDateFrom, visitDateTo);
 
-        Specification<Visit> specification = Specification.where((Specification<Visit>) null);
+        Specification<Visit> specification = Specification.unrestricted();
         if (visitId != null) {
             specification = specification.and(equalLong("id", visitRepository.findByPublicUuid(visitId)
                     .map(Visit::getId).orElse(-1L)));
@@ -191,19 +191,27 @@ public class VisitService {
         return textContains("visitorFullName", value);
     }
 
+    private static Specification<Visit> inmateNumberContains(String value) {
+        return (root, query, cb) -> {
+            Join<Object, Object> inmate = root.join("inmate", JoinType.LEFT);
+            String pattern = likePattern(value);
+            return cb.like(cb.lower(inmate.get("inmateNumber").as(String.class)), pattern, '\\');
+        };
+    }
+
     private static Specification<Visit> inmateNameContains(String value) {
         return (root, query, cb) -> {
             Join<Object, Object> inmate = root.join("inmate", JoinType.LEFT);
             String pattern = likePattern(value);
             return cb.or(
-                    cb.like(cb.lower(inmate.get("firstName").as(String.class)), pattern, '\\'),
-                    cb.like(cb.lower(inmate.get("lastName").as(String.class)), pattern, '\\'));
+                    cb.like(cb.lower(inmate.get("firstName")), pattern, '!'),
+                    cb.like(cb.lower(inmate.get("lastName")), pattern, '!'));
         };
     }
 
     private static Specification<Visit> textContains(String field, String value) {
         String pattern = likePattern(value);
-        return (root, query, cb) -> cb.like(cb.lower(root.get(field).as(String.class)), pattern, '\\');
+        return (root, query, cb) -> cb.like(cb.lower(root.get(field).as(String.class)), pattern, '!');
     }
 
     private static String likePattern(String value) {
@@ -211,9 +219,9 @@ public class VisitService {
     }
 
     private static String escapeLikePattern(String value) {
-        return value.replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_");
+        return value.replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
     }
 
     private static Sort parseSort(String sort, String defaultField, Sort.Direction defaultDirection) {

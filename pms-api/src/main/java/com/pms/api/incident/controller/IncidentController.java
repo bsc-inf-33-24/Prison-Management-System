@@ -30,11 +30,10 @@ public class IncidentController {
         this.incidentService = incidentService;
     }
 
-    // Only Disciplinary Officers may log an incident (per issue #13's
-    // security matrix).
+    // Disciplinary Officers and Super Admins may log incidents.
     @PostMapping("/incidents")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('DISCIPLINARY_OFFICER')")
+    @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Log an inmate incident")
     public IncidentResponse logIncident(@Valid @RequestBody LogIncidentRequest request,
                                          @AuthenticationPrincipal UserDetails currentUser) {
@@ -42,15 +41,14 @@ public class IncidentController {
     }
 
     @PatchMapping("/incidents/{incidentId}/outcome")
-    @PreAuthorize("hasRole('DISCIPLINARY_OFFICER')")
+    @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Record a disciplinary outcome")
     public IncidentResponse recordOutcome(@PathVariable UUID incidentId,
                                            @Valid @RequestBody RecordOutcomeRequest request) {
         return incidentService.recordOutcome(incidentId, request);
     }
 
-    // Both Disciplinary Officers AND Super Admins can view an inmate's
-    // incident history (unlike logging/updating, which is DO-only).
+    // Disciplinary Officers and Super Admins can view an inmate's history.
     @GetMapping("/inmates/{inmateId}/incidents")
     @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Get an inmate's incident history")

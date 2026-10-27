@@ -136,6 +136,40 @@ SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
 
 Use the SMTP provider's app password or service credential, not a personal mailbox password. Recreate the app container after changing these settings. Without a configured sender, password recovery stays unavailable. Repeating `POST /api/v1/auth/password/forgot` sends a new token and invalidates any outstanding token for that account.
 
+## Production image and CI/CD
+
+The GitHub Actions workflow is stored at the repository root in `.github/workflows/pms-api-image.yml`. It checks migration versions and runs Maven verification for pull requests. On pushes to `main` and version tags such as `v1.2.0`, it builds the API image and publishes it to Docker Hub.
+
+To enable publishing, create these repository secrets in GitHub under **Settings → Secrets and variables → Actions**:
+
+- `DOCKERHUB_USERNAME`: the Docker Hub account or organization that owns the image repository.
+- `DOCKERHUB_TOKEN`: a Docker Hub access token with permission to push to that repository.
+
+Create `pms-api` in Docker Hub under that account or organization, and make it public if the frontend team should pull without logging in. The workflow publishes these tags (replace `<dockerhub-namespace>` with the account or organization):
+
+```text
+<dockerhub-namespace>/pms-api:main
+<dockerhub-namespace>/pms-api:sha-<commit-sha>
+<dockerhub-namespace>/pms-api:v1.2.0
+```
+
+`main` is a moving tag; use a version or commit-SHA tag for deployments. Push a version tag to publish a release, for example `git tag v1.2.0 && git push origin v1.2.0`.
+
+The API image contains only the API. PostgreSQL runs as its own container so its data can persist in a Docker volume and the database can be upgraded independently. The Docker Hub handoff includes [docker-compose.hub.yml](docker-compose.hub.yml), which starts both the API image and the official PostgreSQL image together.
+
+Give the frontend team `docker-compose.hub.yml` and an `.env` configured for their environment (do not send production secrets in source control). They can start the complete stack with:
+
+```bash
+docker compose -f docker-compose.hub.yml pull
+docker compose -f docker-compose.hub.yml up -d
+```
+
+The `.env` file needs `DOCKERHUB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, and `INITIAL_ADMIN_PASSWORD`. `PMS_API_TAG` is optional and defaults to `main`; pin it to a release tag such as `v1.2.0` for reproducible environments. The database container and API image are pulled from Docker Hub when Compose starts. If the API image is private, users must first run `docker login` with Docker Hub credentials that have pull access. Never put production secrets in the image or frontend bundle.
+
+The frontend team normally consumes the deployed API URL, not this image. Share the deployment's base URL (for example, `https://api.example.com/api/v1`), the OpenAPI document at `/v3/api-docs`, the JWT authentication instructions, and the frontend origin that must be allowed by the API's CORS configuration.
+
+The workflow builds and publishes the image; deployment to a hosting platform is a separate step. Configure that platform to deploy a specific image tag or digest and inject production secrets at runtime.
+
 ## 7) Access the app
 
 Once the containers are running, open:

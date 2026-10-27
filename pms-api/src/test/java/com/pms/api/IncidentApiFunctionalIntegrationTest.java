@@ -44,7 +44,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @Import(TestcontainersConfiguration.class)
 class IncidentApiFunctionalIntegrationTest {
 
-    private static final String INCIDENTS_PATH = "/api/incidents";
+    private static final String INCIDENTS_PATH = "/api/v1/incidents";
 
     @Autowired
     private MockMvc mockMvc;
@@ -84,8 +84,8 @@ class IncidentApiFunctionalIntegrationTest {
 
         ObjectNode request = baseRequest("Fight broke out in the yard.");
         request.set("participants", participants(
-                participant(inmateA.getId(), "Instigator"),
-                participant(inmateB.getId(), "Bystander")));
+                participant(inmateA.getPublicUuid(), "Instigator"),
+                participant(inmateB.getPublicUuid(), "Bystander")));
         // Client tries to spoof the reporter - must be ignored, since
         // reported_by is derived from the authenticated JWT identity.
         request.put("reportedBy", "Someone Else");
@@ -95,7 +95,7 @@ class IncidentApiFunctionalIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.id").isString())
                 .andExpect(jsonPath("$.status").value("open"))
                 .andExpect(jsonPath("$.outcome").doesNotExist())
                 .andExpect(jsonPath("$.reportedBy").value(reportingOfficerFullName))
@@ -103,8 +103,8 @@ class IncidentApiFunctionalIntegrationTest {
                 .andReturn();
 
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
-        assertTrue(hasParticipantWithRole(response, inmateA.getId(), "Instigator"));
-        assertTrue(hasParticipantWithRole(response, inmateB.getId(), "Bystander"));
+        assertTrue(hasParticipantWithRole(response, inmateA.getPublicUuid(), "Instigator"));
+        assertTrue(hasParticipantWithRole(response, inmateB.getPublicUuid(), "Bystander"));
     }
 
     @Test
@@ -112,7 +112,7 @@ class IncidentApiFunctionalIntegrationTest {
         Inmate inmate = createInmate();
 
         ObjectNode unknownInmateRequest = baseRequest("Unknown inmate test.");
-        unknownInmateRequest.set("participants", participants(participant(999999999L, "Instigator")));
+        unknownInmateRequest.set("participants", participants(participant(UUID.randomUUID(), "Instigator")));
         mockMvc.perform(post(INCIDENTS_PATH)
                         .header("Authorization", "Bearer " + disciplinaryOfficerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -122,8 +122,8 @@ class IncidentApiFunctionalIntegrationTest {
 
         ObjectNode duplicateRequest = baseRequest("Duplicate inmate test.");
         duplicateRequest.set("participants", participants(
-                participant(inmate.getId(), "Instigator"),
-                participant(inmate.getId(), "Instigator again")));
+                participant(inmate.getPublicUuid(), "Instigator"),
+                participant(inmate.getPublicUuid(), "Instigator again")));
         mockMvc.perform(post(INCIDENTS_PATH)
                         .header("Authorization", "Bearer " + disciplinaryOfficerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -145,7 +145,7 @@ class IncidentApiFunctionalIntegrationTest {
 
         Inmate inmate = createInmate();
         ObjectNode blankDescription = baseRequest("");
-        blankDescription.set("participants", participants(participant(inmate.getId(), null)));
+        blankDescription.set("participants", participants(participant(inmate.getPublicUuid(), null)));
         mockMvc.perform(post(INCIDENTS_PATH)
                         .header("Authorization", "Bearer " + disciplinaryOfficerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -154,7 +154,7 @@ class IncidentApiFunctionalIntegrationTest {
 
         ObjectNode futureDate = baseRequest("Future-dated incident.");
         futureDate.put("incidentDate", LocalDate.now().plusDays(1).toString());
-        futureDate.set("participants", participants(participant(inmate.getId(), null)));
+        futureDate.set("participants", participants(participant(inmate.getPublicUuid(), null)));
         mockMvc.perform(post(INCIDENTS_PATH)
                         .header("Authorization", "Bearer " + disciplinaryOfficerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -165,8 +165,8 @@ class IncidentApiFunctionalIntegrationTest {
     @Test
     void recordsOutcomeOnceAndRejectsASecondAttemptWithConflict() throws Exception {
         Inmate inmate = createInmate();
-        JsonNode created = logIncident(inmate.getId(), "Role");
-        long incidentId = created.path("id").asLong();
+        JsonNode created = logIncident(inmate.getPublicUuid(), "Role");
+        String incidentId = created.path("id").asText();
 
         ObjectNode outcomeRequest = objectMapper.createObjectNode();
         outcomeRequest.put("outcome", "Verbal warning issued.");
@@ -192,7 +192,7 @@ class IncidentApiFunctionalIntegrationTest {
         ObjectNode outcomeRequest = objectMapper.createObjectNode();
         outcomeRequest.put("outcome", "N/A");
 
-        mockMvc.perform(patch(INCIDENTS_PATH + "/999999999/outcome")
+        mockMvc.perform(patch(INCIDENTS_PATH + "/" + UUID.randomUUID() + "/outcome")
                         .header("Authorization", "Bearer " + disciplinaryOfficerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(outcomeRequest)))
@@ -203,8 +203,8 @@ class IncidentApiFunctionalIntegrationTest {
     @Test
     void concurrentOutcomeAttemptsCannotBothSucceed() throws Exception {
         Inmate inmate = createInmate();
-        JsonNode created = logIncident(inmate.getId(), "Role");
-        long incidentId = created.path("id").asLong();
+        JsonNode created = logIncident(inmate.getPublicUuid(), "Role");
+        String incidentId = created.path("id").asText();
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CyclicBarrier barrier = new CyclicBarrier(2);
@@ -236,10 +236,10 @@ class IncidentApiFunctionalIntegrationTest {
     @Test
     void historyReturnsThatInmatesRoleAndOrdersMostRecentFirst() throws Exception {
         Inmate inmate = createInmate();
-        logIncidentOn(LocalDate.of(2026, 1, 1), inmate.getId(), "Witness");
-        logIncidentOn(LocalDate.of(2026, 6, 1), inmate.getId(), "Instigator");
+        logIncidentOn(LocalDate.of(2026, 1, 1), inmate.getPublicUuid(), "Witness");
+        logIncidentOn(LocalDate.of(2026, 6, 1), inmate.getPublicUuid(), "Instigator");
 
-        MvcResult result = mockMvc.perform(get("/api/inmates/" + inmate.getId() + "/incidents")
+        MvcResult result = mockMvc.perform(get("/api/v1/inmates/" + inmate.getPublicUuid() + "/incidents")
                         .header("Authorization", "Bearer " + disciplinaryOfficerToken))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -254,17 +254,17 @@ class IncidentApiFunctionalIntegrationTest {
 
     @Test
     void historyForUnknownInmateReturnsNotFound() throws Exception {
-        mockMvc.perform(get("/api/inmates/999999999/incidents")
+        mockMvc.perform(get("/api/v1/inmates/" + UUID.randomUUID() + "/incidents")
                         .header("Authorization", "Bearer " + superAdminToken))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
     }
 
-    private JsonNode logIncident(Long inmateId, String role) throws Exception {
+    private JsonNode logIncident(UUID inmateId, String role) throws Exception {
         return logIncidentOn(LocalDate.now(), inmateId, role);
     }
 
-    private JsonNode logIncidentOn(LocalDate date, Long inmateId, String role) throws Exception {
+    private JsonNode logIncidentOn(LocalDate date, UUID inmateId, String role) throws Exception {
         ObjectNode request = baseRequest("Incident on " + date);
         request.put("incidentDate", date.toString());
         request.set("participants", participants(participant(inmateId, role)));
@@ -299,18 +299,18 @@ class IncidentApiFunctionalIntegrationTest {
         return array;
     }
 
-    private ObjectNode participant(Long inmateId, String role) {
+    private ObjectNode participant(UUID inmateId, String role) {
         ObjectNode node = objectMapper.createObjectNode();
-        node.put("inmateId", inmateId);
+        node.put("inmateId", inmateId.toString());
         if (role != null) {
             node.put("roleInIncident", role);
         }
         return node;
     }
 
-    private boolean hasParticipantWithRole(JsonNode response, Long inmateId, String role) {
+    private boolean hasParticipantWithRole(JsonNode response, UUID inmateId, String role) {
         for (JsonNode participant : response.path("participants")) {
-            if (participant.path("inmateId").asLong() == inmateId
+            if (inmateId.toString().equals(participant.path("inmateId").asText())
                     && role.equals(participant.path("roleInIncident").asText())) {
                 return true;
             }

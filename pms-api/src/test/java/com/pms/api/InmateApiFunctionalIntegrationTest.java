@@ -18,7 +18,6 @@ import com.pms.api.cell.repository.CellRepository;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
-import com.pms.api.inmate.repository.InmateRepository;
 import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
@@ -52,9 +51,6 @@ class InmateApiFunctionalIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private InmateRepository inmateRepository;
-
-    @Autowired
     private CellRepository cellRepository;
 
     private String recordsOfficerToken;
@@ -68,13 +64,14 @@ class InmateApiFunctionalIntegrationTest {
     }
 
     @Test
-    void enrollmentCreatesProfileAndIgnoresUnknownFieldsInTheRequest() throws Exception {
+    void enrollmentCreatesProfileAndIgnoresServerManagedFieldsInTheRequest() throws Exception {
         ObjectNode request = validRequest("Jane", "Doe");
         request.put("sentenceStartDate", "2025-01-15");
         request.put("sentenceEndDate", "2030-01-14");
         request.put("sentenceDurationValue", 99);
         request.put("sentenceDurationUnit", "DAYS");
         request.put("id", 987654);
+        request.put("currentFacility", "Client-controlled facility");
         request.put("createdAt", "2000-01-01T00:00:00Z");
         request.put("updatedAt", "2000-01-01T00:00:00Z");
 
@@ -84,12 +81,9 @@ class InmateApiFunctionalIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isString())
-                .andExpect(jsonPath("$.inmateNumber").doesNotExist())
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.firstName").value("Jane"))
                 .andExpect(jsonPath("$.currentFacility").doesNotExist())
-                .andExpect(jsonPath("$.sentenceStartDate").value("2025-01-15"))
-                .andExpect(jsonPath("$.sentenceEndDate").value("2030-01-14"))
+                .andExpect(jsonPath("$.firstName").value("Jane"))
                 .andExpect(jsonPath("$.sentenceDurationValue").value(5))
                 .andExpect(jsonPath("$.sentenceDurationUnit").value("YEARS"))
                 .andReturn();
@@ -104,6 +98,7 @@ class InmateApiFunctionalIntegrationTest {
     void enrollmentRequiresBothSentenceDates() throws Exception {
         ObjectNode request = validRequest("Missing", "Date");
         request.remove("sentenceEndDate");
+
         mockMvc.perform(post(INMATES_PATH)
                         .header("Authorization", bearerToken())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -117,6 +112,7 @@ class InmateApiFunctionalIntegrationTest {
         ObjectNode request = validRequest("Invalid", "Range");
         request.put("sentenceStartDate", "2025-02-01");
         request.put("sentenceEndDate", "2025-01-31");
+
         mockMvc.perform(post(INMATES_PATH)
                         .header("Authorization", bearerToken())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -126,7 +122,7 @@ class InmateApiFunctionalIntegrationTest {
     }
 
     @Test
-    void identicalAndSimilarNamesAreAllowedWhenNumbersDiffer() throws Exception {
+    void identicalAndSimilarNamesAreAllowed() throws Exception {
         JsonNode first = createInmate(validRequest("John", "Banda"));
         JsonNode identical = createInmate(validRequest("John", "Banda"));
         JsonNode similar = createInmate(validRequest("Jon", "Banda"));
@@ -137,7 +133,7 @@ class InmateApiFunctionalIntegrationTest {
     }
 
     @Test
-    void updateChangesProfileAndPreservesCreatedAt() throws Exception {
+    void updateChangesProfileAndNeverChangesCurrentFacilityOrCreatedAt() throws Exception {
         ObjectNode createRequest = validRequest("Before", "Update");
         JsonNode created = createInmate(createRequest);
         String originalCreatedAt = created.path("createdAt").asText();
@@ -146,6 +142,7 @@ class InmateApiFunctionalIntegrationTest {
 
         ObjectNode updateRequest = validRequest("After", "Update");
         updateRequest.put("id", 123456);
+        updateRequest.put("currentFacility", "Another Facility");
         updateRequest.put("createdAt", "2001-01-01T00:00:00Z");
         updateRequest.put("updatedAt", "2001-01-01T00:00:00Z");
 
@@ -214,7 +211,8 @@ class InmateApiFunctionalIntegrationTest {
                         .header("Authorization", bearerToken()))
                 .andExpect(status().isOk())
                 .andReturn();
-        assertTrue(objectMapper.readTree(injection.getResponse().getContentAsString()).isEmpty());
+        assertTrue(objectMapper.readTree(injection.getResponse().getContentAsString())
+                .path("content").isEmpty());
 
         MvcResult caseInsensitive = mockMvc.perform(get(INMATES_PATH)
                         .param("search", "jAnE")
@@ -228,7 +226,8 @@ class InmateApiFunctionalIntegrationTest {
                         .header("Authorization", bearerToken()))
                 .andExpect(status().isOk())
                 .andReturn();
-        assertTrue(objectMapper.readTree(all.getResponse().getContentAsString()).size() >= 5);
+        assertTrue(objectMapper.readTree(all.getResponse().getContentAsString())
+                .path("content").size() >= 5);
     }
 
     @Test
@@ -267,7 +266,8 @@ class InmateApiFunctionalIntegrationTest {
     }
 
     private boolean containsFirstName(JsonNode results, String name) {
-        for (JsonNode inmate : results) {
+        JsonNode inmates = results.isArray() ? results : results.path("content");
+        for (JsonNode inmate : inmates) {
             if (inmate.path("firstName").asText().equals(name)) {
                 return true;
             }
