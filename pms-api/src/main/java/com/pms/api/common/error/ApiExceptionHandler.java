@@ -185,8 +185,7 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException exception) {
-        LOGGER.warn("Rejected API request: {}", exception.getMessage());
+    public ResponseEntity<ApiError> handleIllegalArgument() {
         return problem(HttpStatus.BAD_REQUEST, "One or more request fields are invalid.");
     }
 

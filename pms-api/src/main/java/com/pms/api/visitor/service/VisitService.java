@@ -93,7 +93,7 @@ public class VisitService {
         validatePage(page, size);
         validateDateRange(visitDateFrom, visitDateTo);
 
-        Specification<Visit> specification = Specification.where((Specification<Visit>) null);
+        Specification<Visit> specification = Specification.unrestricted();
         if (visitId != null) {
             specification = specification.and(equalLong("id", visitRepository.findByPublicUuid(visitId)
                     .map(Visit::getId).orElse(-1L)));
@@ -198,7 +198,7 @@ public class VisitService {
         return (root, query, cb) -> {
             Join<Object, Object> inmate = root.join("inmate", JoinType.LEFT);
             String pattern = likePattern(value);
-            return cb.like(cb.lower(inmate.get("inmateNumber").as(String.class)), pattern, '!');
+            return cb.like(cb.lower(inmate.get("inmateNumber")), pattern, '!');
         };
     }
 
@@ -207,8 +207,8 @@ public class VisitService {
             Join<Object, Object> inmate = root.join("inmate", JoinType.LEFT);
             String pattern = likePattern(value);
             return cb.or(
-                    cb.like(cb.lower(inmate.get("firstName").as(String.class)), pattern, '!'),
-                    cb.like(cb.lower(inmate.get("lastName").as(String.class)), pattern, '!'));
+                    cb.like(cb.lower(inmate.get("firstName")), pattern, '!'),
+                    cb.like(cb.lower(inmate.get("lastName")), pattern, '!'));
         };
     }
 
