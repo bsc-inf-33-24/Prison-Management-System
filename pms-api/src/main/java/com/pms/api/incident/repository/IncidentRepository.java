@@ -22,7 +22,7 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
     // conditional UPDATE, which is safe because the WHERE clause is
     // evaluated against the latest committed row at UPDATE time, not against
     // a value read earlier in the transaction.
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query("""
             update Incident i

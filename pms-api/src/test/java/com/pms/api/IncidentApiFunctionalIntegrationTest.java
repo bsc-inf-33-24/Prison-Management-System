@@ -95,7 +95,7 @@ class IncidentApiFunctionalIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.id").isString())
                 .andExpect(jsonPath("$.status").value("open"))
                 .andExpect(jsonPath("$.outcome").doesNotExist())
                 .andExpect(jsonPath("$.reportedBy").value(reportingOfficerFullName))
