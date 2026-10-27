@@ -13,8 +13,11 @@ RUN ./mvnw -q -DskipTests package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-COPY --from=build /workspace/target/*.jar app.jar
+LABEL org.opencontainers.image.source="https://github.com/bsc-inf-33-24/Prison-Management-System"
+
+COPY --from=build --chown=10001:10001 /workspace/target/*.jar /app/app.jar
+USER 10001:10001
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]

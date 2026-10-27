@@ -42,29 +42,28 @@ class FlywayMigrationPostgresTest {
 
         try (Connection connection = postgres.createConnection("")) {
             assertTables(connection, Set.of(
-                    "incident_inmate", "cells", "cell_allocations", "cases", "crimes",
-                    "case_crimes", "sentences", "sentence", "Case", "crime", "casecrime"));
+                    "incident_inmate", "cells", "cell_allocations", "cases", "sentences",
+                    "sentence", "Case", "crime", "casecrime"));
+            assertTableAbsent(connection, "crimes");
+            assertTableAbsent(connection, "case_crimes");
             assertColumns(connection, "cells", Set.of("id", "block_name", "cell_number", "capacity",
                     "created_at", "updated_at"));
             assertColumnAbsent(connection, "cells", "classification");
             assertColumnAbsent(connection, "inmates", "classification");
-            assertColumns(connection, "inmates", Set.of("current_facility"));
+            assertColumnAbsent(connection, "inmates", "current_facility");
             assertColumns(connection, "cell_allocations", Set.of("id", "inmate_id", "cell_id",
                     "allocated_at", "created_at", "updated_at"));
             assertColumns(connection, "cases", Set.of("id", "inmate_id", "case_number", "court",
-                    "case_start_date", "case_end_date", "status", "created_by", "created_at", "updated_at"));
-                assertColumns(connection, "users", Set.of("email"));
-            assertColumns(connection, "crimes", Set.of("id", "offence_name", "description", "category",
-                    "created_at", "updated_at"));
-            assertColumns(connection, "case_crimes", Set.of("case_id", "crime_id"));
+                    "case_start_date", "case_end_date", "status", "created_by", "created_at", "updated_at",
+                    "crimes"));
+            assertColumns(connection, "users", Set.of("email"));
             assertColumns(connection, "sentences", Set.of("sentence_id", "case_id", "inmate_id", "duration",
                     "start_date", "release_date", "status", "created_at", "updated_at"));
             assertForeignKey(connection, "cell_allocations", "inmate_id", "inmates", "id");
             assertForeignKey(connection, "cell_allocations", "cell_id", "cells", "id");
             assertForeignKey(connection, "cases", "inmate_id", "inmates", "id");
             assertForeignKey(connection, "cases", "created_by", "users", "user_id");
-            assertForeignKey(connection, "case_crimes", "case_id", "cases", "id");
-            assertForeignKey(connection, "case_crimes", "crime_id", "crimes", "id");
+            assertForeignKey(connection, "incident_inmate", "inmate_id", "inmates", "id");
             assertForeignKey(connection, "sentences", "case_id", "cases", "id");
             assertForeignKey(connection, "sentences", "inmate_id", "inmates", "id");
             assertUniqueIndex(connection, "cells", Set.of("block_name", "cell_number"));
@@ -120,6 +119,12 @@ class FlywayMigrationPostgresTest {
 
     private void assertColumnAbsent(Connection connection, String table, String column) throws Exception {
         try (ResultSet result = connection.getMetaData().getColumns(null, "public", table, column)) {
+            assertThat(result.next()).isFalse();
+        }
+    }
+
+    private void assertTableAbsent(Connection connection, String table) throws Exception {
+        try (ResultSet result = connection.getMetaData().getTables(null, "public", table, new String[] {"TABLE"})) {
             assertThat(result.next()).isFalse();
         }
     }

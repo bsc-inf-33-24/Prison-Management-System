@@ -20,6 +20,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import com.pms.api.auth.service.PasswordPolicy;
 import com.pms.api.auth.service.UnavailableRecoveryTokenDelivery;
 
@@ -196,6 +197,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiError> handleQueryParameterTypeMismatch() {
         return problem(HttpStatus.BAD_REQUEST, "One or more query parameters are invalid.");
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleNoResourceFound() {
+        return problem(HttpStatus.NOT_FOUND, "The requested endpoint was not found.");
     }
 
     @ExceptionHandler(Exception.class)

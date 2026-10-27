@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,6 +26,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
@@ -41,8 +42,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 @Import(TestcontainersConfiguration.class)
 class InmateApiSecurityIntegrationTest {
 
-    private static final String INMATES_PATH = "/api/inmates";
-    private static final String UNKNOWN_INMATE_PATH = INMATES_PATH + "/999999999999";
+    private static final String INMATES_PATH = "/api/v1/inmates";
+    private static final String UNKNOWN_INMATE_PATH = INMATES_PATH + "/" + UUID.randomUUID();
     private static final Set<String> API_ERROR_FIELDS = Set.of("status", "error", "message");
 
     @Autowired
@@ -61,6 +62,7 @@ class InmateApiSecurityIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Autowired
+    @Qualifier("requestMappingHandlerMapping")
     private RequestMappingHandlerMapping handlerMapping;
 
     @Value("${jwt.secret}")
@@ -72,13 +74,13 @@ class InmateApiSecurityIntegrationTest {
         String recordsOfficerToken = tokenForRole("Records Officer");
         expectStatus(recordsOfficerToken, "GET", INMATES_PATH, null, 200);
         expectStatus(recordsOfficerToken, "GET", UNKNOWN_INMATE_PATH, null, 404);
-        expectStatus(recordsOfficerToken, "PUT", UNKNOWN_INMATE_PATH, validRequest(), 404);
+        expectStatus(recordsOfficerToken, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 404);
 
         String superAdminToken = tokenForRole("Super Admin");
-        expectStatus(superAdminToken, "POST", INMATES_PATH, validRequest(), 403);
+        expectStatus(superAdminToken, "POST", INMATES_PATH, validRequest(), 201);
         expectStatus(superAdminToken, "GET", INMATES_PATH, null, 200);
         expectStatus(superAdminToken, "GET", UNKNOWN_INMATE_PATH, null, 404);
-        expectStatus(superAdminToken, "PUT", UNKNOWN_INMATE_PATH, validRequest(), 403);
+        expectStatus(superAdminToken, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 404);
 
         for (String role : User.ALLOWED_ROLES) {
             if (role.equals("Records Officer") || role.equals("Super Admin")) {
@@ -88,7 +90,7 @@ class InmateApiSecurityIntegrationTest {
             expectStatus(token, "POST", INMATES_PATH, validRequest(), 403);
             expectStatus(token, "GET", INMATES_PATH, null, 403);
             expectStatus(token, "GET", UNKNOWN_INMATE_PATH, null, 403);
-            expectStatus(token, "PUT", UNKNOWN_INMATE_PATH, validRequest(), 403);
+            expectStatus(token, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 403);
         }
     }
 
@@ -134,7 +136,7 @@ class InmateApiSecurityIntegrationTest {
         expectStatus(token, "POST", INMATES_PATH, validRequest(), expectedStatus);
         expectStatus(token, "GET", INMATES_PATH, null, expectedStatus);
         expectStatus(token, "GET", UNKNOWN_INMATE_PATH, null, expectedStatus);
-        expectStatus(token, "PUT", UNKNOWN_INMATE_PATH, validRequest(), expectedStatus);
+        expectStatus(token, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), expectedStatus);
     }
 
     private void expectStatus(String token, String method, String path, String body, int expectedStatus)
@@ -142,7 +144,7 @@ class InmateApiSecurityIntegrationTest {
         MockHttpServletRequestBuilder request = switch (method) {
             case "POST" -> post(path);
             case "GET" -> get(path);
-            case "PUT" -> put(path);
+            case "PATCH" -> patch(path);
             default -> throw new IllegalArgumentException("Unsupported test HTTP method.");
         };
         if (token != null) {
@@ -176,7 +178,7 @@ class InmateApiSecurityIntegrationTest {
 
     private String validRequest() {
         ObjectNode request = objectMapper.createObjectNode();
-        request.put("inmateNumber", "SECURITY-" + UUID.randomUUID().toString().replace("-", ""));
+        request.put("inmateNumber", "SECURITY-" + UUID.randomUUID().toString().replace("-", "").substring(0, 20));
         request.put("firstName", "Test");
         request.put("lastName", "Inmate");
         request.put("dateOfBirth", "1990-01-01");

@@ -15,7 +15,7 @@ public interface IncidentInmateRepository extends JpaRepository<IncidentInmate, 
     List<IncidentInmate> findByIncidentId(@Param("incidentId") Long incidentId);
 
     // Every incident one inmate was involved in, most recent first - used
-    // for GET /api/inmates/{id}/incidents.
+    // for GET /api/v1/inmates/{id}/incidents.
     @Query("""
             select ii from IncidentInmate ii
             join fetch ii.incident

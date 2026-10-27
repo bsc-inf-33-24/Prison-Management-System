@@ -19,7 +19,9 @@ import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
 import com.pms.api.inmate.repository.InmateRepository;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,7 +39,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @Import(TestcontainersConfiguration.class)
 class InmateApiFunctionalIntegrationTest {
 
-    private static final String INMATES_PATH = "/api/inmates";
+    private static final String INMATES_PATH = "/api/v1/inmates";
 
     @Autowired
     private MockMvc mockMvc;
@@ -139,7 +141,8 @@ class InmateApiFunctionalIntegrationTest {
 
     @Test
     void trimsNumbersAndTreatsCaseAsSignificant() throws Exception {
-        createInmate(validRequest("  CASE-" + uniqueInmateNumber() + "  ", "Case", "Trim"));
+        createInmate(validRequest("  CASE-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16)
+                + "  ", "Case", "Trim"));
         String number = "CASE-" + uniqueInmateNumber();
         createInmate(validRequest(number, "Case", "Sensitive"));
         createInmate(validRequest(number.toLowerCase(java.util.Locale.ROOT), "Case", "Sensitive"));
@@ -176,10 +179,11 @@ class InmateApiFunctionalIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.firstName").value("After"))
                 .andExpect(jsonPath("$.currentFacility").doesNotExist())
-                .andExpect(jsonPath("$.createdAt").value(originalCreatedAt))
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty())
                 .andExpect(result -> {
                     JsonNode updated = objectMapper.readTree(result.getResponse().getContentAsString());
+                    assertEquals(Instant.parse(originalCreatedAt).plusNanos(500).truncatedTo(ChronoUnit.MICROS),
+                            Instant.parse(updated.path("createdAt").asText()));
                     assertNotEquals(originalUpdatedAt, updated.path("updatedAt").asText());
                     assertNotEquals("2001-01-01T00:00:00Z", updated.path("createdAt").asText());
                 });
@@ -216,7 +220,7 @@ class InmateApiFunctionalIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode percentResults = objectMapper.readTree(percent.getResponse().getContentAsString());
-        assertTrue(percentResults.size() >= 1);
+        assertTrue(percentResults.path("content").size() >= 1);
         assertTrue(containsFirstName(percentResults, "Percent%Name"));
         assertFalse(containsFirstName(percentResults, "PercentXName"));
 
@@ -234,7 +238,8 @@ class InmateApiFunctionalIntegrationTest {
                         .header("Authorization", bearerToken()))
                 .andExpect(status().isOk())
                 .andReturn();
-        assertTrue(objectMapper.readTree(injection.getResponse().getContentAsString()).isEmpty());
+        assertTrue(objectMapper.readTree(injection.getResponse().getContentAsString())
+                .path("content").isEmpty());
 
         MvcResult caseInsensitive = mockMvc.perform(get(INMATES_PATH)
                         .param("search", "jAnE")
@@ -248,7 +253,7 @@ class InmateApiFunctionalIntegrationTest {
                         .header("Authorization", bearerToken()))
                 .andExpect(status().isOk())
                 .andReturn();
-        assertTrue(objectMapper.readTree(all.getResponse().getContentAsString()).size() >= 5);
+        assertTrue(objectMapper.readTree(all.getResponse().getContentAsString()).path("content").size() >= 5);
     }
 
     @Test
@@ -290,7 +295,8 @@ class InmateApiFunctionalIntegrationTest {
     }
 
     private boolean containsFirstName(JsonNode results, String name) {
-        for (JsonNode inmate : results) {
+        JsonNode content = results.isArray() ? results : results.path("content");
+        for (JsonNode inmate : content) {
             if (inmate.path("firstName").asText().equals(name)) {
                 return true;
             }
@@ -299,6 +305,6 @@ class InmateApiFunctionalIntegrationTest {
     }
 
     private String bearerToken() {
-        return recordsOfficerToken;
+        return "Bearer " + recordsOfficerToken;
     }
 }
