@@ -30,8 +30,7 @@ public class IncidentController {
         this.incidentService = incidentService;
     }
 
-    // Only Disciplinary Officers may log an incident (per issue #13's
-    // security matrix).
+    // Disciplinary Officers and Super Admins may log incidents.
     @PostMapping("/incidents")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
@@ -49,8 +48,7 @@ public class IncidentController {
         return incidentService.recordOutcome(incidentId, request);
     }
 
-    // Both Disciplinary Officers AND Super Admins can view an inmate's
-    // incident history (unlike logging/updating, which is DO-only).
+    // Disciplinary Officers and Super Admins can view an inmate's history.
     @GetMapping("/inmates/{inmateId}/incidents")
     @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Get an inmate's incident history")
