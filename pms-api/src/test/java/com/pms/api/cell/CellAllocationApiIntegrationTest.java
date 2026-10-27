@@ -91,7 +91,7 @@ class CellAllocationApiIntegrationTest {
     }
 
     private String bearerToken() {
-        return recordsOfficerToken;
+        return "Bearer " + recordsOfficerToken;
     }
 
     private String uniqueInmateNumber() {

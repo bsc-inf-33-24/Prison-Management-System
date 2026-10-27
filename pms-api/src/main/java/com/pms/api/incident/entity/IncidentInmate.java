@@ -9,6 +9,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
+import java.util.UUID;
 
 // Maps V5__discipline_tables_creation.sql's "IncidentInmate" table: the
 // relationship between an Incident and the inmate(s) involved, carrying the
@@ -34,6 +35,9 @@ public class IncidentInmate {
 
     @Column(name = "role_in_incident", length = 255)
     private String roleInIncident;
+
+    @Column(name = "public_uuid", nullable = false, updatable = false, unique = true)
+    private UUID publicUuid = UUID.randomUUID();
 
     protected IncidentInmate() {
     }
