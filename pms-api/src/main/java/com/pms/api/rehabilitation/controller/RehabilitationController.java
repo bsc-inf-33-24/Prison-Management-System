@@ -70,7 +70,7 @@ public class RehabilitationController {
     }
 
     @GetMapping("/rehabilitation/programs")
-    @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER','SUPER_ADMIN','RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List and search rehabilitation programs",
             description = "Each program includes the inmates currently enrolled in it.")
     public Page<ProgramResponse> listPrograms(
