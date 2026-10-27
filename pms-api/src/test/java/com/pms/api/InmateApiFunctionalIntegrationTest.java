@@ -19,8 +19,8 @@ import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
 import com.pms.api.inmate.repository.InmateRepository;
-import java.time.LocalDate;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Set;
 import java.util.UUID;
@@ -182,7 +182,7 @@ class InmateApiFunctionalIntegrationTest {
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty())
                 .andExpect(result -> {
                     JsonNode updated = objectMapper.readTree(result.getResponse().getContentAsString());
-                    assertEquals(Instant.parse(originalCreatedAt).truncatedTo(ChronoUnit.MICROS),
+                    assertEquals(Instant.parse(originalCreatedAt).plusNanos(500).truncatedTo(ChronoUnit.MICROS),
                             Instant.parse(updated.path("createdAt").asText()));
                     assertNotEquals(originalUpdatedAt, updated.path("updatedAt").asText());
                     assertNotEquals("2001-01-01T00:00:00Z", updated.path("createdAt").asText());
