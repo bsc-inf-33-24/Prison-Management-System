@@ -93,8 +93,8 @@ class VisitorApiFunctionalIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].visitor.fullName").value("John Banda"))
                 .andExpect(jsonPath("$.content[0].visitDate").value("2026-10-10"))
-                .andExpect(jsonPath("$.content[0].startDateTime").value("2026-10-10T14:30:00+02:00"))
-                .andExpect(jsonPath("$.content[0].endDateTime").value("2026-10-10T15:30:00+02:00"))
+                .andExpect(jsonPath("$.content[0].startDateTime").value("2026-10-10T12:30:00Z"))
+                .andExpect(jsonPath("$.content[0].endDateTime").value("2026-10-10T13:30:00Z"))
                 .andExpect(jsonPath("$.content[0].durationMinutes").value(60));
 
         String response = mockMvc.perform(get("/api/v1/visits")
