@@ -42,11 +42,10 @@ public record VisitResponse(
         }
     }
 
-    public record InmateSummary(UUID id, String inmateNumber, String firstName, String lastName) {
+    public record InmateSummary(UUID id, String firstName, String lastName) {
         public static InmateSummary from(Inmate inmate) {
             return new InmateSummary(
                     inmate.getPublicUuid(),
-                    inmate.getInmateNumber(),
                     inmate.getFirstName(),
                     inmate.getLastName()
             );

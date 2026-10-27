@@ -15,6 +15,6 @@ Record each visit separately with `POST /api/v1/medical-visits`:
 }
 ```
 
-The authenticated Medical Officer is recorded from the login identity; the request cannot assign a different recorder. Retrieve a particular inmate's visit history by exact inmate number with `GET /api/v1/medical-visits?inmateNumber=...`. The response includes the inmate identity and visits ordered newest first, with date, sickness, diagnosis, medications, recommendations, and recording officer.
+The authenticated Medical Officer is recorded from the login identity; the request cannot assign a different recorder. Retrieve a particular inmate's visit history by UUID with `GET /api/v1/medical-visits?inmateId=...`. The response includes the inmate identity and visits ordered newest first, with date, sickness, diagnosis, medications, recommendations, and recording officer.
 
 Both endpoints are restricted to the `Medical Officer` role. Other authenticated roles should receive `403`; requests without a valid token should receive `401`.

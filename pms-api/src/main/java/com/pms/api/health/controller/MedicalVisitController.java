@@ -7,6 +7,7 @@ import com.pms.api.health.service.MedicalVisitService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.UUID;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,9 +44,9 @@ public class MedicalVisitController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('MEDICAL_OFFICER', 'SUPER_ADMIN')")
-    @Operation(summary = "Search for an inmate's medical history by inmate number and optional name")
-    public MedicalHistoryResponse getHistory(@RequestParam String inmateNumber,
+    @Operation(summary = "Search for an inmate's medical history by inmate ID and optional name")
+    public MedicalHistoryResponse getHistory(@RequestParam UUID inmateId,
                                              @RequestParam(required = false) String name) {
-        return medicalVisitService.getHistory(inmateNumber, name);
+        return medicalVisitService.getHistory(inmateId, name);
     }
 }

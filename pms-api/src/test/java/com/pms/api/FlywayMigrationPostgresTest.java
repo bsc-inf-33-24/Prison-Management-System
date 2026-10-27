@@ -48,6 +48,7 @@ class FlywayMigrationPostgresTest {
                     "created_at", "updated_at"));
             assertColumnAbsent(connection, "cells", "classification");
             assertColumnAbsent(connection, "inmates", "classification");
+            assertColumnAbsent(connection, "inmates", "inmate_number");
             assertColumns(connection, "inmates", Set.of("current_facility"));
             assertColumns(connection, "cell_allocations", Set.of("id", "inmate_id", "cell_id",
                     "allocated_at", "created_at", "updated_at"));

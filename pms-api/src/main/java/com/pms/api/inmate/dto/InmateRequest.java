@@ -14,10 +14,6 @@ import java.util.UUID;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record InmateRequest(
         @NotBlank
-        @Size(max = 30)
-        String inmateNumber,
-
-        @NotBlank
         @Size(max = 100)
         String firstName,
 

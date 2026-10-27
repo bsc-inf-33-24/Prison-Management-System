@@ -28,7 +28,7 @@ Allowed role strings: `Super Admin`, `Records Officer`, `Disciplinary Officer`, 
 - Inmate create/list/detail: `/api/v1/inmates` (GET/POST), `/api/v1/inmates/{inmateUUID}` (GET). Create body:
 
 ```json
-{"inmateNumber":"INM-0001","firstName":"John","lastName":"Banda","dateOfBirth":"1990-04-15","gender":"Male","admissionDate":"2025-01-10","classification":"medium"}
+{"firstName":"John","lastName":"Banda","dateOfBirth":"1990-04-15","gender":"Male","admissionDate":"2025-01-10","sentenceStartDate":"2025-01-10","sentenceEndDate":"2026-01-09","cellId":"a2bd2d14-15ba-44fc-92c1-3d6553d8e8f4"}
 ```
 
 - Cell list/detail: `GET /api/v1/cells?blockName=A&classification=medium&page=0&size=20`, `GET /api/v1/cells/{cellUUID}`.

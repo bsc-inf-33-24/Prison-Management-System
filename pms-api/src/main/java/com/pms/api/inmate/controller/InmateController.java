@@ -41,10 +41,10 @@ public class InmateController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Enroll an inmate",
-            description = "Creates the inmate record and allocates the inmate to the selected cell in one transaction. The inmateNumber is trimmed and must be unique; comparisons are case-sensitive.")
+            description = "Creates the inmate record and allocates the inmate to the selected cell in one transaction.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Inmate created and allocated to the selected cell."),
-            @ApiResponse(responseCode = "409", description = "The inmate number is already in use or the selected cell is full."),
+            @ApiResponse(responseCode = "409", description = "The selected cell is full."),
             @ApiResponse(responseCode = "404", description = "The selected cell does not exist.")
     })
     public InmateResponse enroll(@Valid @RequestBody InmateRequest request) {
@@ -72,8 +72,7 @@ public class InmateController {
     @PatchMapping("/{inmateId}")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update an inmate record",
-            description = "Updates inmate details. Names may be shared. A supplied inmateNumber is trimmed, case-sensitive, and must remain unique across inmates.")
-    @ApiResponses(@ApiResponse(responseCode = "409", description = "The inmate number is already in use by another inmate."))
+            description = "Updates inmate details.")
     public InmateResponse update(@PathVariable UUID inmateId,
                                  @Valid @RequestBody UpdateInmateDetailsRequest request) {
         return inmateService.update(inmateId, request);

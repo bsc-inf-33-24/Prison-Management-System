@@ -38,11 +38,6 @@ public class ApiExceptionHandler {
         return problem(HttpStatus.NOT_FOUND, "Inmate not found.");
     }
 
-    @ExceptionHandler(InmateService.InmateNumberAlreadyExistsException.class)
-    public ResponseEntity<ApiError> handleInmateNumberConflict() {
-        return problem(HttpStatus.CONFLICT, "An inmate with that inmate number already exists.");
-    }
-
     @ExceptionHandler(UserService.UsernameAlreadyExistsException.class)
     public ResponseEntity<ApiError> handleUsernameConflict() {
         return problem(HttpStatus.CONFLICT, "Username already exists.");

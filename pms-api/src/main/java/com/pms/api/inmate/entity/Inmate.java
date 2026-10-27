@@ -10,29 +10,19 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import jakarta.persistence.OneToOne;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.temporal.ChronoUnit;
 
 @Entity
-@Table(
-        name = "inmates",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_inmates_inmate_number",
-                columnNames = "inmate_number"
-        )
-)
+@Table(name = "inmates")
 public class Inmate extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(name = "inmate_number", nullable = false, length = 30)
-    private String inmateNumber;
 
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
@@ -71,10 +61,9 @@ public class Inmate extends BaseEntity {
     protected Inmate() {
     }
 
-    public Inmate(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
+    public Inmate(String firstName, String lastName, LocalDate dateOfBirth,
                   String gender, LocalDate admissionDate,
                   String offence, LocalDate sentenceStartDate, LocalDate sentenceEndDate) {
-        this.inmateNumber = inmateNumber;
         this.firstName = firstName;
         this.lastName = lastName;
         this.dateOfBirth = dateOfBirth;
@@ -106,10 +95,6 @@ public class Inmate extends BaseEntity {
 
     public Long getId() {
         return id;
-    }
-
-    public String getInmateNumber() {
-        return inmateNumber;
     }
 
     public String getFirstName() {
@@ -156,9 +141,8 @@ public class Inmate extends BaseEntity {
         return cellAllocation;
     }
 
-    public void updateDetails(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
+    public void updateDetails(String firstName, String lastName, LocalDate dateOfBirth,
                               String gender, LocalDate admissionDate) {
-        this.inmateNumber = inmateNumber;
         this.firstName = firstName;
         this.lastName = lastName;
         this.dateOfBirth = dateOfBirth;

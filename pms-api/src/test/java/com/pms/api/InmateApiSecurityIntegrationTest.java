@@ -176,7 +176,6 @@ class InmateApiSecurityIntegrationTest {
 
     private String validRequest() {
         ObjectNode request = objectMapper.createObjectNode();
-        request.put("inmateNumber", "SECURITY-" + UUID.randomUUID().toString().replace("-", ""));
         request.put("firstName", "Test");
         request.put("lastName", "Inmate");
         request.put("dateOfBirth", "1990-01-01");

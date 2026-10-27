@@ -69,7 +69,7 @@ class MedicalVisitApiIntegrationTest {
         assertEquals(201, newerVisit.getResponse().getStatus());
 
         MvcResult historyResult = mockMvc.perform(get(MEDICAL_VISITS_PATH)
-                        .param("inmateNumber", inmate.getInmateNumber())
+                        .param("inmateId", inmate.getPublicUuid().toString())
                         .param("name", "medical test")
                         .header("Authorization", "Bearer " + token))
                 .andReturn();
@@ -77,7 +77,6 @@ class MedicalVisitApiIntegrationTest {
 
         JsonNode history = objectMapper.readTree(historyResult.getResponse().getContentAsString());
         assertEquals(inmate.getPublicUuid().toString(), history.path("inmateId").asText());
-        assertEquals(inmate.getInmateNumber(), history.path("inmateNumber").asText());
         assertEquals(2, history.path("visits").size());
         assertEquals(objectMapper.readTree(newerVisit.getResponse().getContentAsString()).path("id").asText(),
                 history.path("visits").get(0).path("id").asText());
@@ -88,7 +87,7 @@ class MedicalVisitApiIntegrationTest {
         assertEquals(medicalOfficer.getFullName(), history.path("visits").get(0).path("recordedBy").asText());
 
         MvcResult nonMatchingHistory = mockMvc.perform(get(MEDICAL_VISITS_PATH)
-                        .param("inmateNumber", inmate.getInmateNumber())
+                        .param("inmateId", inmate.getPublicUuid().toString())
                         .param("name", "someone else")
                         .header("Authorization", "Bearer " + token))
                 .andReturn();
@@ -104,7 +103,7 @@ class MedicalVisitApiIntegrationTest {
 
         assertEquals(401, postVisit(null, body).getResponse().getStatus());
         assertEquals(401, mockMvc.perform(get(MEDICAL_VISITS_PATH)
-                        .param("inmateNumber", inmate.getInmateNumber()))
+                        .param("inmateId", inmate.getPublicUuid().toString()))
                 .andReturn().getResponse().getStatus());
 
         for (String role : User.ALLOWED_ROLES) {
@@ -114,7 +113,7 @@ class MedicalVisitApiIntegrationTest {
             String token = jwtService.generateToken(createUser(role));
             assertEquals(403, postVisit(token, body).getResponse().getStatus(), role + " cannot record visits.");
             assertEquals(403, mockMvc.perform(get(MEDICAL_VISITS_PATH)
-                            .param("inmateNumber", inmate.getInmateNumber())
+                            .param("inmateId", inmate.getPublicUuid().toString())
                             .header("Authorization", "Bearer " + token))
                     .andReturn().getResponse().getStatus(), role + " cannot view medical history.");
         }
@@ -130,7 +129,7 @@ class MedicalVisitApiIntegrationTest {
                 .getResponse().getStatus());
 
         MvcResult history = mockMvc.perform(get(MEDICAL_VISITS_PATH)
-                        .param("inmateNumber", inmate.getInmateNumber())
+                        .param("inmateId", inmate.getPublicUuid().toString())
                         .param("name", "MEDICAL")
                         .header("Authorization", "Bearer " + token))
                 .andReturn();
@@ -170,7 +169,6 @@ class MedicalVisitApiIntegrationTest {
 
     private Inmate createInmate() {
         return inmateRepository.saveAndFlush(new Inmate(
-                "MED-" + UUID.randomUUID().toString().replace("-", "").substring(0, 20),
                 "Medical", "Test", LocalDate.of(1990, 1, 1), "Other",
                 LocalDate.of(2025, 1, 1), null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 1)));
     }

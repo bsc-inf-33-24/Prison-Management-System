@@ -114,27 +114,28 @@ GET /api/v1/users?status=active&role=Records%20Officer&search=records&page=0&siz
 
 ```json
 {
-  "inmateNumber": "INM-0001",
   "firstName": "John",
   "lastName": "Banda",
   "dateOfBirth": "1990-04-15",
   "gender": "Male",
   "admissionDate": "2025-01-10",
-  "classification": "medium"
+  "sentenceStartDate": "2025-01-10",
+  "sentenceEndDate": "2026-01-09",
+  "cellId": "a2bd2d14-15ba-44fc-92c1-3d6553d8e8f4"
 }
 ```
 
-Create a second inmate using `INM-0002` and classification `low`. Save `INMATE_ID` and `INMATE_ID_2`.
+Create a second inmate with a different name. Save `INMATE_ID` and `INMATE_ID_2`.
 
 Other inmate inputs:
 
 ```text
 GET  /api/v1/inmates?search=John&classification=medium&gender=Male&facility=Test%20Facility&page=0&size=20&sort=lastName,asc
-GET  /api/v1/inmates/{inmateId}
-PUT  /api/v1/inmates/{inmateId}
+GET   /api/v1/inmates/{inmateId}
+PATCH /api/v1/inmates/{inmateId}
 ```
 
-The update body is the same as creation. Test duplicate inmate number, future birth date, missing fields, invalid IDs, and wrong roles.
+The update body contains the editable profile fields. Test future birth date, missing fields, invalid IDs, and wrong roles.
 
 ### Create cells
 
@@ -333,7 +334,7 @@ Replace IDs with `VISITOR_ID` and `INMATE_ID`; save `VISIT_ID`.
 
 ```text
 GET /api/v1/visits/{visitId}
-GET /api/v1/visits?visitorId=1&visitorName=Test&visitorIdNumber=NID-TEST-001&inmateId=1&inmateNumber=INM-0001&inmateName=John&visitDateFrom=2026-01-01T00:00:00%2B02:00&visitDateTo=2026-12-31T23:59:59%2B02:00&loggedBy=1&page=0&size=20&sort=visitDateTime,desc
+GET /api/v1/visits?visitorId=1&visitorName=Test&visitorIdNumber=NID-TEST-001&inmateId=1&inmateName=John&visitDateFrom=2026-01-01T00:00:00%2B02:00&visitDateTo=2026-12-31T23:59:59%2B02:00&loggedBy=1&page=0&size=20&sort=visitDateTime,desc
 GET /api/v1/inmates/{inmateId}/visits?visitorName=Test&visitorIdNumber=NID-TEST-001&page=0&size=20&sort=visitDateTime,desc
 PUT /api/v1/visits/{visitId}
 ```

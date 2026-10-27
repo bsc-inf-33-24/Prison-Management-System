@@ -64,7 +64,6 @@ public class VisitController {
             @RequestParam(required = false) UUID visitId,
             @RequestParam(required = false) String visitorName,
             @RequestParam(required = false) UUID inmateId,
-            @RequestParam(required = false) String inmateNumber,
             @RequestParam(required = false) String inmateName,
             @RequestParam(required = false) OffsetDateTime visitDateFrom,
             @RequestParam(required = false) OffsetDateTime visitDateTo,
@@ -72,7 +71,7 @@ public class VisitController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sort) {
-        return visitService.searchVisits(visitId, visitorName, inmateId, inmateNumber,
+        return visitService.searchVisits(visitId, visitorName, inmateId,
                 inmateName, visitDateFrom, visitDateTo, loggedBy, page, size, sort);
     }
 
