@@ -8,7 +8,6 @@ import java.util.UUID;
 
 public record InmateResponse(
         UUID id,
-        String inmateNumber,
         String firstName,
         String lastName,
         LocalDate dateOfBirth,
@@ -33,7 +32,6 @@ public record InmateResponse(
     public static InmateResponse from(Inmate inmate, UUID cellId) {
         return new InmateResponse(
                 inmate.getPublicUuid(),
-                inmate.getInmateNumber(),
                 inmate.getFirstName(),
                 inmate.getLastName(),
                 inmate.getDateOfBirth(),

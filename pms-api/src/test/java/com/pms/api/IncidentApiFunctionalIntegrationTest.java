@@ -280,9 +280,8 @@ class IncidentApiFunctionalIntegrationTest {
 
     private Inmate createInmate() {
         return inmateRepository.saveAndFlush(new Inmate(
-                "IT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 20),
                 "Test", "Inmate", LocalDate.of(1990, 1, 1), "Other",
-                LocalDate.of(2025, 1, 1)));
+                LocalDate.of(2025, 1, 1), null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 1)));
     }
 
     private ObjectNode baseRequest(String description) {

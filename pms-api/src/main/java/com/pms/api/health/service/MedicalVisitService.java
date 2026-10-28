@@ -48,11 +48,8 @@ public class MedicalVisitService {
     }
 
     @Transactional(readOnly = true)
-    public MedicalHistoryResponse getHistory(String inmateNumber, String name) {
-        if (inmateNumber == null || inmateNumber.isBlank()) {
-            throw new IllegalArgumentException("Inmate number is required.");
-        }
-        Inmate inmate = inmateRepository.findByInmateNumber(inmateNumber.trim())
+    public MedicalHistoryResponse getHistory(UUID inmateId, String name) {
+        Inmate inmate = inmateRepository.findByPublicUuid(inmateId)
                 .orElseThrow(InmateNotFoundException::new);
         List<MedicalVisitResponse> visits = medicalVisitRepository
                 .findByInmateIdAndInmateNameOrderByVisitDateDescIdDesc(

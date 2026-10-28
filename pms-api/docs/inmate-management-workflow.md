@@ -27,20 +27,19 @@ Each persisted resource has two identifier concepts:
 
 - The UUID is the public API identifier. Use it in URL path variables, request-body references, query filters, and response objects.
 - The sequential numeric ID may remain an internal database key. Clients must not use or depend on it.
-- `inmateNumber` is a separate business identifier. It is required and unique, but it is not the API resource identifier. Leading and trailing whitespace is trimmed; comparisons are case-sensitive.
+- The UUID is the inmate's only public identifier.
 
 For example, an inmate may have:
 
 ```json
 {
   "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
-  "inmateNumber": "INM-000245",
   "firstName": "John",
   "lastName": "Banda"
 }
 ```
 
-The UUID identifies the API resource, while `inmateNumber` identifies the inmate in prison business processes.
+The UUID identifies the inmate in API requests and responses.
 
 ## 1. Inmate enrollment
 
@@ -54,13 +53,14 @@ The records officer or super administrator submits the required inmate profile:
 
 ```json
 {
-  "inmateNumber": "INM-000245",
   "firstName": "John",
   "lastName": "Banda",
   "dateOfBirth": "1990-04-12",
   "gender": "Male",
   "admissionDate": "2026-10-16",
-  "classification": "Minimum"
+  "sentenceStartDate": "2026-10-16",
+  "sentenceEndDate": "2027-10-15",
+  "cellId": "a2bd2d14-15ba-44fc-92c1-3d6553d8e8f4"
 }
 ```
 
@@ -70,9 +70,7 @@ The API entity maps to the lowercase `inmates` table created by migration `V11__
 
 Important rules:
 
-- `inmateNumber` is required and unique.
-- First names, last names, and full names are not unique and may be shared by multiple inmates. Names do not generate or determine inmate numbers.
-- A duplicate inmate number returns `409 Conflict` with `An inmate with that inmate number already exists.` The same trimmed number conflicts even if surrounding spaces differ; letter case remains significant (`INM-1` and `inm-1` are distinct).
+- Sentence start and end dates are required. The inclusive duration and its unit are calculated and returned by the API.
 - The newly created inmate UUID is used in all subsequent workflows.
 
 Useful follow-up endpoint:

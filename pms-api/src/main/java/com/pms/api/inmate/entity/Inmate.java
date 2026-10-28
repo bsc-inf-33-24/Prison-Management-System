@@ -10,27 +10,19 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import jakarta.persistence.OneToOne;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.time.Period;
+import java.time.temporal.ChronoUnit;
 
 @Entity
-@Table(
-        name = "inmates",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_inmates_inmate_number",
-                columnNames = "inmate_number"
-        )
-)
+@Table(name = "inmates")
 public class Inmate extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(name = "inmate_number", nullable = false, length = 30)
-    private String inmateNumber;
 
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
@@ -50,17 +42,17 @@ public class Inmate extends BaseEntity {
     @Column(name = "offence", length = 500)
     private String offence;
 
-    @Column(name = "sentence_duration_value")
+    @Column(name = "sentence_duration_value", nullable = false)
     private Integer sentenceDurationValue;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "sentence_duration_unit", length = 20)
+    @Column(name = "sentence_duration_unit", nullable = false, length = 20)
     private SentenceDurationUnit sentenceDurationUnit;
 
-    @Column(name = "sentence_start_date")
+    @Column(name = "sentence_start_date", nullable = false)
     private LocalDate sentenceStartDate;
 
-    @Column(name = "sentence_end_date")
+    @Column(name = "sentence_end_date", nullable = false)
     private LocalDate sentenceEndDate;
 
     @OneToOne(mappedBy = "inmate", fetch = FetchType.LAZY)
@@ -69,43 +61,42 @@ public class Inmate extends BaseEntity {
     protected Inmate() {
     }
 
-    public Inmate(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
-                  String gender, LocalDate admissionDate) {
-        this(inmateNumber, firstName, lastName, dateOfBirth, gender, admissionDate,
-                null, null, null, null, null);
-    }
-
-    public Inmate(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
+    public Inmate(String firstName, String lastName, LocalDate dateOfBirth,
                   String gender, LocalDate admissionDate,
-                  String offence, Integer sentenceDurationValue, SentenceDurationUnit sentenceDurationUnit,
-                  LocalDate sentenceStartDate) {
-        this(inmateNumber, firstName, lastName, dateOfBirth, gender, admissionDate,
-                offence, sentenceDurationValue, sentenceDurationUnit, sentenceStartDate, null);
-    }
-
-    public Inmate(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
-                  String gender, LocalDate admissionDate,
-                  String offence, Integer sentenceDurationValue, SentenceDurationUnit sentenceDurationUnit,
-                  LocalDate sentenceStartDate, LocalDate sentenceEndDate) {
-        this.inmateNumber = inmateNumber;
+                  String offence, LocalDate sentenceStartDate, LocalDate sentenceEndDate) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.dateOfBirth = dateOfBirth;
         this.gender = gender;
         this.admissionDate = admissionDate;
         this.offence = offence;
-        this.sentenceDurationValue = sentenceDurationValue;
-        this.sentenceDurationUnit = sentenceDurationUnit;
+        deriveSentenceDuration(sentenceStartDate, sentenceEndDate);
         this.sentenceStartDate = sentenceStartDate;
         this.sentenceEndDate = sentenceEndDate;
     }
 
-    public Long getId() {
-        return id;
+    private void deriveSentenceDuration(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null || endDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("A valid sentence start and end date are required.");
+        }
+        LocalDate exclusiveEnd = endDate.plusDays(1);
+        Period period = Period.between(startDate, exclusiveEnd);
+        long durationDays = ChronoUnit.DAYS.between(startDate, exclusiveEnd);
+        long durationMonths = period.toTotalMonths();
+        if (exclusiveEnd.isAfter(startDate.plusMonths(12))) {
+            sentenceDurationValue = period.getYears();
+            sentenceDurationUnit = SentenceDurationUnit.YEARS;
+        } else if (durationDays > 30) {
+            sentenceDurationValue = Math.toIntExact(Math.max(1, durationMonths));
+            sentenceDurationUnit = SentenceDurationUnit.MONTHS;
+        } else {
+            sentenceDurationValue = Math.toIntExact(durationDays);
+            sentenceDurationUnit = SentenceDurationUnit.DAYS;
+        }
     }
 
-    public String getInmateNumber() {
-        return inmateNumber;
+    public Long getId() {
+        return id;
     }
 
     public String getFirstName() {
@@ -152,9 +143,8 @@ public class Inmate extends BaseEntity {
         return cellAllocation;
     }
 
-    public void updateDetails(String inmateNumber, String firstName, String lastName, LocalDate dateOfBirth,
+    public void updateDetails(String firstName, String lastName, LocalDate dateOfBirth,
                               String gender, LocalDate admissionDate) {
-        this.inmateNumber = inmateNumber;
         this.firstName = firstName;
         this.lastName = lastName;
         this.dateOfBirth = dateOfBirth;
