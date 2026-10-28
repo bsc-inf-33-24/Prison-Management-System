@@ -81,14 +81,16 @@ public class Inmate extends BaseEntity {
         }
         LocalDate exclusiveEnd = endDate.plusDays(1);
         Period period = Period.between(startDate, exclusiveEnd);
-        if (period.getDays() == 0 && period.getMonths() == 0 && period.getYears() > 0) {
+        long durationDays = ChronoUnit.DAYS.between(startDate, exclusiveEnd);
+        long durationMonths = period.toTotalMonths();
+        if (exclusiveEnd.isAfter(startDate.plusMonths(12))) {
             sentenceDurationValue = period.getYears();
             sentenceDurationUnit = SentenceDurationUnit.YEARS;
-        } else if (period.getDays() == 0 && period.toTotalMonths() > 0) {
-            sentenceDurationValue = Math.toIntExact(period.toTotalMonths());
+        } else if (durationDays > 30) {
+            sentenceDurationValue = Math.toIntExact(Math.max(1, durationMonths));
             sentenceDurationUnit = SentenceDurationUnit.MONTHS;
         } else {
-            sentenceDurationValue = Math.toIntExact(ChronoUnit.DAYS.between(startDate, exclusiveEnd));
+            sentenceDurationValue = Math.toIntExact(durationDays);
             sentenceDurationUnit = SentenceDurationUnit.DAYS;
         }
     }

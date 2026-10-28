@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "7. Visits Management")
+@Tag(name = "07. Visits Management")
 public class VisitController {
 
     private final VisitService visitService;
@@ -98,3 +98,4 @@ public class VisitController {
         return visitService.updateVisit(visitId, request, currentUser.getUsername());
     }
 }
+
