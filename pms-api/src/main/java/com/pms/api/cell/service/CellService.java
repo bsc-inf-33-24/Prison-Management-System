@@ -151,7 +151,6 @@ public class CellService {
                 .stream()
                 .map(allocation -> new CellInmateSummary(
                         allocation.getInmate().getPublicUuid(),
-                        allocation.getInmate().getInmateNumber(),
                         allocation.getInmate().getFirstName(),
                         allocation.getInmate().getLastName()))
                 .toList();

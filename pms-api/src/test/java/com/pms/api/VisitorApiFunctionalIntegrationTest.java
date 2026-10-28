@@ -66,8 +66,8 @@ class VisitorApiFunctionalIntegrationTest {
     @Test
     void visitRecordsStartEndAndCalculatedDurationAndAppearsInHistory() throws Exception {
         UUID inmateId = inmateRepository.saveAndFlush(
-                new Inmate("INV-1001", "Grace", "Chirwa", LocalDate.of(1990, 1, 15), "Female",
-                        LocalDate.of(2024, 6, 1))).getPublicUuid();
+                new Inmate("Grace", "Chirwa", LocalDate.of(1990, 1, 15), "Female",
+                        LocalDate.of(2024, 6, 1), null, LocalDate.of(2024, 6, 1), LocalDate.of(2024, 6, 1))).getPublicUuid();
 
         ObjectNode visitRequest = objectMapper.createObjectNode();
         visitRequest.put("visitorFullName", "John Banda");

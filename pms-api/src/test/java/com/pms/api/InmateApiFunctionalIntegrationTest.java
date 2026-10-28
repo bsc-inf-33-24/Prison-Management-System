@@ -18,10 +18,7 @@ import com.pms.api.cell.repository.CellRepository;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
-import com.pms.api.inmate.repository.InmateRepository;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +36,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @Import(TestcontainersConfiguration.class)
 class InmateApiFunctionalIntegrationTest {
 
-    private static final String INMATES_PATH = "/api/v1/inmates";
+    private static final String INMATES_PATH = "/api/inmates";
 
     @Autowired
     private MockMvc mockMvc;
@@ -52,9 +49,6 @@ class InmateApiFunctionalIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Autowired
-    private InmateRepository inmateRepository;
 
     @Autowired
     private CellRepository cellRepository;
@@ -70,11 +64,14 @@ class InmateApiFunctionalIntegrationTest {
     }
 
     @Test
-    void enrollmentCreatesProfileAndIgnoresUnknownFieldsInTheRequest() throws Exception {
-        ObjectNode request = validRequest(uniqueInmateNumber(), "Jane", "Doe");
+    void enrollmentCreatesProfileAndIgnoresServerManagedFieldsInTheRequest() throws Exception {
+        ObjectNode request = validRequest("Jane", "Doe");
         request.put("sentenceStartDate", "2025-01-15");
         request.put("sentenceEndDate", "2030-01-14");
+        request.put("sentenceDurationValue", 99);
+        request.put("sentenceDurationUnit", "DAYS");
         request.put("id", 987654);
+        request.put("currentFacility", "Client-controlled facility");
         request.put("createdAt", "2000-01-01T00:00:00Z");
         request.put("updatedAt", "2000-01-01T00:00:00Z");
 
@@ -85,10 +82,10 @@ class InmateApiFunctionalIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isString())
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.firstName").value("Jane"))
                 .andExpect(jsonPath("$.currentFacility").doesNotExist())
-                .andExpect(jsonPath("$.sentenceStartDate").value("2025-01-15"))
-                .andExpect(jsonPath("$.sentenceEndDate").value("2030-01-14"))
+                .andExpect(jsonPath("$.firstName").value("Jane"))
+                .andExpect(jsonPath("$.sentenceDurationValue").value(5))
+                .andExpect(jsonPath("$.sentenceDurationUnit").value("YEARS"))
                 .andReturn();
 
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
@@ -98,41 +95,37 @@ class InmateApiFunctionalIntegrationTest {
     }
 
     @Test
-    void databaseUniqueConstraintReturnsConflictOnDuplicateInmateNumber() throws Exception {
-        ObjectNode request = validRequest(uniqueInmateNumber(), "Unique", "Number");
-        JsonNode existing = createInmate(request);
-        long countBeforeDuplicate = inmateRepository.count();
+    void enrollmentRequiresBothSentenceDates() throws Exception {
+        ObjectNode request = validRequest("Missing", "Date");
+        request.remove("sentenceEndDate");
 
         mockMvc.perform(post(INMATES_PATH)
                         .header("Authorization", bearerToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.error").value("Conflict"))
-                .andExpect(jsonPath("$.message").value("An inmate with that inmate number already exists."));
-        assertEquals(countBeforeDuplicate, inmateRepository.count());
-
-        JsonNode anotherInmate = createInmate(validRequest(uniqueInmateNumber(), "Different", "Inmate"));
-        long countBeforeConflict = inmateRepository.count();
-        ObjectNode duplicateUpdate = validRequest(request.path("inmateNumber").asText(), "Different", "Inmate");
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(INMATES_PATH + "/" + anotherInmate.path("id").asText())
-                        .header("Authorization", bearerToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(duplicateUpdate)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.error").value("Conflict"))
-                .andExpect(jsonPath("$.message").value("An inmate with that inmate number already exists."));
-        assertEquals(countBeforeConflict, inmateRepository.count());
-        assertNotNull(existing.path("id"));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("One or more request fields are invalid."));
     }
 
     @Test
-    void identicalAndSimilarNamesAreAllowedWhenNumbersDiffer() throws Exception {
-        JsonNode first = createInmate(validRequest("INM-000245", "John", "Banda"));
-        JsonNode identical = createInmate(validRequest("INM-000246", "John", "Banda"));
-        JsonNode similar = createInmate(validRequest("INM-000247", "Jon", "Banda"));
+    void enrollmentRejectsSentenceEndBeforeStart() throws Exception {
+        ObjectNode request = validRequest("Invalid", "Range");
+        request.put("sentenceStartDate", "2025-02-01");
+        request.put("sentenceEndDate", "2025-01-31");
+
+        mockMvc.perform(post(INMATES_PATH)
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("One or more request fields are invalid."));
+    }
+
+    @Test
+    void identicalAndSimilarNamesAreAllowed() throws Exception {
+        JsonNode first = createInmate(validRequest("John", "Banda"));
+        JsonNode identical = createInmate(validRequest("John", "Banda"));
+        JsonNode similar = createInmate(validRequest("Jon", "Banda"));
         assertNotEquals(first.path("id").asText(), identical.path("id").asText());
         assertNotEquals(identical.path("id").asText(), similar.path("id").asText());
         assertEquals("John", identical.path("firstName").asText());
@@ -140,35 +133,16 @@ class InmateApiFunctionalIntegrationTest {
     }
 
     @Test
-    void trimsNumbersAndTreatsCaseAsSignificant() throws Exception {
-        createInmate(validRequest("  CASE-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16)
-                + "  ", "Case", "Trim"));
-        String number = "CASE-" + uniqueInmateNumber();
-        createInmate(validRequest(number, "Case", "Sensitive"));
-        createInmate(validRequest(number.toLowerCase(java.util.Locale.ROOT), "Case", "Sensitive"));
-
-        long countBeforeConflict = inmateRepository.count();
-        mockMvc.perform(post(INMATES_PATH)
-                        .header("Authorization", bearerToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(validRequest(" " + number + " ", "Duplicate", "Number"))))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.error").value("Conflict"))
-                .andExpect(jsonPath("$.message").value("An inmate with that inmate number already exists."));
-        assertEquals(countBeforeConflict, inmateRepository.count());
-    }
-
-    @Test
-    void updateChangesProfileAndPreservesCreatedAt() throws Exception {
-        ObjectNode createRequest = validRequest(uniqueInmateNumber(), "Before", "Update");
+    void updateChangesProfileAndNeverChangesCurrentFacilityOrCreatedAt() throws Exception {
+        ObjectNode createRequest = validRequest("Before", "Update");
         JsonNode created = createInmate(createRequest);
         String originalCreatedAt = created.path("createdAt").asText();
         String originalUpdatedAt = created.path("updatedAt").asText();
         String inmateId = created.path("id").asText();
 
-        ObjectNode updateRequest = validRequest(uniqueInmateNumber(), "After", "Update");
+        ObjectNode updateRequest = validRequest("After", "Update");
         updateRequest.put("id", 123456);
+        updateRequest.put("currentFacility", "Another Facility");
         updateRequest.put("createdAt", "2001-01-01T00:00:00Z");
         updateRequest.put("updatedAt", "2001-01-01T00:00:00Z");
 
@@ -179,11 +153,10 @@ class InmateApiFunctionalIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.firstName").value("After"))
                 .andExpect(jsonPath("$.currentFacility").doesNotExist())
+                .andExpect(jsonPath("$.createdAt").value(originalCreatedAt))
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty())
                 .andExpect(result -> {
                     JsonNode updated = objectMapper.readTree(result.getResponse().getContentAsString());
-                    assertEquals(Instant.parse(originalCreatedAt).plusNanos(500).truncatedTo(ChronoUnit.MICROS),
-                            Instant.parse(updated.path("createdAt").asText()));
                     assertNotEquals(originalUpdatedAt, updated.path("updatedAt").asText());
                     assertNotEquals("2001-01-01T00:00:00Z", updated.path("createdAt").asText());
                 });
@@ -191,7 +164,7 @@ class InmateApiFunctionalIntegrationTest {
 
     @Test
     void invalidAndOversizedRequestFieldsReturnStandardBadRequest() throws Exception {
-        ObjectNode request = validRequest(uniqueInmateNumber(), "Invalid", "Request");
+        ObjectNode request = validRequest("Invalid", "Request");
         request.put("firstName", "F".repeat(101));
         request.putNull("dateOfBirth");
         request.put("gender", "");
@@ -208,11 +181,11 @@ class InmateApiFunctionalIntegrationTest {
 
     @Test
     void searchIsCaseInsensitiveEscapesWildcardsAndTreatsInjectionAsPlainText() throws Exception {
-        createInmate(validRequest(uniqueInmateNumber(), "Percent%Name", "SearchCase"));
-        createInmate(validRequest(uniqueInmateNumber(), "PercentXName", "SearchCase"));
-        createInmate(validRequest(uniqueInmateNumber(), "Under_score", "SearchCase"));
-        createInmate(validRequest(uniqueInmateNumber(), "Other", "SearchCase"));
-        createInmate(validRequest(uniqueInmateNumber(), "Jane", "CaseInsensitive"));
+        createInmate(validRequest("Percent%Name", "SearchCase"));
+        createInmate(validRequest("PercentXName", "SearchCase"));
+        createInmate(validRequest("Under_score", "SearchCase"));
+        createInmate(validRequest("Other", "SearchCase"));
+        createInmate(validRequest("Jane", "CaseInsensitive"));
 
         MvcResult percent = mockMvc.perform(get(INMATES_PATH)
                         .param("search", "%")
@@ -220,7 +193,7 @@ class InmateApiFunctionalIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode percentResults = objectMapper.readTree(percent.getResponse().getContentAsString());
-        assertTrue(percentResults.path("content").size() >= 1);
+        assertTrue(percentResults.size() >= 1);
         assertTrue(containsFirstName(percentResults, "Percent%Name"));
         assertFalse(containsFirstName(percentResults, "PercentXName"));
 
@@ -253,7 +226,8 @@ class InmateApiFunctionalIntegrationTest {
                         .header("Authorization", bearerToken()))
                 .andExpect(status().isOk())
                 .andReturn();
-        assertTrue(objectMapper.readTree(all.getResponse().getContentAsString()).path("content").size() >= 5);
+        assertTrue(objectMapper.readTree(all.getResponse().getContentAsString())
+                .path("content").size() >= 5);
     }
 
     @Test
@@ -276,27 +250,24 @@ class InmateApiFunctionalIntegrationTest {
         return objectMapper.readTree(result.getResponse().getContentAsString());
     }
 
-    private ObjectNode validRequest(String inmateNumber, String firstName, String lastName) {
+    private ObjectNode validRequest(String firstName, String lastName) {
         ObjectNode request = objectMapper.createObjectNode();
-        request.put("inmateNumber", inmateNumber);
         request.put("firstName", firstName);
         request.put("lastName", lastName);
         request.put("dateOfBirth", LocalDate.of(1990, 1, 1).toString());
         request.put("gender", "Other");
         request.put("admissionDate", LocalDate.of(2025, 1, 1).toString());
+        request.put("sentenceStartDate", "2025-01-01");
+        request.put("sentenceEndDate", "2025-01-01");
         Cell cell = cellRepository.saveAndFlush(new Cell(
                 "ENR-" + UUID.randomUUID().toString().replace("-", ""), 1, 100));
         request.put("cellId", cell.getPublicUuid().toString());
         return request;
     }
 
-    private String uniqueInmateNumber() {
-        return "IT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 20);
-    }
-
     private boolean containsFirstName(JsonNode results, String name) {
-        JsonNode content = results.isArray() ? results : results.path("content");
-        for (JsonNode inmate : content) {
+        JsonNode inmates = results.isArray() ? results : results.path("content");
+        for (JsonNode inmate : inmates) {
             if (inmate.path("firstName").asText().equals(name)) {
                 return true;
             }
@@ -305,6 +276,6 @@ class InmateApiFunctionalIntegrationTest {
     }
 
     private String bearerToken() {
-        return "Bearer " + recordsOfficerToken;
+        return recordsOfficerToken;
     }
 }

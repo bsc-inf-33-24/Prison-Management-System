@@ -87,7 +87,7 @@ public class VisitService {
 
     @Transactional(readOnly = true)
     public Page<VisitResponse> searchVisits(UUID visitId, String visitorName, UUID inmateId,
-                                            String inmateNumber, String inmateName,
+                                            String inmateName,
                                             OffsetDateTime visitDateFrom, OffsetDateTime visitDateTo,
                                             UUID loggedBy, int page, int size, String sort) {
         validatePage(page, size);
@@ -104,9 +104,6 @@ public class VisitService {
         if (inmateId != null) {
             specification = specification.and(equalRelatedId("inmate", inmateRepository.findByPublicUuid(inmateId)
                     .map(Inmate::getId).orElse(-1L)));
-        }
-        if (!isBlank(inmateNumber)) {
-            specification = specification.and(inmateNumberContains(inmateNumber));
         }
         if (!isBlank(inmateName)) {
             specification = specification.and(inmateNameContains(inmateName));
@@ -198,7 +195,7 @@ public class VisitService {
         return (root, query, cb) -> {
             Join<Object, Object> inmate = root.join("inmate", JoinType.LEFT);
             String pattern = likePattern(value);
-            return cb.like(cb.lower(inmate.get("inmateNumber")), pattern, '!');
+            return cb.like(cb.lower(inmate.get("inmateNumber").as(String.class)), pattern, '\\');
         };
     }
 
@@ -244,7 +241,6 @@ public class VisitService {
             case "endDateTime" -> "endDateTime";
             case "loggedBy" -> "loggedBy.id";
             case "visitorName" -> "visitorFullName";
-            case "inmateNumber" -> "inmate.inmateNumber";
             case "inmateName" -> "inmate.firstName";
             default -> defaultField;
         };

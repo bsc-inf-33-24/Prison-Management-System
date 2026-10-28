@@ -4,10 +4,10 @@ Create `records01` with role `Records Officer`, log in, and use the returned `ac
 
 ## Inmates
 
-- `POST /api/v1/inmates` and `PUT /api/v1/inmates/{inmateUUID}` use this body (use unique inmate numbers):
+- `POST /api/v1/inmates` and `PATCH /api/v1/inmates/{inmateUUID}` use this body:
 
 ```json
-{"inmateNumber":"INM-0001","firstName":"John","lastName":"Banda","dateOfBirth":"1990-04-15","gender":"Male","admissionDate":"2025-01-10","classification":"medium"}
+{"firstName":"John","lastName":"Banda","dateOfBirth":"1990-04-15","gender":"Male","admissionDate":"2025-01-10","sentenceStartDate":"2025-01-10","sentenceEndDate":"2026-01-09","cellId":"a2bd2d14-15ba-44fc-92c1-3d6553d8e8f4"}
 ```
 
 - `GET /api/v1/inmates?search=John&classification=medium&gender=Male&facility=Test%20Facility&page=0&size=20&sort=lastName,asc`

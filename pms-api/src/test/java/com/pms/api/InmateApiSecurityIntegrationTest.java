@@ -178,12 +178,13 @@ class InmateApiSecurityIntegrationTest {
 
     private String validRequest() {
         ObjectNode request = objectMapper.createObjectNode();
-        request.put("inmateNumber", "SECURITY-" + UUID.randomUUID().toString().replace("-", "").substring(0, 20));
         request.put("firstName", "Test");
         request.put("lastName", "Inmate");
         request.put("dateOfBirth", "1990-01-01");
         request.put("gender", "Other");
         request.put("admissionDate", "2025-01-01");
+        request.put("sentenceStartDate", "2025-01-01");
+        request.put("sentenceEndDate", "2025-01-01");
         Cell cell = cellRepository.saveAndFlush(new Cell(
                 "SEC-" + UUID.randomUUID().toString().replace("-", ""), 1, 100));
         request.put("cellId", cell.getPublicUuid().toString());

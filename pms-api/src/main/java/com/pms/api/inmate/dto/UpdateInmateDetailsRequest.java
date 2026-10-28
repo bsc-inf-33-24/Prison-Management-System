@@ -8,9 +8,6 @@ import java.time.LocalDate;
 /** All fields are optional; omitted or null fields are left unchanged. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record UpdateInmateDetailsRequest(
-        @Size(min = 1, max = 30, message = "Inmate number must not be blank and must not exceed 30 characters.")
-        String inmateNumber,
-
         @Size(min = 1, max = 100, message = "First name must not be blank and must not exceed 100 characters.")
         String firstName,
 
