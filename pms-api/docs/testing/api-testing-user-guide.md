@@ -369,7 +369,7 @@ Create/update with `TOKEN_REHAB`; list/history also allow `TOKEN_RECORDS`.
 
 ### Program
 
-`POST /api/v1/rehabilitation/programs`
+`POST /api/v1/programs`
 
 ```json
 {
@@ -383,10 +383,10 @@ Create/update with `TOKEN_REHAB`; list/history also allow `TOKEN_RECORDS`.
 Save `PROGRAM_ID`. Test:
 
 ```text
-GET /api/v1/rehabilitation/programs?name=Literacy&instructor=Test&status=active&schedule=Monday&page=0&size=20&sort=name,asc
-GET /api/v1/rehabilitation/programs/{programId}
-PUT /api/v1/rehabilitation/programs/{programId}
-PATCH /api/v1/rehabilitation/programs/{programId}/status
+GET /api/v1/programs?name=Literacy&instructor=Test&status=active&schedule=Monday&page=0&size=20&sort=name,asc
+GET /api/v1/programs/{programId}
+PUT /api/v1/programs/{programId}
+PATCH /api/v1/programs/{programId}/status
 ```
 
 Update details body:
@@ -410,7 +410,7 @@ Valid statuses are `active`, `inactive`, and `completed`; inactive/completed req
 
 ### Enrollment
 
-`POST /api/v1/rehabilitation/enrollments`
+`POST /api/v1/programs/enrollments`
 
 ```json
 {
@@ -423,8 +423,8 @@ Valid statuses are `active`, `inactive`, and `completed`; inactive/completed req
 Replace IDs with `INMATE_ID` and `PROGRAM_ID`. Save `ENROLLMENT_ID`.
 
 ```text
-GET /api/v1/rehabilitation/enrollments?inmateId=1&inmateName=John&programId=1&programName=Literacy&status=enrolled&enrollmentDateFrom=2026-01-01&enrollmentDateTo=2026-12-31&page=0&size=20&sort=enrollmentDate,asc
-PATCH /api/v1/rehabilitation/enrollments/{enrollmentId}/status
+GET /api/v1/programs/enrollments?inmateId=1&inmateName=John&programId=1&programName=Literacy&status=enrolled&enrollmentDateFrom=2026-01-01&enrollmentDateTo=2026-12-31&page=0&size=20&sort=enrollmentDate,asc
+PATCH /api/v1/programs/enrollments/{enrollmentId}/status
 ```
 
 Status update body:
@@ -437,7 +437,7 @@ Test duplicate enrollment, inactive programs, invalid transitions, and missing r
 
 ### Attendance
 
-`POST /api/v1/rehabilitation/attendance`
+`POST /api/v1/programs/attendance`
 
 ```json
 {
@@ -451,8 +451,8 @@ Test duplicate enrollment, inactive programs, invalid transitions, and missing r
 Replace `1` with `ENROLLMENT_ID`; save `ATTENDANCE_ID`.
 
 ```text
-GET /api/v1/rehabilitation/attendance?enrollmentId=1&inmateId=1&programId=1&attendanceStatus=present&sessionDateFrom=2026-01-01&sessionDateTo=2026-12-31&page=0&size=20&sort=sessionDate,desc
-PUT /api/v1/rehabilitation/attendance/{attendanceId}
+GET /api/v1/programs/attendance?enrollmentId=1&inmateId=1&programId=1&attendanceStatus=present&sessionDateFrom=2026-01-01&sessionDateTo=2026-12-31&page=0&size=20&sort=sessionDate,desc
+PUT /api/v1/programs/attendance/{attendanceId}
 ```
 
 Update body:
@@ -467,7 +467,7 @@ Valid statuses are `present` and `absent`. The current database does not support
 
 ```text
 GET /api/v1/inmates/{inmateId}/rehabilitation-history?page=0&size=20&sort=enrollmentDate,desc
-GET /api/v1/rehabilitation/enrollments/{enrollmentId}/attendance?page=0&size=20&sort=sessionDate,desc
+GET /api/v1/programs/enrollments/{enrollmentId}/attendance?page=0&size=20&sort=sessionDate,desc
 ```
 
 ## 10. Tests to repeat for every endpoint
