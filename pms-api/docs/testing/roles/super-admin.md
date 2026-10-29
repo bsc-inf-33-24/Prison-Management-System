@@ -6,7 +6,7 @@
 
 `POST /api/v1/users` — create one test account per role. Repeat with a unique username and matching role each time:
 
-The optional `email` field accepts a valid email address. Omit it for accounts without email. Users can later log in by supplying either `username` or `email` (one field only) with their password.
+The optional `email` field accepts a valid email address. Omit it for accounts without email. Users can later log in by entering either their username or email address in the same `identifier` field, together with their password.
 
 ```json
 {"fullName":"Test Records Officer","username":"records01","password":"Records123!","role":"Records Officer"}
