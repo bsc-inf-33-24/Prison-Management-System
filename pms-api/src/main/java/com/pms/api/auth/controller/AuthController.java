@@ -1,19 +1,19 @@
 package com.pms.api.auth.controller;
 
 import com.pms.api.auth.dto.AuthRequest;
-import com.pms.api.auth.dto.EmailLoginRequest;
 import com.pms.api.auth.dto.AuthResponse;
-import com.pms.api.auth.dto.UsernameLoginRequest;
-import com.pms.api.auth.service.AuthService;
 import com.pms.api.auth.dto.ChangePasswordRequest;
 import com.pms.api.auth.dto.ForgotPasswordRequest;
-import com.pms.api.auth.dto.ResetPasswordRequest;
 import com.pms.api.auth.dto.PasswordRecoveryResponse;
+import com.pms.api.auth.dto.ResetPasswordRequest;
+import com.pms.api.auth.service.AuthService;
+import com.pms.api.common.error.ApiError;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,24 +36,20 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Log in", description = "Authenticates a user and returns a signed JWT access token. Supply either username or email.",
+    @Operation(summary = "Log in", description = "Authenticates a user and returns a signed JWT access token. Set username to the account username or its associated email address.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Choose username login or email login, then enter the password.",
-                    content = @Content(schema = @Schema(oneOf = {UsernameLoginRequest.class, EmailLoginRequest.class}),
-                            examples = {
-                                    @ExampleObject(name = "Log in with username", value = """
-                                            {
-                                              "username": "records01",
-                                              "password": "Records123!"
-                                            }
-                                            """),
-                                    @ExampleObject(name = "Log in with email", value = """
-                                            {
-                                              "email": "records.officer@example.test",
-                                              "password": "Records123!"
-                                            }
-                                            """)
-                            })))
+                    description = "Use the username field for either the account username or its associated email address.",
+                    content = @Content(schema = @Schema(implementation = AuthRequest.class))))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Authentication succeeded and a JWT was issued.",
+                    content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+            @ApiResponse(responseCode = "400", description = "The login request is invalid.",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "401", description = "The username/email or password is invalid.",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "429", description = "The account is temporarily locked after too many failed attempts.",
+                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
         AuthService.LoginResult result = authService.login(request);
         return ResponseEntity.ok(result.response());

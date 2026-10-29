@@ -72,7 +72,7 @@ Save the returned `accessToken` as `TOKEN_ADMIN`.
 }
 ```
 
-`email` is optional. Remove the `email` property or set it to `null` when the user has no email address. Supplied addresses must be valid; the API trims surrounding spaces, stores the address in lowercase, and rejects duplicates with `409 Conflict`. Users can log in with either their username or email by supplying exactly one of those fields in the login request.
+`email` is optional. Remove the `email` property or set it to `null` when the user has no email address. Supplied addresses must be valid; the API trims surrounding spaces, stores the address in lowercase, and rejects duplicates with `409 Conflict`. To log in with either the username or email, supply that value in the single `username` login field.
 
 Repeat with these role values and unique usernames:
 
@@ -90,7 +90,7 @@ Login each account with `POST /api/v1/auth/login` and save `TOKEN_RECORDS`, `TOK
 
 | Endpoint | Input |
 |---|---|
-| `POST /api/v1/auth/login` | Username login: `{ "username": "records01", "password": "Records123!" }`; email login: `{ "email": "records01@example.test", "password": "Records123!" }` |
+| `POST /api/v1/auth/login` | `{ "username": "records01", "password": "Records123!" }`; set `username` to the account email address to log in by email. |
 | `POST /api/v1/auth/logout` | No body; valid bearer token |
 | `POST /api/v1/auth/password/forgot` | `{ "username": "records01" }` |
 | `POST /api/v1/auth/password/reset` | `{ "token": "recovery-token", "newPassword": "NewPass123!" }` |

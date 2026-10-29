@@ -80,11 +80,24 @@ class UserEmailAuthenticationIntegrationTest {
         assertFalse(response.has("passwordHash"));
 
         login(username, "Records123!").andExpect(status().isOk());
-        loginByEmail(email, "Records123!").andExpect(status().isOk());
         login(email, "Records123!").andExpect(status().isOk());
         login(email.toUpperCase(java.util.Locale.ROOT), "Records123!").andExpect(status().isOk());
         login("  " + email.toUpperCase(java.util.Locale.ROOT) + "  ", "Records123!")
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void rejectsEmailAsASeparateLoginField() throws Exception {
+        String email = "login." + UUID.randomUUID() + "@example.test";
+        createUser(uniqueUsername(), email, true);
+        ObjectNode request = objectMapper.createObjectNode();
+        request.put("email", email);
+        request.put("password", "Records123!");
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -99,6 +112,51 @@ class UserEmailAuthenticationIntegrationTest {
         createUserRequest(uniqueUsername(), "a".repeat(245) + "@example.test", true)
                 .andExpect(status().isBadRequest());
         createUser(uniqueUsername(), null, true);
+    }
+
+    @Test
+    void validatesRequiredUserFieldsPasswordPolicyAndCreationAuthorization() throws Exception {
+        ObjectNode request = objectMapper.createObjectNode();
+        request.put("fullName", "Test Records Officer");
+        request.put("username", uniqueUsername());
+        request.put("password", "Records123");
+        request.put("role", "Records Officer");
+
+        mockMvc.perform(post("/api/v1/users")
+                .header("Authorization", "Bearer " + adminToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest());
+
+        request.put("password", "Records123!");
+        request.put("fullName", "");
+        mockMvc.perform(post("/api/v1/users")
+                .header("Authorization", "Bearer " + adminToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest());
+
+        request.put("fullName", "Test Records Officer");
+        request.put("role", "Invalid Role");
+        mockMvc.perform(post("/api/v1/users")
+                        .header("Authorization", "Bearer " + adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+
+        User recordsOfficer = userRepository.saveAndFlush(new User(
+                "Test Records Officer", uniqueUsername(), "unused-password-hash", "Records Officer", Set.of()));
+        request.put("role", "Records Officer");
+        mockMvc.perform(post("/api/v1/users")
+                        .header("Authorization", "Bearer " + jwtService.generateToken(recordsOfficer))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -235,15 +293,6 @@ class UserEmailAuthenticationIntegrationTest {
     private ResultActions login(String login, String password) throws Exception {
         ObjectNode request = objectMapper.createObjectNode();
         request.put("username", login);
-        request.put("password", password);
-        return mockMvc.perform(post("/api/v1/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)));
-    }
-
-    private ResultActions loginByEmail(String email, String password) throws Exception {
-        ObjectNode request = objectMapper.createObjectNode();
-        request.put("email", email);
         request.put("password", password);
         return mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)

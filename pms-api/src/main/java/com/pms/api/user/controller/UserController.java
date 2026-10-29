@@ -1,16 +1,17 @@
 package com.pms.api.user.controller;
 
+import com.pms.api.common.error.ApiError;
+import com.pms.api.common.pagination.PageResponse;
 import com.pms.api.user.dto.CreateUserRequest;
-import com.pms.api.user.dto.CreateUserWithEmailRequest;
-import com.pms.api.user.dto.CreateUserWithoutEmailRequest;
 import com.pms.api.user.dto.UpdateUserDetailsRequest;
 import com.pms.api.user.dto.UserResponse;
 import com.pms.api.user.service.UserService;
-import com.pms.api.common.pagination.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -46,29 +47,28 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a user", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Email is optional. Remove the email property or set it to null for a user without an email.",
-            content = @Content(schema = @Schema(oneOf = {
-                            CreateUserWithEmailRequest.class,
-                            CreateUserWithoutEmailRequest.class
-                    }),
-                    examples = {
-                            @ExampleObject(name = "User with email", value = """
-                                    {
-                                      "fullName": "Records Officer",
-                                      "username": "records01",
-                                      "email": "records.officer@example.test",
-                                      "password": "Records123!",
-                                      "role": "Records Officer"
-                                    }
-                                    """),
-                            @ExampleObject(name = "User without email", value = """
-                                    {
-                                      "fullName": "Records Officer",
-                                      "username": "records01",
-                                      "password": "Records123!",
-                                      "role": "Records Officer"
-                                    }
-                                    """)
-                    })))
+            content = @Content(schema = @Schema(implementation = CreateUserRequest.class),
+                examples = @ExampleObject(name = "Create user", value = """
+                    {
+                      "fullName": "Records Officer",
+                      "username": "records01",
+                      "email": "records.officer@example.test",
+                      "password": "Records123!",
+                      "role": "Records Officer"
+                    }
+                    """))))
+        @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "User created.",
+                content = @Content(schema = @Schema(implementation = UserResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Required fields, role, or password policy is invalid.",
+                content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "401", description = "Authentication is required.",
+                content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "403", description = "Only a Super Admin may create users.",
+                content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "409", description = "The username or email already exists.",
+                content = @Content(schema = @Schema(implementation = ApiError.class)))
+        })
     public UserResponse create(@Valid @RequestBody CreateUserRequest request) {
         return userService.create(request);
     }
