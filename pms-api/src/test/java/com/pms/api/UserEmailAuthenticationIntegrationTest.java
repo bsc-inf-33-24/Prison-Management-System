@@ -80,6 +80,7 @@ class UserEmailAuthenticationIntegrationTest {
         assertFalse(response.has("passwordHash"));
 
         login(username, "Records123!").andExpect(status().isOk());
+        loginByUsername(username, "Records123!").andExpect(status().isOk());
         loginByEmail(email, "Records123!").andExpect(status().isOk());
         login(email, "Records123!").andExpect(status().isOk());
         login(email.toUpperCase(java.util.Locale.ROOT), "Records123!").andExpect(status().isOk());
@@ -90,8 +91,11 @@ class UserEmailAuthenticationIntegrationTest {
     @Test
     void rejectsDuplicateInvalidBlankAndOversizedEmails() throws Exception {
         String email = "duplicate." + UUID.randomUUID() + "@example.test";
-        createUser(uniqueUsername(), email, true);
+        String username = uniqueUsername();
+        createUser(username, email, true);
 
+        createUserRequest(username, "duplicate.username." + UUID.randomUUID() + "@example.test", true)
+            .andExpect(status().isConflict());
         createUserRequest(uniqueUsername(), email.toUpperCase(java.util.Locale.ROOT), true)
                 .andExpect(status().isConflict());
         createUserRequest(uniqueUsername(), "not-an-email", true).andExpect(status().isBadRequest());
@@ -99,6 +103,55 @@ class UserEmailAuthenticationIntegrationTest {
         createUserRequest(uniqueUsername(), "a".repeat(245) + "@example.test", true)
                 .andExpect(status().isBadRequest());
         createUser(uniqueUsername(), null, true);
+    }
+
+    @Test
+    void userCreationValidatesRequiredFieldsRolesAndSuperAdminAuthorization() throws Exception {
+        ObjectNode incompleteRequest = objectMapper.createObjectNode();
+        incompleteRequest.put("username", uniqueUsername());
+        incompleteRequest.put("password", "Records123!");
+        incompleteRequest.put("role", "Records Officer");
+        mockMvc.perform(post("/api/v1/users")
+                        .header("Authorization", "Bearer " + adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(incompleteRequest)))
+                .andExpect(status().isBadRequest());
+
+        ObjectNode weakPasswordRequest = objectMapper.createObjectNode();
+        weakPasswordRequest.put("fullName", "Test User");
+        weakPasswordRequest.put("username", uniqueUsername());
+        weakPasswordRequest.put("password", "weak");
+        weakPasswordRequest.put("role", "Records Officer");
+        mockMvc.perform(post("/api/v1/users")
+                .header("Authorization", "Bearer " + adminToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(weakPasswordRequest)))
+            .andExpect(status().isBadRequest());
+
+        ObjectNode invalidRoleRequest = objectMapper.createObjectNode();
+        invalidRoleRequest.put("fullName", "Test User");
+        invalidRoleRequest.put("username", uniqueUsername());
+        invalidRoleRequest.put("password", "Records123!");
+        invalidRoleRequest.put("role", "Prisoner");
+        mockMvc.perform(post("/api/v1/users")
+                        .header("Authorization", "Bearer " + adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRoleRequest)))
+                .andExpect(status().isBadRequest());
+
+        User recordsOfficer = userRepository.saveAndFlush(
+                new User("Test Records Officer", uniqueUsername(), "unused-password-hash",
+                        "Records Officer", Set.of()));
+        ObjectNode validRequest = objectMapper.createObjectNode();
+        validRequest.put("fullName", "Test User");
+        validRequest.put("username", uniqueUsername());
+        validRequest.put("password", "Records123!");
+        validRequest.put("role", "Records Officer");
+        mockMvc.perform(post("/api/v1/users")
+                        .header("Authorization", "Bearer " + jwtService.generateToken(recordsOfficer))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -234,7 +287,16 @@ class UserEmailAuthenticationIntegrationTest {
 
     private ResultActions login(String login, String password) throws Exception {
         ObjectNode request = objectMapper.createObjectNode();
-        request.put("username", login);
+        request.put("identifier", login);
+        request.put("password", password);
+        return mockMvc.perform(post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)));
+    }
+
+    private ResultActions loginByUsername(String username, String password) throws Exception {
+        ObjectNode request = objectMapper.createObjectNode();
+        request.put("username", username);
         request.put("password", password);
         return mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
