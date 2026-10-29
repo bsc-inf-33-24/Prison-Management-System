@@ -1,9 +1,7 @@
 package com.pms.api.auth.controller;
 
 import com.pms.api.auth.dto.AuthRequest;
-import com.pms.api.auth.dto.EmailLoginRequest;
 import com.pms.api.auth.dto.AuthResponse;
-import com.pms.api.auth.dto.UsernameLoginRequest;
 import com.pms.api.auth.service.AuthService;
 import com.pms.api.auth.dto.ChangePasswordRequest;
 import com.pms.api.auth.dto.ForgotPasswordRequest;
@@ -36,20 +34,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Log in", description = "Authenticates a user and returns a signed JWT access token. Supply either username or email.",
+    @Operation(summary = "Log in", description = "Authenticates a user and returns a signed JWT access token. The identifier accepts a username or email address.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Choose username login or email login, then enter the password.",
-                    content = @Content(schema = @Schema(oneOf = {UsernameLoginRequest.class, EmailLoginRequest.class}),
+                    description = "Supply a username or email address in the identifier field, together with the password.",
+                    content = @Content(schema = @Schema(implementation = AuthRequest.class),
                             examples = {
-                                    @ExampleObject(name = "Log in with username", value = """
+                                    @ExampleObject(name = "Log in", value = """
                                             {
-                                              "username": "records01",
-                                              "password": "Records123!"
-                                            }
-                                            """),
-                                    @ExampleObject(name = "Log in with email", value = """
-                                            {
-                                              "email": "records.officer@example.test",
+                                              "identifier": "records01",
                                               "password": "Records123!"
                                             }
                                             """)
@@ -92,4 +84,3 @@ public class AuthController {
     }
 
 }
-

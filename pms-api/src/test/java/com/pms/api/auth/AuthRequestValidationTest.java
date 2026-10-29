@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.pms.api.auth.dto.AuthRequest;
 import com.pms.api.common.error.ApiExceptionHandler;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,7 @@ class AuthRequestValidationTest {
     void returnsStandardApiErrorForInvalidCredentials() throws Exception {
         mockMvc.perform(post("/validation-probe")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"\",\"password\":\"\"}"))
+                        .content("{\"identifier\":\"\",\"password\":\"\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
@@ -55,7 +56,7 @@ class AuthRequestValidationTest {
         String submittedPassword = "not-for-response";
         String response = mockMvc.perform(post("/validation-probe")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"\",\"password\":\"" + submittedPassword + "\"}"))
+                        .content("{\"identifier\":\"\",\"password\":\"" + submittedPassword + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andReturn()
                 .getResponse()
@@ -63,6 +64,29 @@ class AuthRequestValidationTest {
 
         assertFalse(response.contains(submittedPassword));
         assertFalse(response.contains("\"errors\""));
+    }
+
+    @Test
+    void rejectsMultipleLoginIdentifiers() throws Exception {
+        mockMvc.perform(post("/validation-probe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"identifier\":\"records01\",\"email\":\"records@example.test\",\"password\":\"Records123!\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void acceptsUnifiedIdentifierAndExistingUsernameOrEmailPayloads() throws Exception {
+        List<String> requests = List.of(
+                "{\"identifier\":\"records01\",\"password\":\"Records123!\"}",
+                "{\"username\":\"records01\",\"password\":\"Records123!\"}",
+                "{\"email\":\"records@example.test\",\"password\":\"Records123!\"}");
+
+        for (String request : requests) {
+            mockMvc.perform(post("/validation-probe")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(request))
+                    .andExpect(status().isOk());
+        }
     }
 
     @RestController
