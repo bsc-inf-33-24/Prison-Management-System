@@ -51,7 +51,7 @@ Expected common responses: no token `401`, wrong role `403`, invalid input `400`
 
 ```json
 {
-  "username": "admin",
+  "identifier": "admin",
   "password": "Admin123!"
 }
 ```
@@ -72,7 +72,11 @@ Save the returned `accessToken` as `TOKEN_ADMIN`.
 }
 ```
 
-`email` is optional. Remove the `email` property or set it to `null` when the user has no email address. Supplied addresses must be valid; the API trims surrounding spaces, stores the address in lowercase, and rejects duplicates with `409 Conflict`. Users can log in with either their username or email by supplying exactly one of those fields in the login request.
+`email` is optional. Remove the `email` property or set it to `null` when the user has no email address. Supplied addresses must be valid; the API trims surrounding spaces, stores the address in lowercase, and rejects duplicates with `409 Conflict`. Users can log in with either their username or email in the same `identifier` field:
+
+```json
+{"identifier":"records01","password":"Records123!"}
+```
 
 Repeat with these role values and unique usernames:
 
@@ -90,7 +94,7 @@ Login each account with `POST /api/v1/auth/login` and save `TOKEN_RECORDS`, `TOK
 
 | Endpoint | Input |
 |---|---|
-| `POST /api/v1/auth/login` | Username login: `{ "username": "records01", "password": "Records123!" }`; email login: `{ "email": "records01@example.test", "password": "Records123!" }` |
+| `POST /api/v1/auth/login` | `{ "identifier": "records01", "password": "Records123!" }` (the identifier can be a username or email address) |
 | `POST /api/v1/auth/logout` | No body; valid bearer token |
 | `POST /api/v1/auth/password/forgot` | `{ "username": "records01" }` |
 | `POST /api/v1/auth/password/reset` | `{ "token": "recovery-token", "newPassword": "NewPass123!" }` |
@@ -104,7 +108,7 @@ All endpoints require `TOKEN_ADMIN`:
 
 | Endpoint | Input |
 |---|---|
-| `POST /api/v1/users` | `fullName`, `username`, `password`, `role` |
+| `POST /api/v1/users` | Required: `fullName`, `username`, `password`, `role`; optional: `email` |
 | `GET /api/v1/users` | Optional `status`, `role`, `search`, `page`, `size`, `sort` |
 | `GET /api/v1/users/{userId}` | `userId` returned from user creation |
 | `PATCH /api/v1/users/{userId}/deactivate` | Path ID only |
