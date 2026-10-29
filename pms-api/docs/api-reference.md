@@ -332,7 +332,7 @@ Validation:
 
 - `fullName` required
 - `username` required, maximum 16 characters
-- `password` required, 8–16 characters
+- `password` required, 8–16 characters; must contain at least one digit and one punctuation or special character
 - `role` must be one of the allowed roles
 - `email` is optional; if supplied it must be a valid email and is normalized to lowercase
 
