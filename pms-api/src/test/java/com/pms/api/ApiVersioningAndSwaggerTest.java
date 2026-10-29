@@ -38,14 +38,15 @@ class ApiVersioningAndSwaggerTest {
                 .contains("/api/v1/inmates")
                 .contains("/api/v1/cells")
                 .contains("/api/v1/incidents")
-                .contains("/api/v1/rehabilitation/programs")
-                .contains("/api/v1/rehabilitation/enrollments")
-                .contains("/api/v1/rehabilitation/attendance");
+                .contains("/api/v1/programs")
+                .contains("/api/v1/programs/enrollments")
+                .contains("/api/v1/programs/attendance");
 
         assertThat(docs)
                 .doesNotContain("\"/api/inmates\"")
                 .doesNotContain("\"/api/cells\"")
                 .doesNotContain("\"/api/incidents\"")
+                .doesNotContain("/api/v1/rehabilitation/programs")
                 .doesNotContain("/api/v1/cases")
                 .doesNotContain("/api/v1/sentences");
 

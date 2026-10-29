@@ -245,13 +245,13 @@ Recording an outcome changes an incident from open to resolved. The operation is
 A rehabilitation program is created independently:
 
 ```text
-POST /api/v1/rehabilitation/programs
+POST /api/v1/programs
 ```
 
 The program must be active before an inmate can enroll. Enrollment then links an inmate to the program:
 
 ```text
-POST /api/v1/rehabilitation/enrollments
+POST /api/v1/programs/enrollments
 ```
 
 ```json
@@ -267,7 +267,7 @@ The current implementation prevents another active or suspended enrollment for t
 Enrollment status transitions are controlled by the service:
 
 ```text
-PATCH /api/v1/rehabilitation/enrollments/{enrollmentUuid}/status
+PATCH /api/v1/programs/enrollments/{enrollmentUuid}/status
 ```
 
 An enrollment may move between enrolled, suspended, completed, and withdrawn according to the allowed transition rules. A reason is required for suspension, completion, or withdrawal.
@@ -275,7 +275,7 @@ An enrollment may move between enrolled, suspended, completed, and withdrawn acc
 Attendance references the enrollment, not the inmate directly:
 
 ```text
-POST /api/v1/rehabilitation/attendance
+POST /api/v1/programs/attendance
 ```
 
 ```json
