@@ -51,26 +51,38 @@ class ApiVersioningAndSwaggerTest {
                 .doesNotContain("/api/v1/sentences");
 
         JsonNode document = objectMapper.readTree(docs);
-        JsonNode createUserWithEmailSchema = document.at("/components/schemas/CreateUserWithEmailRequest");
-        assertThat(createUserWithEmailSchema.at("/properties/email").isObject()).isTrue();
-        assertThat(createUserWithEmailSchema.path("required").toString()).contains("email");
-        JsonNode createUserWithoutEmailSchema = document.at("/components/schemas/CreateUserWithoutEmailRequest");
-        assertThat(createUserWithoutEmailSchema.at("/properties/email").isMissingNode()).isTrue();
-        assertThat(document.at("/paths/~1api~1v1~1users/post/requestBody/content/application~1json/examples/User with email/value/email").asText())
+        JsonNode createUserSchema = document.at("/components/schemas/CreateUserRequest");
+        assertThat(createUserSchema.at("/properties/email").isObject()).isTrue();
+        assertThat(createUserSchema.path("required").toString()).contains("fullName", "username", "password", "role")
+                .doesNotContain("email");
+        assertThat(createUserSchema.at("/properties/password/minLength").asInt()).isEqualTo(8);
+        assertThat(createUserSchema.at("/properties/password/maxLength").asInt()).isEqualTo(16);
+        assertThat(createUserSchema.at("/properties/role/enum").toString()).contains("Super Admin", "Records Officer");
+        assertThat(document.at("/paths/~1api~1v1~1users/post/requestBody/content/application~1json/examples/Create user/value/email").asText())
                 .isEqualTo("records.officer@example.test");
-        JsonNode userChoices = document.at("/paths/~1api~1v1~1users/post/requestBody/content/application~1json/schema/oneOf");
-        assertThat(userChoices.toString()).contains("CreateUserWithEmailRequest", "CreateUserWithoutEmailRequest");
-        assertThat(document.at("/paths/~1api~1v1~1users/post/requestBody/content/application~1json/examples/User without email/value/email").isMissingNode())
+        assertThat(document.at("/paths/~1api~1v1~1users/post/requestBody/content/application~1json/schema/oneOf").isMissingNode())
                 .isTrue();
-        JsonNode emailLoginSchema = document.at("/components/schemas/EmailLoginRequest");
-        assertThat(emailLoginSchema.at("/properties/email/description").asText())
-                .contains("Email", "account");
-        assertThat(emailLoginSchema.path("required").toString()).contains("email");
-        JsonNode usernameLoginSchema = document.at("/components/schemas/UsernameLoginRequest");
-        assertThat(usernameLoginSchema.at("/properties/email").isMissingNode()).isTrue();
-        assertThat(document.at("/paths/~1api~1v1~1auth~1login/post/requestBody/content/application~1json/examples/Log in with email/value/email").asText())
-                .isEqualTo("records.officer@example.test");
-        JsonNode loginChoices = document.at("/paths/~1api~1v1~1auth~1login/post/requestBody/content/application~1json/schema/oneOf");
-        assertThat(loginChoices.toString()).contains("UsernameLoginRequest", "EmailLoginRequest");
+        assertThat(document.at("/paths/~1api~1v1~1users/post/responses/201").isObject()).isTrue();
+        assertThat(document.at("/paths/~1api~1v1~1users/post/responses/201/content/*~1*/schema/$ref").asText())
+                .endsWith("/UserResponse");
+        assertThat(document.at("/paths/~1api~1v1~1users/post/responses/400").toString())
+                .contains("ApiError");
+        assertThat(document.at("/paths/~1api~1v1~1users/post/responses/403").isObject()).isTrue();
+        assertThat(document.at("/paths/~1api~1v1~1users/post/responses/409").isObject()).isTrue();
+
+        JsonNode loginSchema = document.at("/components/schemas/AuthRequest");
+        assertThat(loginSchema.at("/properties/username/description").asText()).contains("username", "email");
+        assertThat(loginSchema.at("/properties/email").isMissingNode()).isTrue();
+        assertThat(loginSchema.at("/properties/identifier").isMissingNode()).isTrue();
+        assertThat(loginSchema.path("required").toString()).contains("username", "password");
+        assertThat(document.at("/paths/~1api~1v1~1auth~1login/post/requestBody/content/application~1json/schema/oneOf").isMissingNode())
+                .isTrue();
+        assertThat(document.at("/paths/~1api~1v1~1auth~1login/post/responses/200").isObject()).isTrue();
+        assertThat(document.at("/paths/~1api~1v1~1auth~1login/post/responses/200/content/*~1*/schema/$ref").asText())
+                .endsWith("/AuthResponse");
+        assertThat(document.at("/paths/~1api~1v1~1auth~1login/post/responses/401").isObject()).isTrue();
+        assertThat(document.at("/paths/~1api~1v1~1auth~1login/post/responses/401/content/*~1*/schema/$ref").asText())
+                .endsWith("/ApiError");
+        assertThat(document.at("/paths/~1api~1v1~1auth~1login/post/responses/429").isObject()).isTrue();
     }
 }
