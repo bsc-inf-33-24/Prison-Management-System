@@ -71,10 +71,11 @@ class ApiVersioningAndSwaggerTest {
         assertThat(document.at("/paths/~1api~1v1~1users/post/responses/409").isObject()).isTrue();
 
         JsonNode loginSchema = document.at("/components/schemas/AuthRequest");
-        assertThat(loginSchema.at("/properties/username/description").asText()).contains("username", "email");
+        assertThat(loginSchema.at("/properties/usernameOrEmail/description").asText()).contains("username", "email");
         assertThat(loginSchema.at("/properties/email").isMissingNode()).isTrue();
+        assertThat(loginSchema.at("/properties/username").isMissingNode()).isTrue();
         assertThat(loginSchema.at("/properties/identifier").isMissingNode()).isTrue();
-        assertThat(loginSchema.path("required").toString()).contains("username", "password");
+        assertThat(loginSchema.path("required").toString()).contains("usernameOrEmail", "password");
         assertThat(document.at("/paths/~1api~1v1~1auth~1login/post/requestBody/content/application~1json/schema/oneOf").isMissingNode())
                 .isTrue();
         assertThat(document.at("/paths/~1api~1v1~1auth~1login/post/responses/200").isObject()).isTrue();

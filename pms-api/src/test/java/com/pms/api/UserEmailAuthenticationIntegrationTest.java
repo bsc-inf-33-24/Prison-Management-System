@@ -87,17 +87,21 @@ class UserEmailAuthenticationIntegrationTest {
     }
 
     @Test
-    void rejectsEmailAsASeparateLoginField() throws Exception {
+    void rejectsSeparateEmailAndUsernameLoginFields() throws Exception {
         String email = "login." + UUID.randomUUID() + "@example.test";
         createUser(uniqueUsername(), email, true);
-        ObjectNode request = objectMapper.createObjectNode();
-        request.put("email", email);
-        request.put("password", "Records123!");
 
-        mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+        for (String legacyField : java.util.List.of("email", "username")) {
+            ObjectNode request = objectMapper.createObjectNode();
+            request.put("usernameOrEmail", email);
+            request.put("password", "Records123!");
+            request.put(legacyField, "legacy-value");
+
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+        }
     }
 
     @Test
@@ -292,7 +296,7 @@ class UserEmailAuthenticationIntegrationTest {
 
     private ResultActions login(String login, String password) throws Exception {
         ObjectNode request = objectMapper.createObjectNode();
-        request.put("username", login);
+        request.put("usernameOrEmail", login);
         request.put("password", password);
         return mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)

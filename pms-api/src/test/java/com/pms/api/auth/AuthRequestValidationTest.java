@@ -43,7 +43,7 @@ class AuthRequestValidationTest {
     void returnsStandardApiErrorForInvalidCredentials() throws Exception {
         mockMvc.perform(post("/validation-probe")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"\",\"password\":\"\"}"))
+                        .content("{\"usernameOrEmail\":\"\",\"password\":\"\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
@@ -55,7 +55,7 @@ class AuthRequestValidationTest {
         String submittedPassword = "not-for-response";
         String response = mockMvc.perform(post("/validation-probe")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"\",\"password\":\"" + submittedPassword + "\"}"))
+                        .content("{\"usernameOrEmail\":\"\",\"password\":\"" + submittedPassword + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andReturn()
                 .getResponse()

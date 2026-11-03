@@ -36,9 +36,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Log in", description = "Authenticates a user and returns a signed JWT access token. Set username to the account username or its associated email address.",
+    @Operation(summary = "Log in", description = "Authenticates a user and returns a signed JWT access token. Use usernameOrEmail for either the account username or its registered email address.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Use the username field for either the account username or its associated email address.",
+                    description = "Use the usernameOrEmail field for either the account username or its registered email address.",
                     content = @Content(schema = @Schema(implementation = AuthRequest.class))))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Authentication succeeded and a JWT was issued.",
