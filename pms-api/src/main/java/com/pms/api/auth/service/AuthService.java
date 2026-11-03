@@ -51,7 +51,7 @@ public class AuthService {
 
     @Transactional(noRollbackFor = org.springframework.security.core.AuthenticationException.class)
     public LoginResult login(AuthRequest request) {
-        String login = request.email() == null ? request.username().trim() : request.email();
+        String login = request.getUsernameOrEmail().trim();
         User knownUser = userRepository.findByUsername(login)
                 .or(() -> userRepository.findByEmailIgnoreCase(login))
                 .orElse(null);
@@ -59,7 +59,7 @@ public class AuthService {
         try {
             String canonicalUsername = knownUser == null ? login : knownUser.getUsername();
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(canonicalUsername, request.password()));
+                    new UsernamePasswordAuthenticationToken(canonicalUsername, request.getPassword()));
             User user = userRepository.findByUsername(authentication.getName()).orElseThrow(() -> new BadCredentialsException("Invalid username or password."));
             user.resetLoginFailures();
             return new LoginResult(new AuthResponse(jwtService.generateToken(user), "Bearer"));
