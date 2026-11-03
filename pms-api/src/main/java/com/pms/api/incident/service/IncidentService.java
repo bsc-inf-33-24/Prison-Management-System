@@ -10,6 +10,7 @@ import com.pms.api.incident.repository.IncidentInmateRepository;
 import com.pms.api.incident.repository.IncidentRepository;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
+import com.pms.api.notification.service.NotificationService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -27,15 +28,18 @@ public class IncidentService {
     private final IncidentInmateRepository incidentInmateRepository;
     private final InmateRepository inmateRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public IncidentService(IncidentRepository incidentRepository,
                             IncidentInmateRepository incidentInmateRepository,
                             InmateRepository inmateRepository,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            NotificationService notificationService) {
         this.incidentRepository = incidentRepository;
         this.incidentInmateRepository = incidentInmateRepository;
         this.inmateRepository = inmateRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     // Auditing is explicitly NOT implemented for Incident Management
@@ -89,6 +93,12 @@ public class IncidentService {
             incidentInmateRepository.save(
                     new IncidentInmate(incident, inmate, roleByInmateId.get(inmate.getPublicUuid())));
         }
+        notificationService.notifyRoles(
+                "INCIDENT_REPORTED",
+                "Incident reported",
+                "A new inmate incident has been reported.",
+                incident.getPublicUuid(),
+                java.util.Set.of("Disciplinary Officer", "Duty Officer"));
 
         return toResponse(incident, incidentInmateRepository.findByIncidentId(incident.getId()));
     }
@@ -113,6 +123,12 @@ public class IncidentService {
 
         Incident updatedIncident = incidentRepository.findByPublicUuid(incidentId)
                 .orElseThrow(IncidentNotFoundException::new);
+        notificationService.notifyRoles(
+                "INCIDENT_RESOLVED",
+                "Incident outcome recorded",
+                "An outcome has been recorded for an inmate incident.",
+                updatedIncident.getPublicUuid(),
+                java.util.Set.of("Disciplinary Officer", "Duty Officer"));
         return toResponse(updatedIncident, incidentInmateRepository.findByIncidentId(updatedIncident.getId()));
     }
 

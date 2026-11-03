@@ -45,6 +45,9 @@ public class Visit {
     @Column(name = "duration_minutes", nullable = false)
     private Integer durationMinutes;
 
+    @Column(name = "end_reminder_sent_at")
+    private Instant endReminderSentAt;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "logged_by", nullable = false)
     private User loggedBy;
@@ -109,6 +112,10 @@ public class Visit {
         return durationMinutes;
     }
 
+    public Instant getEndReminderSentAt() {
+        return endReminderSentAt;
+    }
+
     public User getLoggedBy() {
         return loggedBy;
     }
@@ -122,6 +129,9 @@ public class Visit {
     }
 
     public void updateDetails(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Integer durationMinutes) {
+        if (!this.endDateTime.equals(endDateTime)) {
+            endReminderSentAt = null;
+        }
         this.startDateTime = startDateTime;
         this.endDateTime = endDateTime;
         this.durationMinutes = durationMinutes;

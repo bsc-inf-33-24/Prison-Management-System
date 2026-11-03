@@ -17,6 +17,7 @@ import com.pms.api.common.pagination.PageableValidator;
 import com.pms.api.common.pagination.PaginationProperties;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
+import com.pms.api.notification.service.NotificationService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -37,15 +38,18 @@ public class CellService {
     private final CellAllocationRepository cellAllocationRepository;
     private final InmateRepository inmateRepository;
     private final PaginationProperties paginationProperties;
+    private final NotificationService notificationService;
 
     public CellService(CellRepository cellRepository,
                        CellAllocationRepository cellAllocationRepository,
                        InmateRepository inmateRepository,
-                       PaginationProperties paginationProperties) {
+                       PaginationProperties paginationProperties,
+                       NotificationService notificationService) {
         this.cellRepository = cellRepository;
         this.cellAllocationRepository = cellAllocationRepository;
         this.inmateRepository = inmateRepository;
         this.paginationProperties = paginationProperties;
+        this.notificationService = notificationService;
     }
 
     @Audited
@@ -111,6 +115,12 @@ public class CellService {
 
         currentAllocation.moveTo(targetCell, Instant.now());
         cellAllocationRepository.saveAndFlush(currentAllocation);
+        notificationService.notifyRoles(
+                "INMATE_CELL_MOVED",
+                "Inmate cell assignment changed",
+                "An inmate has been moved to a different cell.",
+                inmate.getPublicUuid(),
+                Set.of("Records Officer", "Duty Officer"));
 
         return new CellMoveResponse(
                 inmate.getPublicUuid(),
