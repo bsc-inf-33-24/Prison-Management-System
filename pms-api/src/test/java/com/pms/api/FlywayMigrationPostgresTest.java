@@ -58,6 +58,10 @@ class FlywayMigrationPostgresTest {
                     "case_start_date", "case_end_date", "status", "created_by", "created_at", "updated_at",
                     "crimes"));
             assertColumns(connection, "users", Set.of("email"));
+            assertColumns(connection, "notification", Set.of("notification_id", "recipient_user_id",
+                    "type", "title", "message", "related_record_id", "created_at", "is_read", "read_at"));
+            assertColumnType(connection, "notification", "is_read", java.sql.Types.BOOLEAN);
+            assertColumns(connection, "visits", Set.of("end_reminder_sent_at"));
             assertColumns(connection, "sentences", Set.of("sentence_id", "case_id", "inmate_id", "duration",
                     "start_date", "release_date", "status", "created_at", "updated_at"));
             assertForeignKey(connection, "cell_allocations", "inmate_id", "inmates", "id");
@@ -121,6 +125,14 @@ class FlywayMigrationPostgresTest {
     private void assertColumnAbsent(Connection connection, String table, String column) throws Exception {
         try (ResultSet result = connection.getMetaData().getColumns(null, "public", table, column)) {
             assertThat(result.next()).isFalse();
+        }
+    }
+
+    private void assertColumnType(Connection connection, String table, String column, int expectedType)
+            throws Exception {
+        try (ResultSet result = connection.getMetaData().getColumns(null, "public", table, column)) {
+            assertThat(result.next()).isTrue();
+            assertThat(result.getInt("DATA_TYPE")).isEqualTo(expectedType);
         }
     }
 

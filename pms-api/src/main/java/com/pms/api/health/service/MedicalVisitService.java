@@ -7,9 +7,11 @@ import com.pms.api.health.entity.MedicalVisit;
 import com.pms.api.health.repository.MedicalVisitRepository;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
+import com.pms.api.notification.service.NotificationService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,13 +22,16 @@ public class MedicalVisitService {
     private final MedicalVisitRepository medicalVisitRepository;
     private final InmateRepository inmateRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public MedicalVisitService(MedicalVisitRepository medicalVisitRepository,
                                InmateRepository inmateRepository,
-                               UserRepository userRepository) {
+                               UserRepository userRepository,
+                               NotificationService notificationService) {
         this.medicalVisitRepository = medicalVisitRepository;
         this.inmateRepository = inmateRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -44,7 +49,14 @@ public class MedicalVisitService {
                 request.diagnosis().trim(),
                 normalizeOptionalText(request.medicationsProvided()),
                 normalizeOptionalText(request.recommendations()));
-        return MedicalVisitResponse.from(medicalVisitRepository.save(visit));
+        MedicalVisit saved = medicalVisitRepository.save(visit);
+        notificationService.notifyRoles(
+                "HEALTH_VISIT_RECORDED",
+                "Health visit recorded",
+                "A health visit has been recorded for an inmate.",
+                saved.getPublicUuid(),
+                Set.of("Medical Officer", "Super Admin"));
+        return MedicalVisitResponse.from(saved);
     }
 
     @Transactional(readOnly = true)

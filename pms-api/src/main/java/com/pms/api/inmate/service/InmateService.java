@@ -12,6 +12,7 @@ import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.common.pagination.PageResponse;
 import com.pms.api.common.pagination.PageableValidator;
 import com.pms.api.common.pagination.PaginationProperties;
+import com.pms.api.notification.service.NotificationService;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -28,13 +29,16 @@ public class InmateService {
     private final InmateRepository inmateRepository;
     private final CellService cellService;
     private final PaginationProperties paginationProperties;
+    private final NotificationService notificationService;
 
     public InmateService(InmateRepository inmateRepository,
                          CellService cellService,
-                         PaginationProperties paginationProperties) {
+                         PaginationProperties paginationProperties,
+                         NotificationService notificationService) {
         this.inmateRepository = inmateRepository;
         this.cellService = cellService;
         this.paginationProperties = paginationProperties;
+        this.notificationService = notificationService;
     }
 
     @Audited
@@ -53,6 +57,12 @@ public class InmateService {
         Inmate saved = saveInmate(inmate);
         CellAllocationResponse allocation = cellService.allocate(
                 saved.getPublicUuid(), new AllocateCellRequest(request.cellId()));
+        notificationService.notifyRoles(
+                "INMATE_REGISTERED",
+                "Inmate registered",
+                "A new inmate has been registered and assigned to a cell.",
+                saved.getPublicUuid(),
+                Set.of("Records Officer", "Duty Officer"));
         return InmateResponse.from(saved, allocation.cellId());
     }
 
