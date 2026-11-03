@@ -4,6 +4,7 @@ import com.pms.api.auth.service.AuthService;
 import com.pms.api.cell.service.CellService;
 import com.pms.api.inmate.service.InmateService;
 import com.pms.api.incident.service.IncidentService;
+import com.pms.api.notification.service.NotificationService;
 import com.pms.api.user.service.UserService;
 import com.pms.api.visitor.service.VisitService;
 import com.pms.api.common.pagination.InvalidPaginationException;
@@ -56,6 +57,16 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(UserService.UserNotFoundException.class)
     public ResponseEntity<ApiError> handleUserNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "User not found.");
+    }
+
+    @ExceptionHandler(NotificationService.NotificationNotFoundException.class)
+    public ResponseEntity<ApiError> handleNotificationNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Notification not found.");
+    }
+
+    @ExceptionHandler(NotificationService.NotificationUserNotFoundException.class)
+    public ResponseEntity<ApiError> handleNotificationUserNotFound() {
         return problem(HttpStatus.NOT_FOUND, "User not found.");
     }
 

@@ -1,6 +1,8 @@
 package com.pms.api.user.repository;
 
 import com.pms.api.user.entity.User;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,5 +21,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     boolean existsByEmailIgnoreCase(String email);
 
     boolean existsByRole(String role);
+
+    List<User> findByRoleInAndStatus(Collection<String> roles, String status);
 
 }

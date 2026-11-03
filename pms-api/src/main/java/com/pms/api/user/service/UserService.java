@@ -9,6 +9,7 @@ import com.pms.api.common.audit.Audited;
 import com.pms.api.common.pagination.PageResponse;
 import com.pms.api.common.pagination.PageableValidator;
 import com.pms.api.common.pagination.PaginationProperties;
+import com.pms.api.notification.service.NotificationService;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -33,13 +34,16 @@ public class UserService implements UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final com.pms.api.auth.service.PasswordPolicy passwordPolicy;
     private final PaginationProperties paginationProperties;
+    private final NotificationService notificationService;
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        com.pms.api.auth.service.PasswordPolicy passwordPolicy,
-                       PaginationProperties paginationProperties) {
+                       PaginationProperties paginationProperties,
+                       NotificationService notificationService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.passwordPolicy = passwordPolicy;
         this.paginationProperties = paginationProperties;
+        this.notificationService = notificationService;
     }
 
     @Audited
@@ -64,11 +68,20 @@ public class UserService implements UserDetailsService {
                 request.role().trim(),
                 Set.of()
         );
+        User saved;
         try {
-            return UserResponse.from(userRepository.save(user));
+            saved = userRepository.save(user);
         } catch (DataIntegrityViolationException exception) {
             throw new UserIdentityAlreadyExistsException();
         }
+        notificationService.notifyUserAndRoles(
+                saved,
+                "USER_ACCOUNT_CREATED",
+                "User account created",
+                "Your user account has been created.",
+                saved.getPublicUuid(),
+                Set.of("Super Admin"));
+        return UserResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
@@ -112,7 +125,16 @@ public class UserService implements UserDetailsService {
     @Transactional
     public UserResponse deactivate(UUID userId) {
         User user = getUser(userId);
+        boolean wasActive = user.isActive();
         user.deactivate();
+        if (wasActive) {
+            notificationService.notifyRoles(
+                    "USER_ACCOUNT_DEACTIVATED",
+                    "User account deactivated",
+                    "A user account has been deactivated.",
+                    user.getPublicUuid(),
+                    Set.of("Super Admin"));
+        }
         return UserResponse.from(user);
     }
 
@@ -120,7 +142,17 @@ public class UserService implements UserDetailsService {
     @Transactional
     public UserResponse reactivate(UUID userId) {
         User user = getUser(userId);
+        boolean wasInactive = !user.isActive();
         user.reactivate();
+        if (wasInactive) {
+            notificationService.notifyUserAndRoles(
+                    user,
+                    "USER_ACCOUNT_REACTIVATED",
+                    "User account reactivated",
+                    "Your user account has been reactivated.",
+                    user.getPublicUuid(),
+                    Set.of("Super Admin"));
+        }
         return UserResponse.from(user);
     }
 
@@ -128,6 +160,11 @@ public class UserService implements UserDetailsService {
     @Transactional
     public UserResponse updateDetails(UUID userId, UpdateUserDetailsRequest request) {
         User user = getUser(userId);
+        String oldFullName = user.getFullName();
+        String oldUsername = user.getUsername();
+        String oldEmail = user.getEmail();
+        String oldRole = user.getRole();
+        Set<String> oldPermissions = new LinkedHashSet<>(user.getPermissions());
         String fullName = request.fullName() == null ? null : request.fullName().trim();
         String username = request.username() == null ? null : request.username().trim();
         String email = request.email();
@@ -159,6 +196,20 @@ public class UserService implements UserDetailsService {
                     request.permissions() == null
                             ? user.getPermissions()
                             : new LinkedHashSet<>(request.permissions()));
+        }
+        boolean changed = !java.util.Objects.equals(oldFullName, user.getFullName())
+                || !java.util.Objects.equals(oldUsername, user.getUsername())
+                || !java.util.Objects.equals(oldEmail, user.getEmail())
+                || !java.util.Objects.equals(oldRole, user.getRole())
+                || !oldPermissions.equals(user.getPermissions());
+        if (changed) {
+            notificationService.notifyUserAndRoles(
+                    user,
+                    "USER_ACCOUNT_UPDATED",
+                    "User account updated",
+                    "Your profile or account access details have changed.",
+                    user.getPublicUuid(),
+                    Set.of("Super Admin"));
         }
         return UserResponse.from(user);
     }
