@@ -9,6 +9,8 @@ public record ProgramResponse(
         String name,
         String description,
         String instructor,
+        UUID instructorUserId,
+        String instructorDisplayName,
         String schedule,
         String status,
         List<EnrolledInmateResponse> enrolledInmates
@@ -24,6 +26,8 @@ public record ProgramResponse(
                 program.getName(),
                 program.getDescription(),
                 program.getInstructor(),
+                program.getInstructorUser() == null ? null : program.getInstructorUser().getPublicUuid(),
+                program.getInstructorUser() == null ? null : program.getInstructorUser().getFullName(),
                 program.getSchedule(),
                 program.getStatus(),
                 enrolledInmates

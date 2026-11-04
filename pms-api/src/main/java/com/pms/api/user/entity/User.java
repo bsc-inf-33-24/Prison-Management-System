@@ -38,6 +38,7 @@ public class User {
             "Case Officer",
             "Visitor Officer",
             "Rehabilitation Officer",
+            "Instructor",
             "Medical Officer",
             "Duty Officer"
     );

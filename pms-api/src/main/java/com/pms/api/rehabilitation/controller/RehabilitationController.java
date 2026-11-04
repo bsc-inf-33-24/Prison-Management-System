@@ -70,7 +70,7 @@ public class RehabilitationController {
     }
 
     @GetMapping("/programs")
-    @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER','SUPER_ADMIN','RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER','SUPER_ADMIN','RECORDS_OFFICER','INSTRUCTOR')")
     @Operation(summary = "List and search rehabilitation programs",
             description = "Each program includes the inmates currently enrolled in it.")
     public Page<ProgramResponse> listPrograms(
@@ -78,16 +78,17 @@ public class RehabilitationController {
             @RequestParam(required = false) String instructor,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String schedule,
-            @ParameterObject @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+            @ParameterObject @PageableDefault(size = 20, sort = "id") Pageable pageable,
+            @AuthenticationPrincipal UserDetails currentUser) {
         RehabilitationPageable.validate(pageable, Set.of("id", "name", "instructor", "status", "schedule"));
-        return programService.list(name, instructor, status, schedule, pageable);
+        return programService.list(name, instructor, status, schedule, pageable, currentUser.getUsername());
     }
 
     @GetMapping("/programs/{programId}")
-    @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN', 'INSTRUCTOR')")
     @Operation(summary = "Get a rehabilitation program")
-    public ProgramDetailResponse getProgram(@PathVariable UUID programId) {
-        return programService.getDetails(programId);
+    public ProgramDetailResponse getProgram(@PathVariable UUID programId, @AuthenticationPrincipal UserDetails currentUser) {
+        return programService.getDetails(programId, currentUser.getUsername());
     }
 
     @PatchMapping("/programs/{programId}")
@@ -128,16 +129,16 @@ public class RehabilitationController {
 
     @PostMapping("/programs/attendance")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER', 'SUPER_ADMIN', 'INSTRUCTOR')")
     @Operation(summary = "Record attendance for a rehabilitation program session")
     public AttendanceResponse createAttendance(@Valid @RequestBody RecordAttendanceRequest request,
-                                               @AuthenticationPrincipal UserDetails currentUser) {
+                                         @AuthenticationPrincipal UserDetails currentUser) {
         return attendanceService.create(request, currentUser.getUsername());
     }
 
     @PostMapping("/programs/attendance/bulk")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('REHABILITATION_OFFICER', 'SUPER_ADMIN', 'INSTRUCTOR')")
     @Operation(summary = "Record attendance for multiple inmates in one session")
     public List<AttendanceResponse> createBulkAttendance(
             @Valid @RequestBody BulkRecordAttendanceRequest request,
