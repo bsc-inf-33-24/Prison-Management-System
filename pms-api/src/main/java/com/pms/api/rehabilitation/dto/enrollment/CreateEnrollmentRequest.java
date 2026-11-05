@@ -6,8 +6,13 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public record CreateEnrollmentRequest(
-        @NotNull UUID inmateId,
-        @NotNull UUID programId,
-        @NotNull LocalDate enrollmentDate
+        @NotNull(message = "the inmateId is required")
+	UUID inmateId,
+
+        @NotNull(message = "the programId is required")
+	UUID programId,
+
+        @NotNull(message = "the enrollment date is missing")
+	LocalDate enrollmentDate
 ) {
 }
