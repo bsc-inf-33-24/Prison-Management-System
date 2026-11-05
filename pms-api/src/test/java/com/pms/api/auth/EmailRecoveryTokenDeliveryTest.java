@@ -23,15 +23,16 @@ class EmailRecoveryTokenDeliveryTest {
         EmailRecoveryTokenDelivery delivery = new EmailRecoveryTokenDelivery(
                 mailSender, "smtp.example.test", "security@example.test", Duration.ofMinutes(15));
 
-        delivery.deliver(Optional.of("person@example.test"), "one-time-token");
+        delivery.deliver(Optional.of("person@example.test"), "001234");
 
         var message = org.mockito.ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(message.capture());
         assertEquals("security@example.test", message.getValue().getFrom());
         assertEquals("person@example.test", message.getValue().getTo()[0]);
         assertEquals("Password reset request", message.getValue().getSubject());
-        assertTrue(message.getValue().getText().contains("one-time-token"));
-        assertTrue(message.getValue().getText().contains("15 minutes"));
+        assertTrue(message.getValue().getText().contains("one-time password reset code"));
+        assertTrue(message.getValue().getText().contains("001234"));
+        assertTrue(message.getValue().getText().contains("The code expires in 15 minutes"));
     }
 
     @Test
@@ -40,7 +41,7 @@ class EmailRecoveryTokenDeliveryTest {
         EmailRecoveryTokenDelivery delivery = new EmailRecoveryTokenDelivery(
                 mailSender, "smtp.example.test", "security@example.test", Duration.ofMinutes(15));
 
-        delivery.deliver(Optional.empty(), "unregistered-token");
+        delivery.deliver(Optional.empty(), "001234");
 
         verify(mailSender, never()).send(any(SimpleMailMessage.class));
     }
@@ -53,6 +54,6 @@ class EmailRecoveryTokenDeliveryTest {
         EmailRecoveryTokenDelivery delivery = new EmailRecoveryTokenDelivery(
                 mailSender, "smtp.example.test", "security@example.test", Duration.ofMinutes(15));
 
-        delivery.deliver(Optional.of("person@example.test"), "one-time-token");
+        delivery.deliver(Optional.of("person@example.test"), "001234");
     }
 }

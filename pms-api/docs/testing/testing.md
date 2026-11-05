@@ -81,11 +81,11 @@ Login each account with `POST /api/v1/auth/login` and save `TOKEN_RECORDS`, `TOK
 |---|---|
 | `POST /api/v1/auth/login` | `{ "username": "records01", "password": "Records123!" }`; set `username` to the account email address to log in by email. |
 | `POST /api/v1/auth/logout` | No body; valid bearer token |
-| `POST /api/v1/auth/password/forgot` | `{ "username": "records01" }` |
-| `POST /api/v1/auth/password/reset` | `{ "token": "recovery-token", "newPassword": "NewPass123!" }` |
+| `POST /api/v1/auth/password/forgot` | `{ "userEmail": "records01@example.com" }` |
+| `POST /api/v1/auth/password/reset` | `{ "code": "012345", "newPassword": "NewPass123!" }` |
 | `POST /api/v1/auth/password/change` | `{ "currentPassword": "Records123!", "newPassword": "NewRecords123!" }` |
 
-Test missing fields, invalid credentials, expired/reused reset tokens, weak passwords, and reuse of tokens after logout or password change.
+Test missing fields, invalid credentials, expired/reused reset codes, weak passwords, and reuse of codes after logout or password change.
 
 ## 4. User management inputs
 
