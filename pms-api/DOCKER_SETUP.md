@@ -121,11 +121,11 @@ docker compose down -v
 
 ## Email password recovery
 
-Recovery email is disabled unless explicitly enabled. To send reset tokens through SMTP, add the following to `.env`:
+Recovery email is automatically enabled when `MAIL_HOST` is set, or can be explicitly controlled with `RECOVERY_EMAIL_ENABLED`. The Compose files map `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, and `APP_MAIL_FROM` from `.env` to Spring Mail. Alternatively, use the `SPRING_MAIL_*` and `RECOVERY_EMAIL_FROM` names. To configure SMTP in `.env`, add:
 
 ```env
 RECOVERY_EMAIL_ENABLED=true
-RECOVERY_EMAIL_FROM=security@your-verified-domain.com
+APP_MAIL_FROM=security@your-verified-domain.com
 SPRING_MAIL_HOST=smtp.resend.com
 SPRING_MAIL_PORT=587
 SPRING_MAIL_USERNAME=resend
@@ -134,7 +134,7 @@ SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
 SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
 ```
 
-Use the SMTP provider's app password or service credential, not a personal mailbox password. Recreate the app container after changing these settings. Without a configured sender, password recovery stays unavailable. Repeating `POST /api/v1/auth/password/forgot` sends a new token and invalidates any outstanding token for that account.
+Use the SMTP provider's app password or service credential, not a personal mailbox password. Recreate the app container after changing these settings. Without a configured sender, password recovery stays unavailable. Repeating `POST /api/v1/auth/password/forgot` sends a new code and invalidates any outstanding code for that account.
 
 ## Production image and CI/CD
 

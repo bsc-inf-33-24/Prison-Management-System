@@ -34,7 +34,7 @@ public class EmailRecoveryTokenDelivery implements RecoveryTokenDelivery {
     }
 
     @Override
-    public void deliver(Optional<String> recipient, String rawToken) {
+    public void deliver(Optional<String> recipient, String recoveryCode) {
         if (recipient.isEmpty()) {
             return;
         }
@@ -43,8 +43,8 @@ public class EmailRecoveryTokenDelivery implements RecoveryTokenDelivery {
         message.setFrom(fromAddress);
         message.setTo(recipient.get());
         message.setSubject("Password reset request");
-        message.setText("Use this one-time password reset token to reset your account password:\n\n"
-                + rawToken + "\n\nThe token expires in " + tokenTtl.toMinutes()
+        message.setText("Use this one-time password reset code to reset your account password:\n\n"
+                + recoveryCode + "\n\nThe code expires in " + tokenTtl.toMinutes()
                 + " minutes. If you did not request this, you can ignore this message.");
         try {
             mailSender.send(message);

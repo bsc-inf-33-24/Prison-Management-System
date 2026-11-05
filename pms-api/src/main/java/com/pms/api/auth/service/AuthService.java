@@ -13,7 +13,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Base64;
+import java.util.Locale;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int RESET_CODE_BOUND = 1_000_000;
     private static final String RECOVERY_MESSAGE = "If the account can receive recovery instructions, they have been sent.";
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
@@ -71,24 +72,23 @@ public class AuthService {
 
     @Transactional
     public PasswordRecoveryResponse forgotPassword(ForgotPasswordRequest request) {
-        String rawToken = randomToken();
-        String identity = request.username().trim();
-        User user = userRepository.findByUsername(identity)
-                .or(() -> userRepository.findByEmailIgnoreCase(identity))
+        String recoveryCode = randomRecoveryCode();
+        String email = request.userEmail().trim();
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElse(null);
         Optional<String> recipient = Optional.empty();
         if (user != null && user.isActive()) {
             resetTokens.deleteOutstandingForUser(user.getId());
-            resetTokens.save(new PasswordResetToken(user, hash(rawToken), Instant.now().plus(resetTtl)));
-            recipient = Optional.of(user.getEmail() == null ? user.getUsername() : user.getEmail());
+            resetTokens.save(new PasswordResetToken(user, hash(recoveryCode), Instant.now().plus(resetTtl)));
+            recipient = Optional.of(user.getEmail());
         }
-        recoveryDelivery.deliver(recipient, rawToken);
+        recoveryDelivery.deliver(recipient, recoveryCode);
         return new PasswordRecoveryResponse(RECOVERY_MESSAGE);
     }
 
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        PasswordResetToken token = resetTokens.findByTokenHash(hash(request.token())).orElseThrow(InvalidResetTokenException::new);
+        PasswordResetToken token = resetTokens.findByTokenHash(hash(request.code())).orElseThrow(InvalidResetTokenException::new);
         if (!token.isUsable(Instant.now()) || !token.getUser().isActive()) throw new InvalidResetTokenException();
         User user = token.getUser();
         token.consume(Instant.now());
@@ -108,7 +108,7 @@ public class AuthService {
     @Transactional
     public void logout(String username) { userRepository.findByUsername(username).ifPresent(User::invalidateAuthentication); }
 
-    private static String randomToken() { byte[] bytes = new byte[32]; RANDOM.nextBytes(bytes); return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes); }
+    private static String randomRecoveryCode() { return String.format(Locale.ROOT, "%06d", RANDOM.nextInt(RESET_CODE_BOUND)); }
     public static String hash(String value) { try { return toHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); } catch (NoSuchAlgorithmException e) { throw new IllegalStateException(e); } }
     private static String toHex(byte[] bytes) { StringBuilder out = new StringBuilder(64); for (byte b : bytes) out.append(String.format("%02x", b)); return out.toString(); }
 
