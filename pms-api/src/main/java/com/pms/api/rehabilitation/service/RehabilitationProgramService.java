@@ -12,6 +12,8 @@ import com.pms.api.rehabilitation.repository.EnrollmentRepository;
 import com.pms.api.rehabilitation.repository.ProgramEnrollmentProjection;
 import com.pms.api.rehabilitation.repository.RehabilitationProgramRepository;
 import com.pms.api.rehabilitation.specification.ProgramSpecifications;
+import com.pms.api.user.entity.User;
+import com.pms.api.user.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -32,13 +34,15 @@ public class RehabilitationProgramService {
     private final RehabilitationProgramRepository programRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final AuditService auditService;
+    private final UserRepository userRepository;
 
     public RehabilitationProgramService(RehabilitationProgramRepository programRepository,
                                         EnrollmentRepository enrollmentRepository,
-                                        AuditService auditService) {
+                                        AuditService auditService, UserRepository userRepository) {
         this.programRepository = programRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.auditService = auditService;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -46,10 +50,14 @@ public class RehabilitationProgramService {
         RehabilitationProgram program = new RehabilitationProgram(
                 request.name().trim(),
                 request.description(),
-                request.instructor().trim(),
+                request.instructor() == null ? "" : request.instructor().trim(),
                 request.schedule(),
                 ACTIVE
         );
+        if (request.instructorUserId() != null) program.assignInstructorUser(validInstructor(request.instructorUserId()));
+        if (program.getInstructor().isBlank() && program.getInstructorUser() != null) {
+            program.updateDetails(program.getName(), program.getDescription(), program.getInstructorUser().getFullName(), program.getSchedule());
+        }
         RehabilitationProgram saved = programRepository.save(program);
         auditService.record(username, "PROGRAM_CREATED", "RehabProgram", saved.getPublicUuid().toString(), null,
                 "name=" + saved.getName() + ",status=" + saved.getStatus());
@@ -64,6 +72,12 @@ public class RehabilitationProgramService {
     @Transactional(readOnly = true)
     public Page<ProgramResponse> list(String name, String instructor, String status,
                                       String schedule, Pageable pageable) {
+        return list(name, instructor, status, schedule, pageable, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProgramResponse> list(String name, String instructor, String status,
+                                      String schedule, Pageable pageable, String username) {
         Specification<RehabilitationProgram> specification =
                 Specification.unrestricted();
         if (name != null && !name.isBlank()) {
@@ -77,6 +91,12 @@ public class RehabilitationProgramService {
         }
         if (schedule != null && !schedule.isBlank()) {
             specification = specification.and(ProgramSpecifications.scheduleContains(schedule));
+        }
+        if (username != null) {
+            User user = userRepository.findByUsername(username).orElseThrow();
+            if ("Instructor".equals(user.getRole())) {
+                specification = specification.and((root, query, cb) -> cb.equal(root.get("instructorUser").get("id"), user.getId()));
+            }
         }
         Page<RehabilitationProgram> programs = programRepository.findAll(specification, pageable);
         List<Long> programIds = programs.getContent().stream().map(RehabilitationProgram::getId).toList();
@@ -98,6 +118,18 @@ public class RehabilitationProgramService {
     }
 
     @Transactional(readOnly = true)
+    public ProgramDetailResponse getDetails(UUID programId, String username) {
+        RehabilitationProgram program = findProgram(programId);
+        User user = userRepository.findByUsername(username).orElseThrow();
+        if ("Instructor".equals(user.getRole()) && (program.getInstructorUser() == null || !program.getInstructorUser().getId().equals(user.getId()))) {
+            throw new org.springframework.security.access.AccessDeniedException("Program is not assigned to this instructor.");
+        }
+        return ProgramDetailResponse.from(program,
+                enrollmentRepository.countByProgram_IdAndStatusIn(program.getId(), java.util.List.of("enrolled", "suspended")),
+                enrollmentRepository.countByProgram_IdAndStatus(program.getId(), "completed"));
+    }
+
+    @Transactional(readOnly = true)
     public ProgramDetailResponse getDetails(UUID programId) {
         RehabilitationProgram program = findProgram(programId);
         return ProgramDetailResponse.from(
@@ -108,14 +140,21 @@ public class RehabilitationProgramService {
         );
     }
 
+    private User validInstructor(UUID id) {
+        User user = userRepository.findByPublicUuid(id).orElseThrow(() -> new IllegalArgumentException("Instructor user was not found."));
+        if (!user.isActive() || !"Instructor".equals(user.getRole())) throw new IllegalArgumentException("Selected user must be an active Instructor.");
+        return user;
+    }
+
     @Transactional
     public ProgramResponse update(UUID programId, UpdateProgramRequest request, String username) {
         RehabilitationProgram program = findProgram(programId);
+        if (request.instructorUserId() != null) program.assignInstructorUser(validInstructor(request.instructorUserId()));
         String oldValues = "name=" + program.getName() + ",instructor=" + program.getInstructor();
         program.updateDetails(
                 request.name().trim(),
                 request.description(),
-                request.instructor().trim(),
+                request.instructor() == null ? program.getInstructor() : request.instructor().trim(),
                 request.schedule()
         );
         auditService.record(username, "PROGRAM_UPDATED", "RehabProgram", program.getPublicUuid().toString(), oldValues,

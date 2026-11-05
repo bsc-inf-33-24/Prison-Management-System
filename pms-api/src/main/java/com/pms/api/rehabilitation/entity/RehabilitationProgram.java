@@ -6,6 +6,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
+import com.pms.api.user.entity.User;
 import java.util.UUID;
 
 
@@ -29,6 +32,10 @@ public class RehabilitationProgram {
 
     @Column(name = "instructor", nullable = false, length = 255)
     private String instructor;
+
+    @ManyToOne
+    @JoinColumn(name = "instructor_user_id")
+    private User instructorUser;
 
     @Column(name = "schedule", length = 255)
     private String schedule;
@@ -67,6 +74,10 @@ public class RehabilitationProgram {
     public String getInstructor() {
         return instructor;
     }
+
+    public User getInstructorUser() { return instructorUser; }
+
+    public void assignInstructorUser(User instructorUser) { this.instructorUser = instructorUser; }
 
     public String getSchedule() {
         return schedule;

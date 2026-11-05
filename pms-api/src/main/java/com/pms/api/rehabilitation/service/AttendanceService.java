@@ -11,6 +11,7 @@ import com.pms.api.rehabilitation.exception.RehabilitationExceptions.AttendanceN
 import com.pms.api.rehabilitation.exception.RehabilitationExceptions.DuplicateAttendanceException;
 import com.pms.api.rehabilitation.repository.AttendanceRecordRepository;
 import com.pms.api.rehabilitation.specification.AttendanceSpecifications;
+import com.pms.api.user.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -29,18 +30,25 @@ public class AttendanceService {
     private final AttendanceRecordRepository attendanceRepository;
     private final EnrollmentService enrollmentService;
     private final AuditService auditService;
+    private final UserRepository userRepository;
 
     public AttendanceService(AttendanceRecordRepository attendanceRepository,
                              EnrollmentService enrollmentService,
-                             AuditService auditService) {
+                             AuditService auditService, UserRepository userRepository) {
         this.attendanceRepository = attendanceRepository;
         this.enrollmentService = enrollmentService;
         this.auditService = auditService;
+        this.userRepository = userRepository;
     }
 
     @Transactional
     public AttendanceResponse create(RecordAttendanceRequest request, String recordedBy) {
         Enrollment enrollment = enrollmentService.findActiveEnrollment(request.inmateId(), request.programId());
+        var actor = userRepository.findByUsername(recordedBy).orElseThrow();
+        if ("Instructor".equals(actor.getRole()) && (enrollment.getProgram().getInstructorUser() == null
+                || !enrollment.getProgram().getInstructorUser().getId().equals(actor.getId()))) {
+            throw new org.springframework.security.access.AccessDeniedException("Program is not assigned to this instructor.");
+        }
         validateAttendanceDate(enrollment, request.sessionDate());
         validateAttendanceAllowed(enrollment);
 
