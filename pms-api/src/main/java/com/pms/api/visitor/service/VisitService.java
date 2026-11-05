@@ -74,7 +74,7 @@ public class VisitService {
         User user = userRepository.findByUsername(username).orElseThrow(UserNotFoundException::new);
         Visit visit = new Visit(inmate, startDateTime, endDateTime,
                 calculateDurationMinutes(startDateTime, endDateTime), user,
-                request.visitorFullName().trim());
+                request.visitorFullName().trim(), request.itemsBrought());
         Visit saved = visitRepository.saveAndFlush(visit);
         audit(username, "VISIT_CREATED", "Visit", saved.getPublicUuid().toString(), "{}", visitSummary(saved));
         return VisitResponse.from(saved);
@@ -158,7 +158,7 @@ public class VisitService {
 
         Visit prior = new Visit(visit.getInmate(), visit.getStartDateTime(), visit.getEndDateTime(),
                 visit.getDurationMinutes(),
-                visit.getLoggedBy(), visit.getVisitorFullName());
+                visit.getLoggedBy(), visit.getVisitorFullName(), visit.getItemsBrought());
         visit.updateDetails(request.startDateTime(), request.endDateTime(),
                 calculateDurationMinutes(request.startDateTime(), request.endDateTime()));
         Visit saved = visitRepository.saveAndFlush(visit);

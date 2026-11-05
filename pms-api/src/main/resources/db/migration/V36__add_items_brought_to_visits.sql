@@ -1,0 +1,2 @@
+ALTER TABLE visits
+    ADD COLUMN IF NOT EXISTS items_brought VARCHAR(1000);
