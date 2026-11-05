@@ -239,13 +239,13 @@ Success: `204 No Content`.
 
 #### `POST /api/v1/auth/password/forgot`
 
-Purpose: start password recovery using a username or email. The API returns the same generic success message regardless of whether the account exists.
+Purpose: start password recovery using the account's registered email address. For an active account with a configured recovery email, a six-digit code is sent to that address. The API returns the same generic success message regardless of whether the address is registered.
 
 Request body:
 
 ```json
 {
-  "username": "records01"
+  "userEmail": "records01@example.com"
 }
 ```
 
@@ -259,13 +259,13 @@ Success `202 Accepted` example:
 
 #### `POST /api/v1/auth/password/reset`
 
-Purpose: consume a recovery token and replace the user’s password.
+Purpose: consume a single-use, short-lived recovery code and replace the user’s password.
 
 Request body:
 
 ```json
 {
-  "token": "<single-use recovery token>",
+  "code": "<6-digit recovery code>",
   "newPassword": "NewPass123!"
 }
 ```
@@ -274,7 +274,8 @@ Rules:
 
 - `newPassword` must be 8–16 characters long
 - password must satisfy the application password policy (must contain a digit and a punctuation mark)
-- reused or expired tokens fail with `400 Bad Request`
+- codes must contain exactly six digits
+- reused or expired codes fail with `400 Bad Request`
 
 Success: `204 No Content`.
 

@@ -65,13 +65,13 @@ public class AuthController {
     }
 
     @PostMapping("/password/forgot")
-    @Operation(summary = "Initiate password recovery", description = "Accepts a username or email and returns the same response for registered and unregistered identities. A configured recovery delivery integration is required.")
+    @Operation(summary = "Initiate password recovery", description = "Accepts the account's registered email address and emails a six-digit reset code when a configured recovery delivery integration is available. The response is the same for registered and unregistered addresses.")
     public ResponseEntity<PasswordRecoveryResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         return ResponseEntity.accepted().body(authService.forgotPassword(request));
     }
 
     @PostMapping("/password/reset")
-    @Operation(summary = "Reset password", description = "Consumes a single-use, short-lived recovery token.")
+    @Operation(summary = "Reset password", description = "Consumes a single-use, short-lived six-digit recovery code.")
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ResponseEntity.noContent().build();
@@ -88,4 +88,3 @@ public class AuthController {
     }
 
 }
-

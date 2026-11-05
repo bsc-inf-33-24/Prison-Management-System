@@ -234,7 +234,7 @@ class UserEmailAuthenticationIntegrationTest {
         createUser(username, " " + email + " ", true);
 
         ObjectNode knownRequest = objectMapper.createObjectNode();
-        knownRequest.put("username", "  " + email.toUpperCase(java.util.Locale.ROOT) + "  ");
+        knownRequest.put("userEmail", "  " + email.toUpperCase(java.util.Locale.ROOT) + "  ");
         MvcResult knownResult = mockMvc.perform(post("/api/v1/auth/password/forgot")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(knownRequest)))
@@ -242,10 +242,11 @@ class UserEmailAuthenticationIntegrationTest {
         String knownResponse = knownResult.getResponse().getContentAsString();
         assertFalse(knownResponse.contains(email));
 
-        ArgumentCaptor<String> rawToken = ArgumentCaptor.forClass(String.class);
-        verify(recoveryDelivery).deliver(eq(Optional.of(email)), rawToken.capture());
-        String firstToken = rawToken.getValue();
-        assertTrue(resetTokenRepository.findByTokenHash(AuthService.hash(firstToken)).isPresent());
+        ArgumentCaptor<String> recoveryCode = ArgumentCaptor.forClass(String.class);
+        verify(recoveryDelivery).deliver(eq(Optional.of(email)), recoveryCode.capture());
+        String firstCode = recoveryCode.getValue();
+        assertTrue(firstCode.matches("[0-9]{6}"));
+        assertTrue(resetTokenRepository.findByTokenHash(AuthService.hash(firstCode)).isPresent());
 
         reset(recoveryDelivery);
         MvcResult resendResult = mockMvc.perform(post("/api/v1/auth/password/forgot")
@@ -253,20 +254,35 @@ class UserEmailAuthenticationIntegrationTest {
                 .content(objectMapper.writeValueAsString(knownRequest)))
             .andExpect(status().isAccepted()).andReturn();
         assertEquals(knownResponse, resendResult.getResponse().getContentAsString());
-        ArgumentCaptor<String> resentToken = ArgumentCaptor.forClass(String.class);
-        verify(recoveryDelivery).deliver(eq(Optional.of(email)), resentToken.capture());
-        assertFalse(resetTokenRepository.findByTokenHash(AuthService.hash(firstToken)).isPresent());
-        assertTrue(resetTokenRepository.findByTokenHash(AuthService.hash(resentToken.getValue())).isPresent());
+        ArgumentCaptor<String> resentCode = ArgumentCaptor.forClass(String.class);
+        verify(recoveryDelivery).deliver(eq(Optional.of(email)), resentCode.capture());
+        assertTrue(resentCode.getValue().matches("[0-9]{6}"));
+        assertFalse(resetTokenRepository.findByTokenHash(AuthService.hash(firstCode)).isPresent());
+        assertTrue(resetTokenRepository.findByTokenHash(AuthService.hash(resentCode.getValue())).isPresent());
 
         reset(recoveryDelivery);
         ObjectNode unknownRequest = objectMapper.createObjectNode();
-        unknownRequest.put("username", "missing." + UUID.randomUUID() + "@example.test");
+        unknownRequest.put("userEmail", "missing." + UUID.randomUUID() + "@example.test");
         MvcResult unknownResult = mockMvc.perform(post("/api/v1/auth/password/forgot")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(unknownRequest)))
                 .andExpect(status().isAccepted()).andReturn();
         assertEquals(knownResponse, unknownResult.getResponse().getContentAsString());
         verify(recoveryDelivery).deliver(eq(Optional.empty()), anyString());
+
+        ObjectNode resetRequest = objectMapper.createObjectNode();
+        resetRequest.put("code", resentCode.getValue());
+        resetRequest.put("newPassword", "Changed123!");
+        mockMvc.perform(post("/api/v1/auth/password/reset")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(resetRequest)))
+                .andExpect(status().isNoContent());
+        login(email, "Changed123!").andExpect(status().isOk());
+        login(email, "Records123!").andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/auth/password/reset")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(resetRequest)))
+                .andExpect(status().isBadRequest());
     }
 
     private JsonNode createUser(String username, String email, boolean includeEmail) throws Exception {
