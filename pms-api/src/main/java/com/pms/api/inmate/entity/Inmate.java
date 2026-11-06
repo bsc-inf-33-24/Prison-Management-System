@@ -2,6 +2,7 @@ package com.pms.api.inmate.entity;
 
 import com.pms.api.cell.entity.CellAllocation;
 import com.pms.api.common.entity.BaseEntity;
+import com.pms.api.prison.entity.Prison;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,6 +12,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.Period;
@@ -55,8 +59,12 @@ public class Inmate extends BaseEntity {
     @Column(name = "sentence_end_date", nullable = false)
     private LocalDate sentenceEndDate;
 
-    @OneToOne(mappedBy = "inmate", fetch = FetchType.LAZY)
-    private CellAllocation cellAllocation;
+    @OneToMany(mappedBy = "inmate", fetch = FetchType.LAZY)
+    private java.util.List<CellAllocation> cellAllocations = new java.util.ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_prison_id")
+    private Prison currentPrison;
 
     protected Inmate() {
     }
@@ -140,8 +148,12 @@ public class Inmate extends BaseEntity {
     }
 
     public CellAllocation getCellAllocation() {
-        return cellAllocation;
+        return cellAllocations.stream().filter(CellAllocation::isActive).findFirst().orElse(null);
     }
+
+    public Prison getCurrentPrison() { return currentPrison; }
+
+    public void assignPrison(Prison prison) { this.currentPrison = prison; }
 
     public void updateDetails(String firstName, String lastName, LocalDate dateOfBirth,
                               String gender, LocalDate admissionDate) {

@@ -13,6 +13,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface CellRepository extends JpaRepository<Cell, Long>, JpaSpecificationExecutor<Cell> {
 
+    List<Cell> findByBlockIsNullOrderByBlockNameAsc();
+
+    @Query("select c from Cell c join fetch c.block where c.block.id in :blockIds order by c.block.name asc, c.cellNumber asc")
+    List<Cell> findAllByBlockIds(@Param("blockIds") List<Long> blockIds);
+
     Optional<Cell> findByPublicUuid(UUID publicUuid);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

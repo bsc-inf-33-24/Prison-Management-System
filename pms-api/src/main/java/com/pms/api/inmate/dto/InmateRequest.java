@@ -42,6 +42,9 @@ public record InmateRequest(
         LocalDate sentenceEndDate,
 
         @NotNull
+        UUID prisonId,
+
+        @NotNull
         UUID cellId
 ) {
     @AssertTrue(message = "Sentence end date must be on or after the start date.")

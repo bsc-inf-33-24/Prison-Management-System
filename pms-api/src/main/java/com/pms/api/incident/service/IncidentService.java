@@ -13,6 +13,7 @@ import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.notification.service.NotificationService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
+import com.pms.api.security.PrisonAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,17 +30,20 @@ public class IncidentService {
     private final InmateRepository inmateRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final PrisonAccessService prisonAccess;
 
     public IncidentService(IncidentRepository incidentRepository,
                             IncidentInmateRepository incidentInmateRepository,
                             InmateRepository inmateRepository,
                             UserRepository userRepository,
-                            NotificationService notificationService) {
+                            NotificationService notificationService,
+                            PrisonAccessService prisonAccess) {
         this.incidentRepository = incidentRepository;
         this.incidentInmateRepository = incidentInmateRepository;
         this.inmateRepository = inmateRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.prisonAccess = prisonAccess;
     }
 
     // Auditing is explicitly NOT implemented for Incident Management
@@ -75,6 +79,8 @@ public class IncidentService {
             // Some of the requested inmate IDs don't exist.
             throw new IncidentInmateNotFoundException();
         }
+        inmates.forEach(inmate -> prisonAccess.requirePrison(
+                inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid()));
 
         // reported_by is plain text in the schema (no foreign key to users),
         // but we still resolve it from the authenticated JWT identity rather
@@ -109,6 +115,9 @@ public class IncidentService {
         // exist" (404) apart from "exists but already resolved" (409).
         Incident incident = incidentRepository.findByPublicUuid(incidentId)
                 .orElseThrow(IncidentNotFoundException::new);
+        incidentInmateRepository.findByIncidentId(incident.getId()).forEach(participant ->
+                prisonAccess.requirePrison(participant.getInmate().getCurrentPrison()==null?null:
+                        participant.getInmate().getCurrentPrison().getPublicUuid()));
 
         // Write-once, concurrency-safe: this only updates a row that is
         // still "open" right now. A second call - whether it arrives after
@@ -138,6 +147,7 @@ public class IncidentService {
         if (inmate == null) {
             throw new IncidentInmateNotFoundException();
         }
+        prisonAccess.requirePrison(inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid());
         return incidentInmateRepository.findByInmateIdOrderByIncidentDateDesc(inmate.getId()).stream()
                 .map(participant -> new IncidentHistoryItemResponse(
                         participant.getIncident().getPublicUuid(),

@@ -6,6 +6,9 @@ import com.pms.api.inmate.service.InmateService;
 import com.pms.api.incident.service.IncidentService;
 import com.pms.api.notification.service.NotificationService;
 import com.pms.api.user.service.UserService;
+import com.pms.api.prison.service.PrisonService;
+import com.pms.api.transfer.entity.InmateTransfer;
+import com.pms.api.transfer.service.TransferService;
 import com.pms.api.visitor.service.VisitService;
 import com.pms.api.common.pagination.InvalidPaginationException;
 import com.pms.api.common.pagination.InvalidSortException;
@@ -64,6 +67,22 @@ public class ApiExceptionHandler {
     @ExceptionHandler(UserService.UserNotFoundException.class)
     public ResponseEntity<ApiError> handleUserNotFound() {
         return problem(HttpStatus.NOT_FOUND, "User not found.");
+    }
+
+    @ExceptionHandler({UserService.PrisonAssignmentRequiredException.class,
+            UserService.PrisonAssignmentNotAllowedException.class})
+    public ResponseEntity<ApiError> handleInvalidUserPrisonAssignment() {
+        return problem(HttpStatus.BAD_REQUEST, "A prison is required for staff accounts; Super Admin accounts are system-wide.");
+    }
+
+    @ExceptionHandler({UserService.PrisonNotFoundException.class})
+    public ResponseEntity<ApiError> handleUserPrisonNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Prison not found.");
+    }
+
+    @ExceptionHandler(UserService.PrisonInactiveException.class)
+    public ResponseEntity<ApiError> handleUserPrisonInactive() {
+        return problem(HttpStatus.CONFLICT, "Users cannot be assigned to an inactive prison.");
     }
 
     @ExceptionHandler(NotificationService.NotificationNotFoundException.class)
@@ -179,6 +198,32 @@ public class ApiExceptionHandler {
     @ExceptionHandler(CellService.CellAlreadyAssignedToSameCellException.class)
     public ResponseEntity<ApiError> handleCellAlreadyAssignedToSameCell() {
         return problem(HttpStatus.CONFLICT, "The inmate is already assigned to this cell.");
+    }
+
+    @ExceptionHandler({CellService.CellPrisonMismatchException.class, PrisonService.PrisonCodeAlreadyExistsException.class,
+            PrisonService.DuplicatePrisonStructureException.class, PrisonService.InactivePrisonException.class,
+            InmateService.PrisonInactiveException.class})
+    public ResponseEntity<ApiError> handleFacilityConflict() {
+        return problem(HttpStatus.CONFLICT, "The prison, block, cell, or inmate assignment conflicts with current records.");
+    }
+
+    @ExceptionHandler({PrisonService.PrisonNotFoundException.class, PrisonService.BlockNotFoundException.class,
+            InmateService.PrisonNotFoundException.class})
+    public ResponseEntity<ApiError> handleFacilityNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "The prison, block, or cell was not found.");
+    }
+
+    @ExceptionHandler({TransferService.ActiveTransferExistsException.class, TransferService.InmatePrisonNotAssignedException.class,
+            TransferService.InactivePrisonException.class, TransferService.SamePrisonException.class,
+            TransferService.InmateHasNoCellException.class, InmateTransfer.InvalidTransferStateException.class})
+    public ResponseEntity<ApiError> handleTransferConflict() {
+        return problem(HttpStatus.CONFLICT, "The transfer request conflicts with the inmate's current custody or transfer state.");
+    }
+
+    @ExceptionHandler({TransferService.InmateNotFoundException.class, TransferService.PrisonNotFoundException.class,
+            TransferService.TransferNotFoundException.class})
+    public ResponseEntity<ApiError> handleTransferNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "The inmate, prison, or transfer was not found.");
     }
 
     @ExceptionHandler(VisitService.VisitNotFoundException.class)

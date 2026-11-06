@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/medical-visits")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "06. Medical visits", description = "Record medical visits and review an inmate's medical history.")
+@Tag(name = "08. Medical visits", description = "Record medical visits and review an inmate's medical history.")
 public class MedicalVisitController {
 
     private final MedicalVisitService medicalVisitService;
@@ -50,4 +50,3 @@ public class MedicalVisitController {
         return medicalVisitService.getHistory(inmateId, name);
     }
 }
-
