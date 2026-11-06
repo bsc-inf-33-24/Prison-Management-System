@@ -10,6 +10,7 @@ import java.util.UUID;
 public record VisitResponse(
         UUID id,
         VisitorSummary visitor,
+        String itemsBrought,
         InmateSummary inmate,
         LocalDate visitDate,
         OffsetDateTime startDateTime,
@@ -24,6 +25,7 @@ public record VisitResponse(
         return new VisitResponse(
                 visit.getPublicUuid(),
                 VisitorSummary.from(visit),
+                visit.getItemsBrought(),
                 InmateSummary.from(visit.getInmate()),
                 visit.getStartDateTime().toLocalDate(),
                 visit.getStartDateTime(),

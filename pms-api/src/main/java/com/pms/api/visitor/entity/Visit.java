@@ -32,6 +32,9 @@ public class Visit {
     @Column(name = "visitor_full_name", nullable = false, length = 255)
     private String visitorFullName;
 
+    @Column(name = "items_brought", length = 1000)
+    private String itemsBrought;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "inmate_id", nullable = false)
     private Inmate inmate;
@@ -63,13 +66,14 @@ public class Visit {
 
     public Visit(Inmate inmate, OffsetDateTime startDateTime, OffsetDateTime endDateTime,
                  Integer durationMinutes, User loggedBy,
-                 String visitorFullName) {
+                 String visitorFullName, String itemsBrought) {
         this.inmate = inmate;
         this.startDateTime = startDateTime;
         this.endDateTime = endDateTime;
         this.durationMinutes = durationMinutes;
         this.loggedBy = loggedBy;
         this.visitorFullName = visitorFullName;
+        this.itemsBrought = itemsBrought;
     }
 
     @PrePersist
@@ -94,6 +98,10 @@ public class Visit {
 
     public String getVisitorFullName() {
         return visitorFullName;
+    }
+
+    public String getItemsBrought() {
+        return itemsBrought;
     }
 
     public Inmate getInmate() {

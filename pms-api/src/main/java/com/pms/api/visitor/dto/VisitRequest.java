@@ -14,7 +14,8 @@ public record VisitRequest(
         @NotNull(message = "inmateId is required") UUID inmateId,
         @NotNull(message = "visitDate is required") LocalDate visitDate,
         @NotNull(message = "startTime is required") LocalTime startTime,
-        @NotNull(message = "endTime is required") LocalTime endTime
+        @NotNull(message = "endTime is required") LocalTime endTime,
+        @Size(max = 1000, message = "itemsBrought must not exceed 1000 characters") String itemsBrought
 ) {
     @AssertTrue(message = "endTime must not be earlier than startTime.")
     @JsonIgnore
