@@ -5,6 +5,8 @@ import com.pms.api.user.dto.UpdateUserDetailsRequest;
 import com.pms.api.user.dto.UserResponse;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
+import com.pms.api.prison.entity.Prison;
+import com.pms.api.prison.repository.PrisonRepository;
 import com.pms.api.common.audit.Audited;
 import com.pms.api.common.pagination.PageResponse;
 import com.pms.api.common.pagination.PageableValidator;
@@ -35,15 +37,17 @@ public class UserService implements UserDetailsService {
     private final com.pms.api.auth.service.PasswordPolicy passwordPolicy;
     private final PaginationProperties paginationProperties;
     private final NotificationService notificationService;
+    private final PrisonRepository prisonRepository;
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        com.pms.api.auth.service.PasswordPolicy passwordPolicy,
                        PaginationProperties paginationProperties,
-                       NotificationService notificationService) {
+                       NotificationService notificationService, PrisonRepository prisonRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.passwordPolicy = passwordPolicy;
         this.paginationProperties = paginationProperties;
         this.notificationService = notificationService;
+        this.prisonRepository = prisonRepository;
     }
 
     @Audited
@@ -52,6 +56,7 @@ public class UserService implements UserDetailsService {
         String username = request.username().trim();
         passwordPolicy.validate(request.password());
         validateRole(request.role());
+        Prison prison = resolvePrisonForRole(request.role(), request.prisonId());
         if (userRepository.existsByUsername(username)) {
             throw new UsernameAlreadyExistsException();
         }
@@ -68,6 +73,7 @@ public class UserService implements UserDetailsService {
                 request.role().trim(),
                 Set.of()
         );
+        user.assignPrison(prison);
         User saved;
         try {
             saved = userRepository.save(user);
@@ -114,6 +120,17 @@ public class UserService implements UserDetailsService {
 
     private static String escapeLike(String value) {
         return value.replace("!", "!!").replace("%", "!%").replace("_", "!_");
+    }
+
+    private Prison resolvePrisonForRole(String role, java.util.UUID prisonId) {
+        if ("Super Admin".equals(role.trim())) {
+            if (prisonId != null) throw new PrisonAssignmentNotAllowedException();
+            return null;
+        }
+        if (prisonId == null) throw new PrisonAssignmentRequiredException();
+        Prison prison = prisonRepository.findByPublicUuid(prisonId).orElseThrow(PrisonNotFoundException::new);
+        if (!prison.isActive()) throw new PrisonInactiveException();
+        return prison;
     }
 
     @Transactional(readOnly = true)
@@ -164,6 +181,7 @@ public class UserService implements UserDetailsService {
         String oldUsername = user.getUsername();
         String oldEmail = user.getEmail();
         String oldRole = user.getRole();
+        java.util.UUID oldPrisonId = user.getPrison()==null?null:user.getPrison().getPublicUuid();
         Set<String> oldPermissions = new LinkedHashSet<>(user.getPermissions());
         String fullName = request.fullName() == null ? null : request.fullName().trim();
         String username = request.username() == null ? null : request.username().trim();
@@ -172,6 +190,15 @@ public class UserService implements UserDetailsService {
 
         if (role != null) {
             validateRole(role);
+        }
+        String effectiveRole=role==null?user.getRole():role;
+        if ("Super Admin".equals(effectiveRole)) {
+            if (request.prisonId()!=null) throw new PrisonAssignmentNotAllowedException();
+            user.assignPrison(null);
+        } else if (request.prisonId()!=null) {
+            user.assignPrison(resolvePrisonForRole(effectiveRole,request.prisonId()));
+        } else if (user.getPrison()==null) {
+            throw new PrisonAssignmentRequiredException();
         }
 
         if (fullName != null && fullName.isEmpty()) {
@@ -201,6 +228,7 @@ public class UserService implements UserDetailsService {
                 || !java.util.Objects.equals(oldUsername, user.getUsername())
                 || !java.util.Objects.equals(oldEmail, user.getEmail())
                 || !java.util.Objects.equals(oldRole, user.getRole())
+                || !java.util.Objects.equals(oldPrisonId,user.getPrison()==null?null:user.getPrison().getPublicUuid())
                 || !oldPermissions.equals(user.getPermissions());
         if (changed) {
             notificationService.notifyUserAndRoles(
@@ -257,4 +285,8 @@ public class UserService implements UserDetailsService {
     public static class EmailAlreadyExistsException extends RuntimeException { }
     public static class UserIdentityAlreadyExistsException extends RuntimeException { }
     public static class InvalidRoleException extends RuntimeException { }
+    public static class PrisonNotFoundException extends RuntimeException { }
+    public static class PrisonInactiveException extends RuntimeException { }
+    public static class PrisonAssignmentRequiredException extends RuntimeException { }
+    public static class PrisonAssignmentNotAllowedException extends RuntimeException { }
 }
