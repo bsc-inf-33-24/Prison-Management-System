@@ -6,6 +6,8 @@ import java.util.UUID;
 
 public record CellDetailResponse(
         UUID id,
+        UUID prisonId,
+        UUID blockId,
         String name,
         String blockName,
         Integer cellNumber,
@@ -17,6 +19,8 @@ public record CellDetailResponse(
     public static CellDetailResponse from(Cell cell, int occupancy, List<CellInmateSummary> inmates) {
         return new CellDetailResponse(
                 cell.getPublicUuid(),
+                cell.getBlock() == null ? null : cell.getBlock().getPrison().getPublicUuid(),
+                cell.getBlock() == null ? null : cell.getBlock().getPublicUuid(),
                 cell.getName(),
                 cell.getBlockName(),
                 cell.getCellNumber(),

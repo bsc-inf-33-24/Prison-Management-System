@@ -10,6 +10,7 @@ import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.notification.service.NotificationService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
+import com.pms.api.security.PrisonAccessService;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -23,21 +24,25 @@ public class MedicalVisitService {
     private final InmateRepository inmateRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final PrisonAccessService prisonAccess;
 
     public MedicalVisitService(MedicalVisitRepository medicalVisitRepository,
                                InmateRepository inmateRepository,
                                UserRepository userRepository,
-                               NotificationService notificationService) {
+                               NotificationService notificationService,
+                               PrisonAccessService prisonAccess) {
         this.medicalVisitRepository = medicalVisitRepository;
         this.inmateRepository = inmateRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.prisonAccess = prisonAccess;
     }
 
     @Transactional
     public MedicalVisitResponse recordVisit(RecordMedicalVisitRequest request, String username) {
         Inmate inmate = inmateRepository.findByPublicUuid(request.inmateId())
                 .orElseThrow(InmateNotFoundException::new);
+        prisonAccess.requirePrison(inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid());
         User medicalOfficer = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalStateException("Authenticated user no longer exists."));
 
@@ -63,6 +68,7 @@ public class MedicalVisitService {
     public MedicalHistoryResponse getHistory(UUID inmateId, String name) {
         Inmate inmate = inmateRepository.findByPublicUuid(inmateId)
                 .orElseThrow(InmateNotFoundException::new);
+        prisonAccess.requirePrison(inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid());
         List<MedicalVisitResponse> visits = medicalVisitRepository
                 .findByInmateIdAndInmateNameOrderByVisitDateDescIdDesc(
                         inmate.getId(), normalizeOptionalText(name))

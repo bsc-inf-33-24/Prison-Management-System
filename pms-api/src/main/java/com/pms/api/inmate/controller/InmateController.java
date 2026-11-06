@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/inmates")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "03. Inmate enrollment and inmate records", description = "Enroll inmates and manage inmate records and custody information.")
+@Tag(name = "04. Inmate enrollment and inmate records", description = "Enroll inmates and manage inmate records and custody information.")
 public class InmateController {
 
     private final InmateService inmateService;
@@ -41,7 +41,7 @@ public class InmateController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Enroll an inmate",
-            description = "Creates the inmate record and allocates the inmate to the selected cell in one transaction.")
+            description = "Creates the inmate at the selected prison and allocates the inmate to a cell in that prison in one transaction.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Inmate created and allocated to the selected cell."),
             @ApiResponse(responseCode = "409", description = "The selected cell is full."),
@@ -78,4 +78,3 @@ public class InmateController {
         return inmateService.update(inmateId, request);
     }
 }
-

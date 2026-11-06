@@ -12,6 +12,7 @@ import com.pms.api.rehabilitation.repository.EnrollmentRepository;
 import com.pms.api.rehabilitation.repository.ProgramEnrollmentProjection;
 import com.pms.api.rehabilitation.repository.RehabilitationProgramRepository;
 import com.pms.api.rehabilitation.specification.ProgramSpecifications;
+import com.pms.api.security.PrisonAccessService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -35,14 +36,16 @@ public class RehabilitationProgramService {
     private final EnrollmentRepository enrollmentRepository;
     private final AuditService auditService;
     private final UserRepository userRepository;
+    private final PrisonAccessService prisonAccess;
 
     public RehabilitationProgramService(RehabilitationProgramRepository programRepository,
                                         EnrollmentRepository enrollmentRepository,
-                                        AuditService auditService, UserRepository userRepository) {
+                                        AuditService auditService, UserRepository userRepository, PrisonAccessService prisonAccess) {
         this.programRepository = programRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.auditService = auditService;
         this.userRepository = userRepository;
+        this.prisonAccess=prisonAccess;
     }
 
     @Transactional
@@ -100,9 +103,12 @@ public class RehabilitationProgramService {
         }
         Page<RehabilitationProgram> programs = programRepository.findAll(specification, pageable);
         List<Long> programIds = programs.getContent().stream().map(RehabilitationProgram::getId).toList();
+        UUID assignedPrison=prisonAccess.effectivePrison(null);
         Map<Long, List<EnrolledInmateResponse>> participantsByProgram = programIds.isEmpty()
                 ? Map.of()
-                : enrollmentRepository.findEnrolledParticipantsByProgramIds(programIds).stream()
+                : (assignedPrison==null
+                    ? enrollmentRepository.findEnrolledParticipantsByProgramIds(programIds)
+                    : enrollmentRepository.findEnrolledParticipantsByProgramIdsAndPrison(programIds,assignedPrison)).stream()
                         .collect(Collectors.groupingBy(
                                 ProgramEnrollmentProjection::getProgramId,
                                 Collectors.mapping(participant -> new EnrolledInmateResponse(

@@ -1,22 +1,19 @@
 package com.pms.api.cell.entity;
 
 import com.pms.api.common.entity.BaseEntity;
+import com.pms.api.prison.entity.Block;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 
 @Entity
-@Table(
-        name = "cells",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_cells_block_number",
-                columnNames = {"block_name", "cell_number"}
-        )
-)
+@Table(name = "cells")
 public class Cell extends BaseEntity {
 
     @Id
@@ -25,6 +22,10 @@ public class Cell extends BaseEntity {
 
     @Column(name = "block_name", nullable = false, length = 50)
     private String blockName;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "block_id")
+    private Block block;
 
     @Column(name = "cell_number", nullable = false)
     private Integer cellNumber;
@@ -41,13 +42,23 @@ public class Cell extends BaseEntity {
         this.capacity = capacity;
     }
 
+    public Cell(Block block, Integer cellNumber, Integer capacity) {
+        this.block = block;
+        this.blockName = block.getName();
+        this.cellNumber = cellNumber;
+        this.capacity = capacity;
+    }
+
     public Long getId() {
         return id;
     }
 
     public String getBlockName() {
-        return blockName;
+        return block == null ? blockName : block.getName();
     }
+
+    public Block getBlock() { return block; }
+    public void assignBlock(Block block) { this.block=block; this.blockName=block.getName(); }
 
     public Integer getCellNumber() {
         return cellNumber;
@@ -58,6 +69,6 @@ public class Cell extends BaseEntity {
     }
 
     public String getName() {
-        return blockName + "-" + cellNumber;
+        return getBlockName() + "-" + cellNumber;
     }
 }

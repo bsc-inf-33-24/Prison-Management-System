@@ -86,8 +86,10 @@ class CellAllocationApiIntegrationTest {
                 .andExpect(jsonPath("$.oldCellId").value(oldCell.getPublicUuid().toString()))
                 .andExpect(jsonPath("$.newCellId").value(newCell.getPublicUuid().toString()));
 
-        assertThat(cellAllocationRepository.findByInmateId(inmate.getId())).isPresent();
-        assertThat(cellAllocationRepository.findByInmateId(inmate.getId()).get().getCell().getId()).isEqualTo(newCell.getId());
+        CellAllocation activeAllocation = cellAllocationRepository
+                .findByInmate_IdAndReleasedAtIsNull(inmate.getId())
+                .orElseThrow();
+        assertThat(activeAllocation.getCell().getId()).isEqualTo(newCell.getId());
     }
 
     private String bearerToken() {

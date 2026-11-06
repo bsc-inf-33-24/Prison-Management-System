@@ -12,6 +12,8 @@ import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.notification.entity.Notification;
 import com.pms.api.notification.repository.NotificationRepository;
+import com.pms.api.prison.entity.Prison;
+import com.pms.api.prison.repository.PrisonRepository;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.dto.CreateUserRequest;
 import com.pms.api.user.dto.UpdateUserDetailsRequest;
@@ -42,6 +44,9 @@ class NotificationApiIntegrationTest {
 
     @Autowired
     private NotificationRepository notificationRepository;
+
+    @Autowired
+    private PrisonRepository prisonRepository;
 
     @Autowired
     private UserService userService;
@@ -105,8 +110,12 @@ class NotificationApiIntegrationTest {
     @Test
     void creatingAnAccountNotifiesTheNewUserAndActiveSuperAdmins() {
         String username = uniqueUsername();
+        Prison prison = prisonRepository.saveAndFlush(new Prison(
+                "NT-" + UUID.randomUUID().toString().substring(0, 8),
+                "Notification Test Prison",
+                null));
         userService.create(new CreateUserRequest(
-                "New Records Officer", username, null, "GoodPass1!", "Records Officer"));
+                "New Records Officer", username, null, "GoodPass1!", "Records Officer", prison.getPublicUuid()));
         User createdUser = userRepository.findByUsername(username).orElseThrow();
 
         assertThat(notificationRepository.findByRecipientUserIdOrderByCreatedAtDesc(createdUser.getId()))

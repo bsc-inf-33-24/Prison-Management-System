@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Locale;
+import java.util.UUID;
 
 public record CreateUserRequest(
     @Schema(description = "User's full name", requiredMode = Schema.RequiredMode.REQUIRED, example = "Records Officer")
@@ -32,7 +33,10 @@ public record CreateUserRequest(
                 allowableValues = {"Super Admin", "Records Officer", "Disciplinary Officer", "Case Officer", "Visitor Officer", "Rehabilitation Officer", "Instructor", "Medical Officer", "Duty Officer"},
                 example = "Records Officer")
         @NotBlank(message = "Role is required.")
-        String role
+        String role,
+
+        @Schema(description = "Prison this staff account belongs to. Required for all roles except Super Admin.", nullable = true)
+        UUID prisonId
 ) {
     public CreateUserRequest {
         if (email != null) {

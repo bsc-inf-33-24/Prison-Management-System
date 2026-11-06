@@ -6,7 +6,6 @@ import com.pms.api.cell.dto.CellDetailResponse;
 import com.pms.api.cell.dto.CellInmateSummary;
 import com.pms.api.cell.dto.CellMoveResponse;
 import com.pms.api.cell.dto.CellResponse;
-import com.pms.api.cell.dto.CreateCellRequest;
 import com.pms.api.cell.entity.Cell;
 import com.pms.api.cell.entity.CellAllocation;
 import com.pms.api.cell.repository.CellAllocationRepository;
@@ -18,16 +17,18 @@ import com.pms.api.common.pagination.PaginationProperties;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.notification.service.NotificationService;
+import com.pms.api.security.PrisonAccessService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.UUID;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.JoinType;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,29 +40,19 @@ public class CellService {
     private final InmateRepository inmateRepository;
     private final PaginationProperties paginationProperties;
     private final NotificationService notificationService;
+    private final PrisonAccessService prisonAccess;
 
     public CellService(CellRepository cellRepository,
                        CellAllocationRepository cellAllocationRepository,
                        InmateRepository inmateRepository,
                        PaginationProperties paginationProperties,
-                       NotificationService notificationService) {
+                       NotificationService notificationService, PrisonAccessService prisonAccess) {
         this.cellRepository = cellRepository;
         this.cellAllocationRepository = cellAllocationRepository;
         this.inmateRepository = inmateRepository;
         this.paginationProperties = paginationProperties;
         this.notificationService = notificationService;
-    }
-
-    @Audited
-    @Transactional
-    public CellResponse createCell(CreateCellRequest request) {
-        Cell cell = new Cell(
-                request.blockName().trim(),
-                request.cellNumber(),
-                request.capacity()
-        );
-        Cell saved = cellRepository.saveAndFlush(cell);
-        return CellResponse.from(saved, 0);
+        this.prisonAccess = prisonAccess;
     }
 
     @Audited
@@ -71,6 +62,9 @@ public class CellService {
                 .orElseThrow(InmateNotFoundException::new);
         Cell cell = cellRepository.findByPublicUuidForUpdate(request.cellId())
                 .orElseThrow(CellNotFoundException::new);
+        prisonAccess.requireInmate(inmateId);
+        prisonAccess.requireCell(request.cellId());
+        ensureSamePrison(inmate, cell);
 
         long occupancy = cellAllocationRepository.countByCellId(cell.getId());
         if (occupancy >= cell.getCapacity()) {
@@ -95,12 +89,15 @@ public class CellService {
         Inmate inmate = inmateRepository.findByPublicUuid(inmateId)
                 .orElseThrow(InmateNotFoundException::new);
 
-        CellAllocation currentAllocation = cellAllocationRepository.findByInmateId(inmate.getId())
+        CellAllocation currentAllocation = cellAllocationRepository.findByInmate_IdAndReleasedAtIsNull(inmate.getId())
                 .orElseThrow(CellAllocationNotFoundException::new);
 
         Cell currentCell = currentAllocation.getCell();
+        prisonAccess.requireInmate(inmateId);
         Cell targetCell = cellRepository.findByPublicUuidForUpdate(request.cellId())
                 .orElseThrow(CellNotFoundException::new);
+        prisonAccess.requireCell(request.cellId());
+        ensureSamePrison(inmate, targetCell);
 
         if (currentCell.getId().equals(targetCell.getId())) {
             throw new CellAlreadyAssignedToSameCellException();
@@ -113,8 +110,10 @@ public class CellService {
             throw new CellCapacityExceededException();
         }
 
-        currentAllocation.moveTo(targetCell, Instant.now());
+        Instant movedAt = Instant.now();
+        currentAllocation.release(movedAt);
         cellAllocationRepository.saveAndFlush(currentAllocation);
+        CellAllocation newAllocation = cellAllocationRepository.saveAndFlush(new CellAllocation(inmate, targetCell, movedAt));
         notificationService.notifyRoles(
                 "INMATE_CELL_MOVED",
                 "Inmate cell assignment changed",
@@ -126,21 +125,36 @@ public class CellService {
                 inmate.getPublicUuid(),
                 currentCell.getPublicUuid(),
                 targetCell.getPublicUuid(),
-                currentAllocation.getAllocatedAt(),
+                newAllocation.getAllocatedAt(),
                 currentCellOccupancy - 1,
                 targetCellOccupancy + 1
         );
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<CellResponse> listCells(String blockName,
+    public PageResponse<CellResponse> listCells(String blockName, UUID prisonId, UUID blockId,
                                                  Integer page, Integer size, List<String> sort) {
         Pageable pageable = PageableValidator.create(page, size, sort,
                 Set.of("id", "blockName", "cellNumber", "capacity"),
                 Sort.by(Sort.Order.asc("id")), paginationProperties);
+        UUID effectivePrisonId=prisonAccess.effectivePrison(prisonId);
         Specification<Cell> specification = Specification.unrestricted();
         if (blockName != null && !blockName.isBlank()) {
-            specification = specification.and((root, query, cb) -> cb.equal(root.get("blockName"), blockName.trim()));
+            String name = blockName.trim();
+            specification = specification.and((root, query, cb) -> {
+                var block = root.join("block", JoinType.LEFT);
+                return cb.or(cb.equal(root.get("blockName"), name), cb.equal(block.get("name"), name));
+            });
+        }
+        if (effectivePrisonId != null) {
+            specification = specification.and((root, query, cb) -> {
+                var block = root.join("block", JoinType.LEFT);
+                return cb.equal(block.get("prison").get("publicUuid"), effectivePrisonId);
+            });
+        }
+        if (blockId != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(
+                    root.join("block", JoinType.LEFT).get("publicUuid"), blockId));
         }
         var cells = cellRepository.findAll(specification, pageable);
         List<Long> cellIds = cells.getContent().stream().map(Cell::getId).toList();
@@ -155,9 +169,10 @@ public class CellService {
 
     @Transactional(readOnly = true)
     public CellDetailResponse getCell(UUID cellId) {
+        prisonAccess.requireCell(cellId);
         Cell cell = cellRepository.findByPublicUuid(cellId).orElseThrow(CellNotFoundException::new);
         int occupancy = Math.toIntExact(cellAllocationRepository.countByCellId(cell.getId()));
-        List<CellInmateSummary> inmates = cellAllocationRepository.findByCell_IdOrderByAllocatedAtAsc(cell.getId())
+        List<CellInmateSummary> inmates = cellAllocationRepository.findByCell_IdAndReleasedAtIsNullOrderByAllocatedAtAsc(cell.getId())
                 .stream()
                 .map(allocation -> new CellInmateSummary(
                         allocation.getInmate().getPublicUuid(),
@@ -165,6 +180,11 @@ public class CellService {
                         allocation.getInmate().getLastName()))
                 .toList();
         return CellDetailResponse.from(cell, occupancy, inmates);
+    }
+
+    @Transactional
+    public int releaseCurrentAllocation(Long inmateId) {
+        return cellAllocationRepository.releaseByInmateId(inmateId, Instant.now());
     }
 
     public static class CellNotFoundException extends RuntimeException {
@@ -184,4 +204,13 @@ public class CellService {
 
     public static class CellAlreadyAssignedToSameCellException extends RuntimeException {
     }
+
+    private static void ensureSamePrison(Inmate inmate, Cell cell) {
+        if (cell.getBlock() == null || inmate.getCurrentPrison() == null
+                || !cell.getBlock().getPrison().getId().equals(inmate.getCurrentPrison().getId())) {
+            throw new CellPrisonMismatchException();
+        }
+    }
+
+    public static class CellPrisonMismatchException extends RuntimeException { }
 }

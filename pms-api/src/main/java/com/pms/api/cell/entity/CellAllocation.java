@@ -10,7 +10,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 
@@ -22,8 +21,8 @@ public class CellAllocation extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "inmate_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "inmate_id", nullable = false)
     private Inmate inmate;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -32,6 +31,9 @@ public class CellAllocation extends BaseEntity {
 
     @Column(name = "allocated_at", nullable = false)
     private Instant allocatedAt;
+
+    @Column(name = "released_at")
+    private Instant releasedAt;
 
     protected CellAllocation() {
     }
@@ -58,8 +60,9 @@ public class CellAllocation extends BaseEntity {
         return allocatedAt;
     }
 
-    public void moveTo(Cell newCell, Instant newAllocatedAt) {
-        this.cell = newCell;
-        this.allocatedAt = newAllocatedAt;
-    }
+    public Instant getReleasedAt() { return releasedAt; }
+
+    public boolean isActive() { return releasedAt == null; }
+
+    public void release(Instant releasedAt) { this.releasedAt = releasedAt; }
 }

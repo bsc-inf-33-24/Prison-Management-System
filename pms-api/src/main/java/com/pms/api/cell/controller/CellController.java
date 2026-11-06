@@ -4,7 +4,6 @@ import com.pms.api.cell.dto.AllocateCellRequest;
 import com.pms.api.cell.dto.CellDetailResponse;
 import com.pms.api.cell.dto.CellMoveResponse;
 import com.pms.api.cell.dto.CellResponse;
-import com.pms.api.cell.dto.CreateCellRequest;
 import com.pms.api.cell.service.CellService;
 import com.pms.api.common.pagination.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,36 +12,25 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "04. Cell allocation and custody", description = "Manage cell inventory and inmate cell allocation.")
+@Tag(name = "05. Cell allocation and custody", description = "Manage cell inventory and inmate cell allocation.")
 public class CellController {
 
     private final CellService cellService;
 
     public CellController(CellService cellService) {
         this.cellService = cellService;
-    }
-
-    @PostMapping("/cells")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create a cell")
-    public CellResponse createCell(@Valid @RequestBody CreateCellRequest request) {
-        return cellService.createCell(request);
     }
 
     @PutMapping("/inmates/{inmateId}/cell-allocation")
@@ -57,10 +45,12 @@ public class CellController {
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List cells")
     public PageResponse<CellResponse> listCells(@RequestParam(required = false) String blockName,
+                                                @RequestParam(required = false) UUID prisonId,
+                                                @RequestParam(required = false) UUID blockId,
                                                 @RequestParam(required = false) Integer page,
                                                 @RequestParam(required = false) Integer size,
                                                 @RequestParam(required = false) List<String> sort) {
-        return cellService.listCells(blockName, page, size, sort);
+        return cellService.listCells(blockName, prisonId, blockId, page, size, sort);
     }
 
     @GetMapping("/cells/{cellId}")
@@ -70,4 +60,3 @@ public class CellController {
         return cellService.getCell(cellId);
     }
 }
-
