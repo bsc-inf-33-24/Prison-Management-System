@@ -16,7 +16,7 @@ services:
       retries: 10
 
   app:
-    image: ${DOCKERHUB_USERNAME:?Set DOCKERHUB_USERNAME in .env}/pms-api:${PMS_API_TAG:-main}
+    image: ${DOCKERHUB_USERNAME:?Set DOCKERHUB_USERNAME in .env}/pms-api:${PMS_API_TAG:?Set PMS_API_TAG to a published commit SHA in .env}
     depends_on:
       db:
         condition: service_healthy
