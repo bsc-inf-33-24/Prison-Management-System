@@ -13,6 +13,7 @@ import com.pms.api.rehabilitation.exception.RehabilitationExceptions.EnrollmentN
 import com.pms.api.rehabilitation.exception.RehabilitationExceptions.ProgramNotActiveException;
 import com.pms.api.rehabilitation.repository.EnrollmentRepository;
 import com.pms.api.rehabilitation.specification.EnrollmentSpecifications;
+import com.pms.api.security.PrisonAccessService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -36,21 +37,25 @@ public class EnrollmentService {
     private final InmateRepository inmateRepository;
     private final RehabilitationProgramService programService;
     private final AuditService auditService;
+    private final PrisonAccessService prisonAccess;
 
     public EnrollmentService(EnrollmentRepository enrollmentRepository,
                               InmateRepository inmateRepository,
                               RehabilitationProgramService programService,
-                              AuditService auditService) {
+                              AuditService auditService,
+                              PrisonAccessService prisonAccess) {
         this.enrollmentRepository = enrollmentRepository;
         this.inmateRepository = inmateRepository;
         this.programService = programService;
         this.auditService = auditService;
+        this.prisonAccess = prisonAccess;
     }
 
     @Transactional
     public EnrollmentResponse create(CreateEnrollmentRequest request, String username) {
         Inmate inmate = inmateRepository.findByPublicUuid(request.inmateId())
                 .orElseThrow(InmateService.InmateNotFoundException::new);
+        prisonAccess.requirePrison(inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid());
         RehabilitationProgram program = programService.findProgram(request.programId());
 
         if (!RehabilitationProgramService.ACTIVE.equals(program.getStatus())) {
@@ -79,7 +84,11 @@ public class EnrollmentService {
                                          String programName, String status, Pageable pageable) {
         Specification<Enrollment> specification =
                 Specification.unrestricted();
+        UUID assignedPrison=prisonAccess.effectivePrison(null);
+        if (assignedPrison!=null) specification=specification.and((root,query,cb)->
+                cb.equal(root.get("inmate").get("currentPrison").get("publicUuid"),assignedPrison));
         Long internalInmateId = inmateId == null ? null : inmateRepository.findByPublicUuid(inmateId).map(Inmate::getId).orElse(-1L);
+        if (inmateId!=null) prisonAccess.requireInmate(inmateId);
         Long internalProgramId = programId == null ? null : programService.findProgram(programId).getId();
         if (internalInmateId != null) {
             specification = specification.and(EnrollmentSpecifications.inmateId(internalInmateId));
@@ -105,6 +114,7 @@ public class EnrollmentService {
         if (inmate == null) {
             throw new InmateService.InmateNotFoundException();
         }
+        prisonAccess.requirePrison(inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid());
         return enrollmentRepository.findByInmate_Id(inmate.getId(), pageable)
                 .map(EnrollmentResponse::from);
     }
@@ -112,6 +122,7 @@ public class EnrollmentService {
     public Enrollment findActiveEnrollment(UUID inmateUuid, UUID programUuid) {
         Inmate inmate = inmateRepository.findByPublicUuid(inmateUuid)
                 .orElseThrow(InmateService.InmateNotFoundException::new);
+        prisonAccess.requirePrison(inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid());
         RehabilitationProgram program = programService.findProgram(programUuid);
         return enrollmentRepository.findByInmate_IdAndProgram_IdAndStatus(
                         inmate.getId(), program.getId(), ENROLLED)

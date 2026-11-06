@@ -46,4 +46,20 @@ public interface EnrollmentRepository
             """)
     List<ProgramEnrollmentProjection> findEnrolledParticipantsByProgramIds(
             @Param("programIds") Collection<Long> programIds);
+
+    @Query("""
+            select program.id as programId,
+                   inmate.publicUuid as inmateId,
+                   concat(concat(inmate.firstName, ' '), inmate.lastName) as inmateName
+            from Enrollment enrollment
+            join enrollment.program program
+            join enrollment.inmate inmate
+            join inmate.currentPrison prison
+            where program.id in :programIds
+              and prison.publicUuid = :prisonUuid
+              and enrollment.status = 'enrolled'
+            order by inmate.lastName, inmate.firstName
+            """)
+    List<ProgramEnrollmentProjection> findEnrolledParticipantsByProgramIdsAndPrison(
+            @Param("programIds") Collection<Long> programIds, @Param("prisonUuid") UUID prisonUuid);
 }
