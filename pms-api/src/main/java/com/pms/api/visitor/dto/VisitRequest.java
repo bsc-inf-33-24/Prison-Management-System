@@ -10,7 +10,8 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 public record VisitRequest(
-        @NotBlank @Size(max = 255) String visitorFullName,
+        @NotBlank(message = "visitors full name is missing or invalid")
+	@Size(max = 255) String visitorFullName,
         @NotNull(message = "inmateId is required") UUID inmateId,
         @NotNull(message = "visitDate is required") LocalDate visitDate,
         @NotNull(message = "startTime is required") LocalTime startTime,

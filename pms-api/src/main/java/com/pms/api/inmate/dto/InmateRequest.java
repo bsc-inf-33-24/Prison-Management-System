@@ -13,38 +13,39 @@ import java.util.UUID;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record InmateRequest(
-        @NotBlank
+        @NotBlank(message = "inmate first name is missing or invalid")
         @Size(max = 100)
         String firstName,
 
-        @NotBlank
+        @NotBlank(message = "inmate last name is missing or invalid")
         @Size(max = 100)
         String lastName,
 
-        @NotNull
+        @NotNull(message = "inmate date of birth is missing or is invalid")
         @Past
         LocalDate dateOfBirth,
 
-        @NotBlank
+        @NotBlank(message = "inmates gender is missing or invalid")
         @Size(max = 20)
         String gender,
 
-        @NotNull
+        @NotNull(message = "admission date is required")
         LocalDate admissionDate,
 
+	@NotBlank(message = "inmates offence is missing or invalid")
         @Size(min = 1, max = 500)
         String offence,
 
-        @NotNull
+        @NotNull(message = "sentence start date is required")
         LocalDate sentenceStartDate,
 
-        @NotNull
+        @NotNull(message = "sentence end date is required")
         LocalDate sentenceEndDate,
 
-        @NotNull
+        @NotNull(message = "Prison Id is required")
         UUID prisonId,
 
-        @NotNull
+        @NotNull(message = "cell Id is required")
         UUID cellId
 ) {
     @AssertTrue(message = "Sentence end date must be on or after the start date.")
