@@ -39,7 +39,7 @@ public class VisitController {
     @Operation(summary = "Record a visit", description = "Record visitor name, inmate, visit date, and start/end times; duration is calculated.")
     @PostMapping("/visits")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'SUPER_ADMIN', 'RECORDS_OFFICER')")
     public VisitResponse recordVisit(@Valid @RequestBody VisitRequest request,
                                     @AuthenticationPrincipal UserDetails currentUser) {
         return visitService.recordVisit(request, currentUser.getUsername());
@@ -47,7 +47,7 @@ public class VisitController {
 
     @Operation(summary = "Search visits", description = "Filter visits by recorded visitor details, inmate, date range, and recording officer.")
     @GetMapping("/visits")
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'SUPER_ADMIN', 'RECORDS_OFFICER')")
     public Page<VisitResponse> searchVisits(
             @RequestParam(required = false) UUID visitId,
             @RequestParam(required = false) String visitorName,
@@ -65,7 +65,7 @@ public class VisitController {
 
     @Operation(summary = "Get an inmate's visit history", description = "Returns visits associated with the specified inmate, including each visitor's name.")
     @GetMapping("/inmates/{inmateId}/visits")
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'SUPER_ADMIN', 'RECORDS_OFFICER')")
     public Page<VisitHistoryResponse> getInmateVisitHistory(
             @PathVariable UUID inmateId,
             @RequestParam(required = false) String visitorName,

@@ -109,7 +109,7 @@ class MedicalVisitApiIntegrationTest {
                 .andReturn().getResponse().getStatus());
 
         for (String role : User.ALLOWED_ROLES) {
-            if ("Medical Officer".equals(role)) {
+            if ("Medical Officer".equals(role) || "Super Admin".equals(role)) {
                 continue;
             }
             String token = jwtService.generateToken(createUser(role));
@@ -122,11 +122,11 @@ class MedicalVisitApiIntegrationTest {
     }
 
     @Test
-    void superAdminIsDeniedMedicalAccess() throws Exception {
+    void superAdminCanRecordAndSearchMedicalVisits() throws Exception {
         Inmate inmate = createInmate();
         String token = jwtService.generateToken(createUser("Super Admin"));
 
-        assertEquals(403, postVisit(token, medicalVisitRequest(
+        assertEquals(201, postVisit(token, medicalVisitRequest(
                 inmate.getPublicUuid(), LocalDate.now(), "Cough", "Bronchitis"))
                 .getResponse().getStatus());
 
@@ -135,7 +135,9 @@ class MedicalVisitApiIntegrationTest {
                         .param("name", "MEDICAL")
                         .header("Authorization", "Bearer " + token))
                 .andReturn();
-        assertEquals(403, history.getResponse().getStatus());
+        assertEquals(200, history.getResponse().getStatus());
+        assertEquals(1, objectMapper.readTree(history.getResponse().getContentAsString())
+                .path("visits").size());
     }
 
     @Test
