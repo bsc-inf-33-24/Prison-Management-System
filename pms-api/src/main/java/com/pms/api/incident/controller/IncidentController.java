@@ -30,10 +30,9 @@ public class IncidentController {
         this.incidentService = incidentService;
     }
 
-    // Disciplinary Officers and Super Admins may log incidents.
     @PostMapping("/incidents")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('DISCIPLINARY_OFFICER')")
     @Operation(summary = "Log an inmate incident")
     public IncidentResponse logIncident(@Valid @RequestBody LogIncidentRequest request,
                                          @AuthenticationPrincipal UserDetails currentUser) {
@@ -41,16 +40,15 @@ public class IncidentController {
     }
 
     @PatchMapping("/incidents/{incidentId}/outcome")
-    @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('DISCIPLINARY_OFFICER')")
     @Operation(summary = "Record a disciplinary outcome")
     public IncidentResponse recordOutcome(@PathVariable UUID incidentId,
                                            @Valid @RequestBody RecordOutcomeRequest request) {
         return incidentService.recordOutcome(incidentId, request);
     }
 
-    // Disciplinary Officers and Super Admins can view an inmate's history.
     @GetMapping("/inmates/{inmateId}/incidents")
-    @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('DISCIPLINARY_OFFICER')")
     @Operation(summary = "Get an inmate's incident history")
     public List<IncidentHistoryItemResponse> getHistory(@PathVariable UUID inmateId) {
         return incidentService.getHistory(inmateId);

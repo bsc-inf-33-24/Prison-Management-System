@@ -26,23 +26,29 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController @RequestMapping("/api/v1/transfers") @SecurityRequirement(name="bearerAuth")
 @Tag(name="06. Inmate transfers",description="Transfer inmates between prisons in the centralized PMS.")
-@PreAuthorize("hasAnyRole('RECORDS_OFFICER','SUPER_ADMIN')")
 public class TransferController {
     private final TransferService service;
     public TransferController(TransferService service) { this.service=service; }
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     public TransferResponse create(@Valid @RequestBody CreateTransferRequest request) { return service.create(request); }
     @GetMapping
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','SUPER_ADMIN')")
     public PageResponse<TransferResponse> list(@RequestParam(required=false) TransferStatus status,
             @RequestParam(required=false) UUID prisonId,@RequestParam(required=false) Integer page,
             @RequestParam(required=false) Integer size,@RequestParam(required=false) List<String> sort) {
         return service.list(status,prisonId,page,size,sort);
     }
     @PostMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','SUPER_ADMIN')")
     @Operation(summary = "Approve and complete an inmate transfer")
     public TransferResponse approve(@PathVariable UUID id,@Valid @RequestBody ApproveTransferRequest request) {
         return service.approve(id,request);
     }
-    @PostMapping("/{id}/reject") public TransferResponse reject(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.reject(id,request); }
-    @PostMapping("/{id}/cancel") public TransferResponse cancel(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.cancel(id,request); }
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','SUPER_ADMIN')")
+    public TransferResponse reject(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.reject(id,request); }
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    public TransferResponse cancel(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.cancel(id,request); }
 }

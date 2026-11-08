@@ -34,7 +34,7 @@ public class CellController {
     }
 
     @PutMapping("/inmates/{inmateId}/cell-allocation")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "Move an inmate to a different cell")
     public CellMoveResponse move(@PathVariable UUID inmateId,
                                 @Valid @RequestBody AllocateCellRequest request) {
@@ -42,7 +42,7 @@ public class CellController {
     }
 
     @GetMapping("/cells")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "List cells")
     public PageResponse<CellResponse> listCells(@RequestParam(required = false) String blockName,
                                                 @RequestParam(required = false) UUID prisonId,
@@ -54,7 +54,7 @@ public class CellController {
     }
 
     @GetMapping("/cells/{cellId}")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "Get a cell")
     public CellDetailResponse getCell(@PathVariable UUID cellId) {
         return cellService.getCell(cellId);
