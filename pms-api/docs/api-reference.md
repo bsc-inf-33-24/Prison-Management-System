@@ -31,9 +31,11 @@ The `users` table only accepts the following role names:
 - `Disciplinary Officer`
 - `Case Officer`
 - `Visitor Officer`
-- `Rehabilitation Officer`
+- `Instructor`
 - `Medical Officer`
 - `Duty Officer`
+- `Prison Officer`
+- `Program Facilitator`
 
 The Spring Security rules are mapped to the `ROLE_...` authorities. For example, `Super Admin` becomes `ROLE_SUPER_ADMIN` and the check `hasRole('SUPER_ADMIN')` is used by user and admin endpoints.
 
@@ -123,7 +125,7 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
-| `POST` | `/api/v1/inmates` | Yes | `Super Admin` | Enroll an inmate and allocate a cell |
+| `POST` | `/api/v1/inmates` | Yes | `Super Admin`, `Prison Officer` | Enroll an inmate and allocate a cell |
 | `GET` | `/api/v1/inmates` | Yes | `Records Officer`, `Super Admin` | List inmates |
 | `GET` | `/api/v1/inmates/{inmateId}` | Yes | `Records Officer`, `Super Admin` | View an inmate |
 | `PATCH` | `/api/v1/inmates/{inmateId}` | Yes | `Super Admin` | Update an inmate record |
@@ -163,21 +165,21 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
-| `POST` | `/api/v1/programs` | Yes | `Rehabilitation Officer`, `Super Admin` | Create a program |
-| `GET` | `/api/v1/programs` | Yes | `Rehabilitation Officer`, `Records Officer`, `Super Admin`, `Instructor` | List/search programs |
-| `GET` | `/api/v1/programs/{programId}` | Yes | `Rehabilitation Officer`, `Records Officer`, `Super Admin`, `Instructor` | View a program |
-| `PATCH` | `/api/v1/programs/{programId}` | Yes | `Rehabilitation Officer`, `Super Admin` | Update a program |
-| `POST` | `/api/v1/programs/enrollments` | Yes | `Rehabilitation Officer`, `Super Admin` | Enroll an inmate |
-| `GET` | `/api/v1/programs/enrollments` | Yes | `Rehabilitation Officer`, `Records Officer`, `Super Admin` | List enrollment records |
-| `POST` | `/api/v1/programs/attendance` | Yes | `Rehabilitation Officer`, `Super Admin`, `Instructor` | Record attendance |
-| `POST` | `/api/v1/programs/attendance/bulk` | Yes | `Rehabilitation Officer`, `Super Admin`, `Instructor` | Record bulk attendance |
-| `GET` | `/api/v1/programs/attendance` | Yes | `Rehabilitation Officer`, `Records Officer`, `Super Admin` | Search attendance records |
+| `POST` | `/api/v1/programs` | Yes | `Program Facilitator`, `Super Admin` | Create a program |
+| `GET` | `/api/v1/programs` | Yes | `Program Facilitator`, `Super Admin`, `Records Officer`, `Instructor` | List/search programs |
+| `GET` | `/api/v1/programs/{programId}` | Yes | `Program Facilitator`, `Records Officer`, `Super Admin`, `Instructor` | View a program |
+| `PATCH` | `/api/v1/programs/{programId}` | Yes | `Program Facilitator`, `Super Admin` | Update a program |
+| `POST` | `/api/v1/programs/enrollments` | Yes | `Program Facilitator`, `Super Admin` | Enroll an inmate |
+| `GET` | `/api/v1/programs/enrollments` | Yes | `Program Facilitator`, `Records Officer`, `Super Admin` | List enrollment records |
+| `POST` | `/api/v1/programs/attendance` | Yes | `Program Facilitator`, `Super Admin`, `Instructor` | Record attendance |
+| `POST` | `/api/v1/programs/attendance/bulk` | Yes | `Program Facilitator`, `Super Admin`, `Instructor` | Record bulk attendance |
+| `GET` | `/api/v1/programs/attendance` | Yes | `Program Facilitator`, `Records Officer`, `Super Admin` | Search attendance records |
 
 ### 4.9 Inmate transfers
 
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
-| `POST` | `/api/v1/transfers` | Yes | `Records Officer`, `Super Admin` | Submit an inmate transfer |
+| `POST` | `/api/v1/transfers` | Yes | `Records Officer`, `Super Admin`, `Prison Officer` | Submit an inmate transfer |
 | `GET` | `/api/v1/transfers` | Yes | `Records Officer`, `Super Admin` | List transfers |
 | `POST` | `/api/v1/transfers/{transferId}/approve` | Yes | `Records Officer`, `Super Admin` | Approve a transfer |
 | `POST` | `/api/v1/transfers/{transferId}/reject` | Yes | `Records Officer`, `Super Admin` | Reject a transfer |
@@ -732,7 +734,7 @@ Representative `VisitResponse` shape:
 
 ### 5.8 Rehabilitation
 
-#### `POST /api/v1/rehabilitation/programs`
+#### `POST /api/v1/programs`
 
 Purpose: create a rehabilitation program.
 
@@ -742,14 +744,14 @@ Request body:
 {
   "name": "Anger management",
   "description": "Weekly behaviour coaching and reflection sessions.",
-  "instructor": "Rehab Instructor",
+  "instructor": "Program Instructor",
   "schedule": "Mondays 14:00-16:00"
 }
 ```
 
-`name` and `instructor` are required, nonblank, max 255 characters. `description` is optional (max 10000); `schedule` is optional (max 255). Success `201 Created` returns `ProgramResponse`; newly created programs have status `active`.
+`name` is required and nonblank (max 255 characters). `description` and `instructor` are optional (max 10000 and 255 characters); `schedule` is optional (max 255). Success `201 Created` returns `ProgramResponse`; newly created programs have status `active`.
 
-#### `GET /api/v1/rehabilitation/programs`
+#### `GET /api/v1/programs`
 
 Query parameters:
 
@@ -759,17 +761,17 @@ Query parameters:
 - `schedule`
 - `page`, `size`, `sort` with allowed sort fields `id`, `name`, `instructor`, `status`, `schedule`
 
-`status` filters accept `active`, `inactive`, or `completed` (case-insensitive). Names/instructors/schedules are optional filters. Pagination defaults to page `0`, size `20`; allowed sort properties are `id`, `name`, `instructor`, `status`, and `schedule`. Status cannot be changed through the program update DTO. Updating requires the full `name` and `instructor` fields (both nonblank, max 255); `description` and `schedule` are optional.
+`status` filters accept `active`, `inactive`, or `completed` (case-insensitive). Names/instructors/schedules are optional filters. Pagination defaults to page `0`, size `20`; allowed sort properties are `id`, `name`, `instructor`, `status`, and `schedule`. Status cannot be changed through the program update DTO. Updating requires `name`; `instructor`, `description`, and `schedule` are optional.
 
-#### `GET /api/v1/rehabilitation/programs/{programId}`
+#### `GET /api/v1/programs/{programId}`
 
 Purpose: fetch one program by its public UUID, with details and enrollment counts in `ProgramDetailResponse`.
 
-#### `PATCH /api/v1/rehabilitation/programs/{programId}`
+#### `PATCH /api/v1/programs/{programId}`
 
-Purpose: update a program by public UUID. The required body fields are `name` and `instructor`; `description` and `schedule` are optional. Success `200 OK` returns a `ProgramResponse` containing `id`, name, description, instructor, schedule, status, and enrolled inmate summaries.
+Purpose: update a program by public UUID. `name` is required; `instructor`, `description`, and `schedule` are optional. Success `200 OK` returns a `ProgramResponse` containing `id`, name, description, instructor, schedule, status, and enrolled inmate summaries.
 
-#### `POST /api/v1/rehabilitation/enrollments`
+#### `POST /api/v1/programs/enrollments`
 
 Purpose: enroll an inmate into a program.
 
@@ -786,7 +788,7 @@ Request body:
 Success `201 Created` returns `EnrollmentResponse`.
 The response contains public UUIDs for enrollment `id`, `inmateId`, and `programId`, display names, `enrollmentDate`, and `status`.
 
-#### `GET /api/v1/rehabilitation/enrollments`
+#### `GET /api/v1/programs/enrollments`
 
 Query parameters:
 
@@ -799,7 +801,7 @@ Query parameters:
 
 Default page/size are `0`/`20`; size must be 1–100. Results are sorted by `enrollmentDate` ascending; this endpoint does not accept a sort parameter.
 
-#### `POST /api/v1/rehabilitation/attendance`
+#### `POST /api/v1/programs/attendance`
 
 Purpose: record attendance for one inmate/program/session.
 
@@ -823,7 +825,7 @@ Rules:
 
 Success `201 Created` returns an `AttendanceResponse`.
 
-#### `POST /api/v1/rehabilitation/attendance/bulk`
+#### `POST /api/v1/programs/attendance/bulk`
 
 Purpose: record attendance for multiple inmates in one request.
 
@@ -842,7 +844,7 @@ Request body:
 
 `programId` and `sessionDate` are required. `records` must contain 1–500 non-null entries; each entry requires `inmateId` and nonblank `attendanceStatus`, with optional `remarks` up to 10000 characters. Success is `201 Created` with a list of attendance responses.
 
-#### `GET /api/v1/rehabilitation/attendance`
+#### `GET /api/v1/programs/attendance`
 
 Query parameters:
 

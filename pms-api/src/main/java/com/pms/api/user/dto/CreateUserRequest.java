@@ -30,7 +30,7 @@ public record CreateUserRequest(
         String password,
 
         @Schema(description = "User role", requiredMode = Schema.RequiredMode.REQUIRED,
-                allowableValues = {"Super Admin", "Records Officer", "Disciplinary Officer", "Case Officer", "Visitor Officer", "Rehabilitation Officer", "Instructor", "Medical Officer", "Duty Officer"},
+            allowableValues = {"Super Admin", "Records Officer", "Disciplinary Officer", "Case Officer", "Visitor Officer", "Instructor", "Medical Officer", "Duty Officer", "Prison Officer", "Program Facilitator"},
                 example = "Records Officer")
         @NotBlank(message = "Role is required.")
         String role,

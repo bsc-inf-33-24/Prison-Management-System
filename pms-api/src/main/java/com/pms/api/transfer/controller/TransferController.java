@@ -30,6 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class TransferController {
     private final TransferService service;
     public TransferController(TransferService service) { this.service=service; }
+
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','SUPER_ADMIN', 'PRISON_OFFICER')")
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
     public TransferResponse create(@Valid @RequestBody CreateTransferRequest request) { return service.create(request); }
     @GetMapping

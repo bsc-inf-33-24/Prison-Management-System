@@ -40,10 +40,11 @@ public class User {
             "Disciplinary Officer",
             "Case Officer",
             "Visitor Officer",
-            "Rehabilitation Officer",
             "Instructor",
             "Medical Officer",
-            "Duty Officer"
+            "Duty Officer",
+            "Prison Officer",
+            "Program Facilitator"
     );
 
     @Id
