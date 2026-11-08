@@ -226,11 +226,6 @@ public class ApiExceptionHandler {
         return problem(HttpStatus.NOT_FOUND, "The inmate, prison, or transfer was not found.");
     }
 
-    @ExceptionHandler(VisitService.VisitNotFoundException.class)
-    public ResponseEntity<ApiError> handleVisitNotFound() {
-        return problem(HttpStatus.NOT_FOUND, "Visit not found.");
-    }
-
     @ExceptionHandler(VisitService.InmateNotFoundException.class)
     public ResponseEntity<ApiError> handleVisitInmateNotFound() {
         return problem(HttpStatus.NOT_FOUND, "Inmate not found.");

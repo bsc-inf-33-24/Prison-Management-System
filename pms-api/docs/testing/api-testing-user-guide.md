@@ -346,22 +346,9 @@ GET /api/v1/visitors?fullName=Test&idNumber=NID-TEST-001&phone=991&relationshipT
 Replace IDs with `VISITOR_ID` and `INMATE_ID`; save `VISIT_ID`.
 
 ```text
-GET /api/v1/visits/{visitId}
 GET /api/v1/visits?visitorId=1&visitorName=Test&visitorIdNumber=NID-TEST-001&inmateId=1&inmateName=John&visitDateFrom=2026-01-01T00:00:00%2B02:00&visitDateTo=2026-12-31T23:59:59%2B02:00&loggedBy=1&page=0&size=20&sort=visitDateTime,desc
 GET /api/v1/inmates/{inmateId}/visits?visitorName=Test&visitorIdNumber=NID-TEST-001&page=0&size=20&sort=visitDateTime,desc
-PUT /api/v1/visits/{visitId}
 ```
-
-Update body:
-
-```json
-{
-  "visitDateTime": "2026-01-16T11:00:00+02:00",
-  "durationMinutes": 90
-}
-```
-
-Valid duration is `0` through `1440`. Test `-1` and `1441`.
 
 ## 9. Rehabilitation
 

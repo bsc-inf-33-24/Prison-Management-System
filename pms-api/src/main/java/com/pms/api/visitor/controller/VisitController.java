@@ -1,15 +1,11 @@
 package com.pms.api.visitor.controller;
 
-import com.pms.api.visitor.dto.UpdateVisitRequest;
 import com.pms.api.visitor.dto.VisitHistoryResponse;
 import com.pms.api.visitor.dto.VisitRequest;
 import com.pms.api.visitor.dto.VisitResponse;
 import com.pms.api.visitor.service.VisitService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import java.time.OffsetDateTime;
@@ -22,7 +18,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -48,13 +43,6 @@ public class VisitController {
     public VisitResponse recordVisit(@Valid @RequestBody VisitRequest request,
                                     @AuthenticationPrincipal UserDetails currentUser) {
         return visitService.recordVisit(request, currentUser.getUsername());
-    }
-
-    @Operation(summary = "Get a visit by ID", description = "Find a specific visit with its recorded visitor details.")
-    @GetMapping("/visits/{visitId}")
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
-    public VisitResponse getVisit(@PathVariable UUID visitId) {
-        return visitService.getVisit(visitId);
     }
 
     @Operation(summary = "Search visits", description = "Filter visits by recorded visitor details, inmate, date range, and recording officer.")
@@ -89,12 +77,4 @@ public class VisitController {
         return visitService.getInmateVisitHistory(inmateId, visitorName, visitDateFrom, visitDateTo, page, size, sort);
     }
 
-    @Operation(summary = "Update a visit", description = "Correct the visit start and end timestamps; duration is recalculated.")
-    @PatchMapping("/visits/{visitId}")
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER','SUPER_ADMIN')")
-    public VisitResponse updateVisit(@PathVariable UUID visitId,
-                                    @Valid @RequestBody UpdateVisitRequest request,
-                                    @AuthenticationPrincipal UserDetails currentUser) {
-        return visitService.updateVisit(visitId, request, currentUser.getUsername());
-    }
 }
