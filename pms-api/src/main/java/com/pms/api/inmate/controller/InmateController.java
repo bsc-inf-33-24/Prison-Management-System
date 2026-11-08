@@ -39,7 +39,7 @@ public class InmateController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Enroll an inmate",
             description = "Creates the inmate at the selected prison and allocates the inmate to a cell in that prison in one transaction.")
     @ApiResponses({
@@ -70,7 +70,7 @@ public class InmateController {
     }
 
     @PatchMapping("/{inmateId}")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Update an inmate record",
             description = "Updates inmate details.")
     public InmateResponse update(@PathVariable UUID inmateId,

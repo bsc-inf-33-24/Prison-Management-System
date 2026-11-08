@@ -30,10 +30,10 @@ public class IncidentController {
         this.incidentService = incidentService;
     }
 
-    // Disciplinary Officers and Super Admins may log incidents.
+    // Records Officers may log incidents; only disciplinary officers and Super Admins may resolve them.
     @PostMapping("/incidents")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'DISCIPLINARY_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Log an inmate incident")
     public IncidentResponse logIncident(@Valid @RequestBody LogIncidentRequest request,
                                          @AuthenticationPrincipal UserDetails currentUser) {
