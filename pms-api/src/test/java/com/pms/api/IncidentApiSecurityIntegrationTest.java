@@ -84,12 +84,11 @@ class IncidentApiSecurityIntegrationTest {
         expectStatus(disciplinaryOfficerToken, "GET", historyPath, null, 200);
 
         String superAdminToken = tokenForRole("Super Admin");
-        // Super Admin may read history and log incidents.
-        expectStatus(superAdminToken, "GET", historyPath, null, 200);
-        expectStatus(superAdminToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 201);
+        expectStatus(superAdminToken, "GET", historyPath, null, 403);
+        expectStatus(superAdminToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 403);
 
         for (String role : User.ALLOWED_ROLES) {
-            if (role.equals("Disciplinary Officer") || role.equals("Super Admin")) {
+            if (role.equals("Disciplinary Officer")) {
                 continue;
             }
             String token = tokenForRole(role);

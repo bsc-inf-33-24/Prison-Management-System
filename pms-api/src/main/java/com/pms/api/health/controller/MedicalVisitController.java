@@ -35,7 +35,7 @@ public class MedicalVisitController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('MEDICAL_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('MEDICAL_OFFICER')")
     @Operation(summary = "Record an inmate medical visit")
     public MedicalVisitResponse recordVisit(@Valid @RequestBody RecordMedicalVisitRequest request,
                                              @AuthenticationPrincipal UserDetails currentUser) {
@@ -43,7 +43,7 @@ public class MedicalVisitController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('MEDICAL_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('MEDICAL_OFFICER')")
     @Operation(summary = "Search for an inmate's medical history by inmate ID and optional name")
     public MedicalHistoryResponse getHistory(@RequestParam UUID inmateId,
                                              @RequestParam(required = false) String name) {
