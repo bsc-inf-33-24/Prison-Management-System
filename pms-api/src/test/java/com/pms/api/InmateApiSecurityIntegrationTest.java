@@ -70,11 +70,11 @@ class InmateApiSecurityIntegrationTest {
 
     @Test
     void appliesRoleMatrixAndChecksRoleBeforeLookingUpInmateIds() throws Exception {
-        expectStatus(tokenForRole("Records Officer"), "POST", INMATES_PATH, validRequest(), 201);
         String recordsOfficerToken = tokenForRole("Records Officer");
+        expectStatus(recordsOfficerToken, "POST", INMATES_PATH, validRequest(), 403);
         expectStatus(recordsOfficerToken, "GET", INMATES_PATH, null, 200);
         expectStatus(recordsOfficerToken, "GET", UNKNOWN_INMATE_PATH, null, 404);
-        expectStatus(recordsOfficerToken, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 404);
+        expectStatus(recordsOfficerToken, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 403);
 
         String superAdminToken = tokenForRole("Super Admin");
         expectStatus(superAdminToken, "POST", INMATES_PATH, validRequest(), 201);

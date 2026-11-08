@@ -49,7 +49,7 @@ Endpoint:
 POST /api/v1/inmates
 ```
 
-The records officer or super administrator submits the required inmate profile:
+Only a Super Admin can enroll an inmate. Records Officers can read inmate records but cannot use this write endpoint. The request includes the target cell:
 
 ```json
 {
@@ -81,50 +81,15 @@ GET /api/v1/inmates/{inmateUuid}
 
 ## 2. Cell allocation
 
-Cells are created independently before an inmate can be allocated:
+The inmate enrollment request allocates its cell in the same transaction. Cells are read through `GET /api/v1/cells` and `GET /api/v1/cells/{cellId}`; the API currently exposes no cell-creation endpoint.
 
-```text
-POST /api/v1/cells
-```
-
-Example:
-
-```json
-{
-  "blockName": "A",
-  "cellNumber": 12,
-  "capacity": 4,
-  "classification": "Minimum"
-}
-```
-
-After the inmate and cell exist, allocate the inmate:
-
-```text
-POST /api/v1/inmates/{inmateUuid}/cell-allocation
-```
-
-```json
-{
-  "cellId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
-}
-```
-
-The allocation links one inmate to one cell. The current implementation enforces:
-
-- The inmate must exist.
-- The cell must exist.
-- The inmate classification must match the cell classification.
-- The cell must have available capacity.
-- An inmate may have only one active allocation because `inmate_id` is unique in `cell_allocations`.
-
-To move an already allocated inmate:
+Only a Super Admin can move an already allocated inmate:
 
 ```text
 PUT /api/v1/inmates/{inmateUuid}/cell-allocation
 ```
 
-The target cell must pass the same classification and capacity checks. Moving to the same cell is rejected.
+The target cell must have available capacity and belong to the inmate's current prison. Moving to the same cell is rejected. Records Officers can read cell records but cannot allocate or move inmates.
 
 Cell allocation is not required to create a case, sentence, incident, rehabilitation enrollment, or visit. Those workflows reference the inmate directly.
 

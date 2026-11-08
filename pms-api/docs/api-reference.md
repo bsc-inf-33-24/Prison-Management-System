@@ -123,17 +123,16 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
-| `POST` | `/api/v1/inmates` | Yes | `Records Officer`, `Super Admin` | Enroll an inmate and allocate a cell |
+| `POST` | `/api/v1/inmates` | Yes | `Super Admin` | Enroll an inmate and allocate a cell |
 | `GET` | `/api/v1/inmates` | Yes | `Records Officer`, `Super Admin` | List inmates |
 | `GET` | `/api/v1/inmates/{inmateId}` | Yes | `Records Officer`, `Super Admin` | View an inmate |
-| `PATCH` | `/api/v1/inmates/{inmateId}` | Yes | `Records Officer`, `Super Admin` | Update an inmate record |
+| `PATCH` | `/api/v1/inmates/{inmateId}` | Yes | `Super Admin` | Update an inmate record |
 
 ### 4.4 Cell allocation and inventory
 
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
-| `POST` | `/api/v1/cells` | Yes | `Records Officer`, `Super Admin` | Create a cell |
-| `PUT` | `/api/v1/inmates/{inmateId}/cell-allocation` | Yes | `Records Officer`, `Super Admin` | Move an inmate to another cell |
+| `PUT` | `/api/v1/inmates/{inmateId}/cell-allocation` | Yes | `Super Admin` | Move an inmate to another cell |
 | `GET` | `/api/v1/cells` | Yes | `Records Officer`, `Super Admin` | List cells |
 | `GET` | `/api/v1/cells/{cellId}` | Yes | `Records Officer`, `Super Admin` | View a cell |
 
@@ -141,7 +140,7 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
-| `POST` | `/api/v1/incidents` | Yes | `Disciplinary Officer`, `Super Admin` | Log an incident |
+| `POST` | `/api/v1/incidents` | Yes | `Records Officer`, `Disciplinary Officer`, `Super Admin` | Log an incident |
 | `PATCH` | `/api/v1/incidents/{incidentId}/outcome` | Yes | `Disciplinary Officer`, `Super Admin` | Record an outcome |
 | `GET` | `/api/v1/inmates/{inmateId}/incidents` | Yes | `Disciplinary Officer`, `Super Admin` | Read an inmate’s incident history |
 
@@ -164,17 +163,27 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
-| `POST` | `/api/v1/rehabilitation/programs` | Yes | `Rehabilitation Officer`, `Super Admin` | Create a program |
-| `GET` | `/api/v1/rehabilitation/programs` | Yes | `Rehabilitation Officer`, `Records Officer`, `Super Admin` | List/search programs |
-| `GET` | `/api/v1/rehabilitation/programs/{programId}` | Yes | `Rehabilitation Officer`, `Records Officer`, `Super Admin` | View a program |
-| `PATCH` | `/api/v1/rehabilitation/programs/{programId}` | Yes | `Rehabilitation Officer`, `Super Admin` | Update a program |
-| `POST` | `/api/v1/rehabilitation/enrollments` | Yes | `Rehabilitation Officer`, `Super Admin` | Enroll an inmate |
-| `GET` | `/api/v1/rehabilitation/enrollments` | Yes | `Rehabilitation Officer`, `Records Officer`, `Super Admin` | List enrollment records |
-| `POST` | `/api/v1/rehabilitation/attendance` | Yes | `Rehabilitation Officer`, `Super Admin` | Record attendance |
-| `POST` | `/api/v1/rehabilitation/attendance/bulk` | Yes | `Rehabilitation Officer`, `Super Admin` | Record bulk attendance |
-| `GET` | `/api/v1/rehabilitation/attendance` | Yes | `Rehabilitation Officer`, `Records Officer`, `Super Admin` | Search attendance records |
+| `POST` | `/api/v1/programs` | Yes | `Rehabilitation Officer`, `Super Admin` | Create a program |
+| `GET` | `/api/v1/programs` | Yes | `Rehabilitation Officer`, `Records Officer`, `Super Admin`, `Instructor` | List/search programs |
+| `GET` | `/api/v1/programs/{programId}` | Yes | `Rehabilitation Officer`, `Records Officer`, `Super Admin`, `Instructor` | View a program |
+| `PATCH` | `/api/v1/programs/{programId}` | Yes | `Rehabilitation Officer`, `Super Admin` | Update a program |
+| `POST` | `/api/v1/programs/enrollments` | Yes | `Rehabilitation Officer`, `Super Admin` | Enroll an inmate |
+| `GET` | `/api/v1/programs/enrollments` | Yes | `Rehabilitation Officer`, `Records Officer`, `Super Admin` | List enrollment records |
+| `POST` | `/api/v1/programs/attendance` | Yes | `Rehabilitation Officer`, `Super Admin`, `Instructor` | Record attendance |
+| `POST` | `/api/v1/programs/attendance/bulk` | Yes | `Rehabilitation Officer`, `Super Admin`, `Instructor` | Record bulk attendance |
+| `GET` | `/api/v1/programs/attendance` | Yes | `Rehabilitation Officer`, `Records Officer`, `Super Admin` | Search attendance records |
 
-### 4.9 Monitoring
+### 4.9 Inmate transfers
+
+| Method | Path | Auth | Roles | Purpose |
+|---|---|---:|---|---|
+| `POST` | `/api/v1/transfers` | Yes | `Records Officer`, `Super Admin` | Submit an inmate transfer |
+| `GET` | `/api/v1/transfers` | Yes | `Records Officer`, `Super Admin` | List transfers |
+| `POST` | `/api/v1/transfers/{transferId}/approve` | Yes | `Records Officer`, `Super Admin` | Approve a transfer |
+| `POST` | `/api/v1/transfers/{transferId}/reject` | Yes | `Records Officer`, `Super Admin` | Reject a transfer |
+| `POST` | `/api/v1/transfers/{transferId}/cancel` | Yes | `Records Officer`, `Super Admin` | Cancel a transfer |
+
+### 4.10 Monitoring
 
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
@@ -494,38 +503,6 @@ Purpose: update a previously created inmate record.
 The patch body fields are optional: `firstName`, `lastName`, and `gender` (nonblank when provided); `dateOfBirth` (must be in the past); `admissionDate`. Other create fields, including `cellId`, offence, and sentence dates, are not updated by this endpoint. Success is `200 OK` with `InmateResponse`.
 
 ### 5.4 Cells
-
-#### `POST /api/v1/cells`
-
-Purpose: create a new cell record.
-
-Request body:
-
-```json
-{
-  "blockName": "A",
-  "cellNumber": 1,
-  "capacity": 2
-}
-```
-
-Validation:
-
-- `blockName` required
-- `cellNumber` required and must be a positive integer
-- `capacity` required and must be a positive integer
-
-Success `201 Created` returns a `CellResponse` with the public UUID in `id`, current occupancy, and available spaces.
-
-```json
-{
-  "id": "4a3d7b2a-6c97-4b33-962a-0d1db78b86ce",
-  "name": "A-1",
-  "capacity": 2,
-  "currentOccupancy": 0,
-  "availableSpaces": 2
-}
-```
 
 #### `PUT /api/v1/inmates/{inmateId}/cell-allocation`
 

@@ -88,12 +88,19 @@ class IncidentApiSecurityIntegrationTest {
         expectStatus(superAdminToken, "GET", historyPath, null, 200);
         expectStatus(superAdminToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 201);
 
+        String recordsOfficerToken = tokenForRole("Records Officer");
+        expectStatus(recordsOfficerToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 201);
+        expectStatus(recordsOfficerToken, "GET", historyPath, null, 403);
+        expectStatus(recordsOfficerToken, "PATCH", INCIDENTS_PATH + "/1/outcome", outcomeRequest(), 403);
+
         for (String role : User.ALLOWED_ROLES) {
             if (role.equals("Disciplinary Officer") || role.equals("Super Admin")) {
                 continue;
             }
             String token = tokenForRole(role);
-            expectStatus(token, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 403);
+            if (!role.equals("Records Officer")) {
+                expectStatus(token, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 403);
+            }
             expectStatus(token, "GET", historyPath, null, 403);
         }
     }

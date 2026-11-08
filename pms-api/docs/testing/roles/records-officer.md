@@ -4,32 +4,13 @@ Create `records01` with role `Records Officer`, log in, and use the returned `ac
 
 ## Inmates
 
-- `POST /api/v1/inmates` and `PATCH /api/v1/inmates/{inmateUUID}` use this body:
-
-```json
-{"firstName":"John","lastName":"Banda","dateOfBirth":"1990-04-15","gender":"Male","admissionDate":"2025-01-10","sentenceStartDate":"2025-01-10","sentenceEndDate":"2026-01-09","cellId":"a2bd2d14-15ba-44fc-92c1-3d6553d8e8f4"}
-```
-
 - `GET /api/v1/inmates?search=John&classification=medium&gender=Male&facility=Test%20Facility&page=0&size=20&sort=lastName,asc`
 - `GET /api/v1/inmates/{inmateUUID}`
 
 ## Cells and allocation
 
-- `POST /api/v1/cells`:
-
-```json
-{"blockName":"A","cellNumber":1,"capacity":2,"classification":"medium"}
-```
-
 - `GET /api/v1/cells?blockName=A&classification=medium&page=0&size=20&sort=cellNumber,asc`
 - `GET /api/v1/cells/{cellUUID}`
-- `POST /api/v1/inmates/{inmateUUID}/cell-allocation` and `PUT` the same path to move:
-
-```json
-{"cellId":"<CELL_UUID>"}
-```
-
-Try a valid allocation, duplicate allocation, full cell, classification mismatch, and move to another compatible cell.
 
 ## Read access to other records
 
@@ -38,6 +19,22 @@ Try a valid allocation, duplicate allocation, full cell, classification mismatch
 - Visitors/visits: list and detail `GET` endpoints, including `GET /api/v1/inmates/{inmateUUID}/visits?...`.
 - Rehabilitation: list/detail programs, list enrollments/attendance, and history endpoints. Use the [full guide](../api-testing-user-guide.md#9-rehabilitation) for filters.
 
+## Create incidents and submit transfers
+
+- Log an incident with `POST /api/v1/incidents`:
+
+```json
+{"participants":[{"inmateId":"<INMATE_UUID>","roleInIncident":"Primary participant"}],"incidentDate":"2026-11-08","description":"Incident recorded by a Records Officer."}
+```
+
+- Submit a transfer with `POST /api/v1/transfers`:
+
+```json
+{"inmateId":"<INMATE_UUID>","destinationPrisonId":"<DESTINATION_PRISON_UUID>","reason":"Transfer request"}
+```
+
+Records Officers can also use the other transfer endpoints, subject to the prison access rules.
+
 ## Denied checks
 
-Expect `403` when creating/updating cases, managing crimes, recording incidents, creating/updating visits, or writing rehabilitation records.
+Expect `403` when enrolling/updating inmates, allocating cells, creating/updating cases, managing crimes, recording incident outcomes, creating/updating visits, or writing rehabilitation records.

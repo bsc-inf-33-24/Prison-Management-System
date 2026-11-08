@@ -121,7 +121,7 @@ GET /api/v1/users?status=active&role=Records%20Officer&search=records&page=0&siz
 
 ### Create inmates
 
-`POST /api/v1/inmates` using `TOKEN_RECORDS` or `TOKEN_ADMIN`:
+`POST /api/v1/inmates` using `TOKEN_ADMIN`:
 
 ```json
 {
@@ -136,7 +136,7 @@ GET /api/v1/users?status=active&role=Records%20Officer&search=records&page=0&siz
 }
 ```
 
-Create a second inmate with a different name. Save `INMATE_ID` and `INMATE_ID_2`.
+Create inmates with `TOKEN_ADMIN`; Records Officers have read-only access. Save `INMATE_ID` and `INMATE_ID_2`.
 
 Other inmate inputs:
 
@@ -146,39 +146,21 @@ GET   /api/v1/inmates/{inmateUuid}
 PATCH /api/v1/inmates/{inmateUuid}
 ```
 
-The update body contains the editable profile fields. Test future birth date, missing fields, invalid IDs, and wrong roles.
+Only `TOKEN_ADMIN` may update an inmate. The update body contains the editable profile fields. Test future birth date, missing fields, invalid IDs, and wrong roles.
 
 Names are not unique: create multiple inmates with the same or similar names. Successful responses expose a UUID in `id`; the numeric database key is never returned.
 
 ### Create cells
 
-`POST /api/v1/cells` using `TOKEN_RECORDS`:
-
-```json
-{
-  "blockName": "A",
-  "cellNumber": 1,
-  "capacity": 1,
-  "classification": "medium"
-}
-```
-
-Create another cell with block `B`, cell number `2`, capacity `2`, and classification `low`. Save `CELL_ID` and `CELL_ID_2`.
+Prepare cells through the application's test-data setup; there is no cell-creation endpoint.
 
 Allocation and movement:
 
 ```text
-POST /api/v1/inmates/{inmateId}/cell-allocation
 PUT  /api/v1/inmates/{inmateId}/cell-allocation
 ```
 
-Body:
-
-```json
-{ "cellId": 1 }
-```
-
-Replace `1` with `CELL_ID`. Test full capacity, classification mismatch, duplicate allocation, same-cell movement, and valid movement to `CELL_ID_2`.
+Only `TOKEN_ADMIN` may allocate or move an inmate. Use a valid `CELL_ID` and test full capacity, classification mismatch, duplicate allocation, same-cell movement, and valid movement to another cell.
 
 Cell reads:
 
