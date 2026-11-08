@@ -39,7 +39,7 @@ public class InmateController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Enroll an inmate",
             description = "Creates the inmate at the selected prison and allocates the inmate to a cell in that prison in one transaction.")
     @ApiResponses({
@@ -52,7 +52,7 @@ public class InmateController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "List inmate records")
     public PageResponse<InmateResponse> list(@RequestParam(required = false) String search,
                                              @RequestParam(required = false) String gender,
@@ -63,14 +63,14 @@ public class InmateController {
     }
 
     @GetMapping("/{inmateId}")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Get an inmate record")
     public InmateResponse get(@PathVariable UUID inmateId) {
         return inmateService.get(inmateId);
     }
 
     @PatchMapping("/{inmateId}")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
     @Operation(summary = "Update an inmate record",
             description = "Updates inmate details.")
     public InmateResponse update(@PathVariable UUID inmateId,
