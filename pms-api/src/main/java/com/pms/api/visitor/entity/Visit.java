@@ -136,12 +136,4 @@ public class Visit {
         return updatedAt;
     }
 
-    public void updateDetails(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Integer durationMinutes) {
-        if (!this.endDateTime.equals(endDateTime)) {
-            endReminderSentAt = null;
-        }
-        this.startDateTime = startDateTime;
-        this.endDateTime = endDateTime;
-        this.durationMinutes = durationMinutes;
-    }
 }

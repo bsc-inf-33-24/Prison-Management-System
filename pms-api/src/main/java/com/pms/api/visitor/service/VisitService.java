@@ -7,7 +7,6 @@ import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
-import com.pms.api.visitor.dto.UpdateVisitRequest;
 import com.pms.api.visitor.dto.VisitHistoryResponse;
 import com.pms.api.visitor.dto.VisitRequest;
 import com.pms.api.visitor.dto.VisitResponse;
@@ -86,13 +85,6 @@ public class VisitService {
     }
 
     @Transactional(readOnly = true)
-    public VisitResponse getVisit(UUID visitId) {
-        Visit visit=findVisit(visitId);
-        prisonAccess.requirePrison(visit.getInmate().getCurrentPrison()==null?null:visit.getInmate().getCurrentPrison().getPublicUuid());
-        return VisitResponse.from(visit);
-    }
-
-    @Transactional(readOnly = true)
     public Page<VisitResponse> searchVisits(UUID visitId, String visitorName, UUID inmateId,
                                             String inmateName,
                                             OffsetDateTime visitDateFrom, OffsetDateTime visitDateTo,
@@ -157,30 +149,6 @@ public class VisitService {
 
         Pageable pageable = PageRequest.of(page, size, parseSort(sort, "startDateTime", Sort.Direction.DESC));
         return visitRepository.findAll(specification, pageable).map(VisitHistoryResponse::from);
-    }
-
-    @Transactional
-    public VisitResponse updateVisit(UUID visitId, UpdateVisitRequest request, String username) {
-        Visit visit = findVisit(visitId);
-        prisonAccess.requirePrison(visit.getInmate().getCurrentPrison()==null?null:visit.getInmate().getCurrentPrison().getPublicUuid());
-        if (request == null) {
-            throw new IllegalArgumentException("Visit details are required.");
-        }
-        validateVisitTimes(request.startDateTime(), request.endDateTime());
-
-        Visit prior = new Visit(visit.getInmate(), visit.getStartDateTime(), visit.getEndDateTime(),
-                visit.getDurationMinutes(),
-                visit.getLoggedBy(), visit.getVisitorFullName(), visit.getItemsBrought());
-        visit.updateDetails(request.startDateTime(), request.endDateTime(),
-                calculateDurationMinutes(request.startDateTime(), request.endDateTime()));
-        Visit saved = visitRepository.saveAndFlush(visit);
-        audit(username, "VISIT_UPDATED", "Visit", saved.getPublicUuid().toString(),
-                visitSummary(prior), visitSummary(saved));
-        return VisitResponse.from(saved);
-    }
-
-    public Visit findVisit(UUID visitId) {
-        return visitRepository.findByPublicUuid(visitId).orElseThrow(VisitNotFoundException::new);
     }
 
     private static Specification<Visit> equalLong(String fieldName, Long value) {
@@ -307,9 +275,6 @@ public class VisitService {
         } catch (JsonProcessingException exception) {
             return "{}";
         }
-    }
-
-    public static class VisitNotFoundException extends RuntimeException {
     }
 
     public static class InmateNotFoundException extends RuntimeException {

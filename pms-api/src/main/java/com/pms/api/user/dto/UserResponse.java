@@ -14,7 +14,9 @@ public record UserResponse(
         @Schema(description = "Optional email address, visible through super-admin user management.", nullable = true)
         String email,
         String role,
+        @Schema(description = "Public UUID of the assigned prison.", nullable = true)
         UUID prisonId,
+        @Schema(description = "Name of the assigned prison.", nullable = true)
         String prisonName,
         String status,
         Set<String> permissions,

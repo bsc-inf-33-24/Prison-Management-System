@@ -157,10 +157,8 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
 | `POST` | `/api/v1/visits` | Yes | `Visitor Officer`, `Super Admin`, `Records Officer` | Create a visitor record |
-| `GET` | `/api/v1/visits/{visitId}` | Yes | `Visitor Officer`, `Records Officer` | Fetch a visit by ID |
 | `GET` | `/api/v1/visits` | Yes | `Visitor Officer`, `Super Admin`, `Records Officer` | Search visits |
 | `GET` | `/api/v1/inmates/{inmateId}/visits` | Yes | `Visitor Officer`, `Super Admin`, `Records Officer` | Fetch an inmate’s visit history |
-| `PATCH` | `/api/v1/visits/{visitId}` | Yes | `Visitor Officer`, `Super Admin` | Update visit timestamps |
 
 ### 4.8 Rehabilitation
 
@@ -371,7 +369,7 @@ Query parameters:
 - `size`: optional integer, default `20`, max `100`
 - `sort`: optional sort expression such as `createdAt,desc` or `username,asc`; valid properties are `id`, `fullName`, `username`, `role`, `status`, and `createdAt`
 
-Success `200 OK` returns `PageResponse<UserResponse>`.
+Success `200 OK` returns `PageResponse<UserResponse>`. Each user includes `prisonId` and `prisonName`; both are `null` when the user has no assigned prison.
 
 #### `GET /api/v1/users/{userId}`
 
@@ -707,10 +705,6 @@ Validation:
 
 Success `201 Created` returns `VisitResponse`.
 
-#### `GET /api/v1/visits/{visitId}`
-
-Purpose: fetch a visit by its public UUID.
-
 #### `GET /api/v1/visits`
 
 Query parameters:
@@ -740,10 +734,6 @@ Optional filters:
 - `page` (default `0`), `size` (default `20`, max `100`), `sort` (same sort aliases as visit search; default `startDateTime,desc`)
 
 This route first resolves the inmate UUID; an unknown inmate returns `404`.
-
-#### `PATCH /api/v1/visits/{visitId}`
-
-Purpose: edit a visit’s start and end timestamps; the duration is recalculated server-side. Both `startDateTime` and `endDateTime` are required ISO-8601 offset date-times, and the end cannot precede the start. Success `200 OK` returns `VisitResponse`.
 
 Representative `VisitResponse` shape:
 

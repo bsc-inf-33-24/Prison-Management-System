@@ -51,6 +51,10 @@ class ApiVersioningAndSwaggerTest {
                 .doesNotContain("/api/v1/sentences");
 
         JsonNode document = objectMapper.readTree(docs);
+        assertThat(document.at("/paths/~1api~1v1~1visits~1{visitId}").isMissingNode()).isTrue();
+        assertThat(document.at("/paths/~1api~1v1~1users/get").isObject()).isTrue();
+        assertThat(document.at("/components/schemas/UserResponse/properties/prisonId").isObject()).isTrue();
+        assertThat(document.at("/components/schemas/UserResponse/properties/prisonName").isObject()).isTrue();
         JsonNode createUserSchema = document.at("/components/schemas/CreateUserRequest");
         assertThat(createUserSchema.at("/properties/email").isObject()).isTrue();
         assertThat(createUserSchema.path("required").toString()).contains("fullName", "username", "password", "role")
