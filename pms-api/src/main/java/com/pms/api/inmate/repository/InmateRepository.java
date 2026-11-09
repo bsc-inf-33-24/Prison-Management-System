@@ -3,6 +3,9 @@ package com.pms.api.inmate.repository;
 import com.pms.api.inmate.entity.Inmate;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.LocalDate;
+import java.time.Instant;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -12,4 +15,12 @@ public interface InmateRepository extends JpaRepository<Inmate, Long>, JpaSpecif
     int assignPrisonToUnassigned(@org.springframework.data.repository.query.Param("prisonId") Long prisonId);
 
     Optional<Inmate> findByPublicUuid(UUID publicUuid);
+
+    @org.springframework.data.jpa.repository.Query("select i from Inmate i where i.projectedReleaseDate = :date and i.releaseReminderSentAt is null")
+    List<Inmate> findDueForReleaseReminder(@org.springframework.data.repository.query.Param("date") LocalDate date);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("update Inmate i set i.releaseReminderSentAt = :sentAt where i.id = :id and i.releaseReminderSentAt is null")
+    int claimReleaseReminder(@org.springframework.data.repository.query.Param("id") Long id,
+                             @org.springframework.data.repository.query.Param("sentAt") Instant sentAt);
 }

@@ -2,6 +2,7 @@ package com.pms.api.inmate.dto;
 
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.entity.SentenceDurationUnit;
+import com.pms.api.inmate.entity.SentenceType;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -17,7 +18,10 @@ public record InmateResponse(
         Integer sentenceDurationValue,
         SentenceDurationUnit sentenceDurationUnit,
         LocalDate sentenceStartDate,
+        SentenceType sentenceType,
         LocalDate sentenceEndDate,
+        java.math.BigDecimal remissionPercentage,
+        LocalDate projectedReleaseDate,
         UUID prisonId,
         String prisonName,
         UUID cellId,
@@ -43,7 +47,10 @@ public record InmateResponse(
                 inmate.getSentenceDurationValue(),
                 inmate.getSentenceDurationUnit(),
                 inmate.getSentenceStartDate(),
+                inmate.getSentenceType(),
                 inmate.getSentenceEndDate(),
+                inmate.getRemissionPercentage(),
+                inmate.getProjectedReleaseDate(),
                 inmate.getCurrentPrison() == null ? null : inmate.getCurrentPrison().getPublicUuid(),
                 inmate.getCurrentPrison() == null ? null : inmate.getCurrentPrison().getName(),
                 cellId,

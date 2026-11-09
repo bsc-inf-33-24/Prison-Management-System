@@ -60,7 +60,9 @@ public class InmateService {
                 request.admissionDate(),
                 request.offence() == null ? null : request.offence().trim(),
                 request.sentenceStartDate(),
-                request.sentenceEndDate()
+                request.sentenceType(),
+                request.sentenceEndDate(),
+                request.remissionPercentage()
         );
         Prison prison = prisonRepository.findByPublicUuid(request.prisonId()).orElseThrow(PrisonNotFoundException::new);
         prisonAccess.requirePrison(request.prisonId());
