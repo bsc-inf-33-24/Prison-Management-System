@@ -26,4 +26,4 @@ Check a multiple-participant incident, nonexistent inmate, future date, blank ou
 
 ## Denied checks
 
-Expect `403` for incident write requests using Records, Case, Visitor, or Duty Officer tokens. Super Admin can read incident history but cannot log or resolve incidents.
+Records Officers can log incidents but receive `403` for incident history and outcome updates. Expect `403` for incident write requests using Case, Visitor, or Duty Officer tokens. Super Admin can read incident history but cannot log or resolve incidents.

@@ -34,7 +34,7 @@ public class CellController {
     }
 
     @PutMapping("/inmates/{inmateId}/cell-allocation")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Move an inmate to a different cell")
     public CellMoveResponse move(@PathVariable UUID inmateId,
                                 @Valid @RequestBody AllocateCellRequest request) {
