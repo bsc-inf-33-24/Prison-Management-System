@@ -38,14 +38,14 @@ public class PrisonController {
     @Operation(summary = "Create a prison with its initial blocks and cells")
     public PrisonDetailResponse create(@Valid @RequestBody CreatePrisonRequest request) { return service.create(request); }
 
-    @GetMapping @PreAuthorize("hasAnyRole('SUPER_ADMIN','RECORDS_OFFICER')")
+    @GetMapping @PreAuthorize("hasRole('RECORDS_OFFICER')")
     public PageResponse<PrisonListResponse> list(@RequestParam(required=false) String search,
             @RequestParam(required=false) Boolean active, @RequestParam(required=false) Integer page,
             @RequestParam(required=false) Integer size, @RequestParam(required=false) List<String> sort) {
         return service.list(search,active,page,size,sort);
     }
 
-    @GetMapping("/{prisonId}") @PreAuthorize("hasAnyRole('SUPER_ADMIN','RECORDS_OFFICER')")
+    @GetMapping("/{prisonId}") @PreAuthorize("hasRole('RECORDS_OFFICER')")
     public PrisonDetailResponse get(@PathVariable UUID prisonId) { return service.get(prisonId); }
 
     @PatchMapping("/{prisonId}") @PreAuthorize("hasRole('SUPER_ADMIN')")
