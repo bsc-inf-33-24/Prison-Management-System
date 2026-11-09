@@ -64,8 +64,8 @@ public class InmateService {
                 request.sentenceEndDate(),
                 request.remissionPercentage()
         );
-        Prison prison = prisonRepository.findByPublicUuid(request.prisonId()).orElseThrow(PrisonNotFoundException::new);
-        prisonAccess.requirePrison(request.prisonId());
+        UUID prisonId = prisonAccess.effectivePrison(null);
+        Prison prison = prisonRepository.findByPublicUuid(prisonId).orElseThrow(PrisonNotFoundException::new);
         if (!prison.isActive()) throw new PrisonInactiveException();
         inmate.assignPrison(prison);
         Inmate saved = saveInmate(inmate);
