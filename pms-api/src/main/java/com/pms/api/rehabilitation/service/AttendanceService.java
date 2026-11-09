@@ -11,6 +11,7 @@ import com.pms.api.rehabilitation.exception.RehabilitationExceptions.AttendanceN
 import com.pms.api.rehabilitation.exception.RehabilitationExceptions.DuplicateAttendanceException;
 import com.pms.api.rehabilitation.repository.AttendanceRecordRepository;
 import com.pms.api.rehabilitation.specification.AttendanceSpecifications;
+import com.pms.api.security.PrisonAccessService;
 import com.pms.api.user.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,14 +32,16 @@ public class AttendanceService {
     private final EnrollmentService enrollmentService;
     private final AuditService auditService;
     private final UserRepository userRepository;
+    private final PrisonAccessService prisonAccess;
 
     public AttendanceService(AttendanceRecordRepository attendanceRepository,
                              EnrollmentService enrollmentService,
-                             AuditService auditService, UserRepository userRepository) {
+                             AuditService auditService, UserRepository userRepository, PrisonAccessService prisonAccess) {
         this.attendanceRepository = attendanceRepository;
         this.enrollmentService = enrollmentService;
         this.auditService = auditService;
         this.userRepository = userRepository;
+        this.prisonAccess=prisonAccess;
     }
 
     @Transactional
@@ -97,7 +100,11 @@ public class AttendanceService {
                                          LocalDate sessionDateTo, Pageable pageable) {
         Specification<AttendanceRecord> specification =
                 Specification.unrestricted();
+        UUID assignedPrison=prisonAccess.effectivePrison(null);
+        if (assignedPrison!=null) specification=specification.and((root,query,cb)->
+                cb.equal(root.get("enrollment").get("inmate").get("currentPrison").get("publicUuid"),assignedPrison));
         Long internalInmateId = inmateId == null ? null : enrollmentService.getInmateId(inmateId);
+        if (inmateId!=null) prisonAccess.requireInmate(inmateId);
         if (internalInmateId != null) {
             specification = specification.and(AttendanceSpecifications.inmateId(internalInmateId));
         }

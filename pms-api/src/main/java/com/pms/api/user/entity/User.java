@@ -13,6 +13,9 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.FetchType;
+import com.pms.api.prison.entity.Prison;
 import org.hibernate.annotations.BatchSize;
 import java.time.Instant;
 import java.util.Collections;
@@ -66,6 +69,10 @@ public class User {
 
     @Column(name = "role", nullable = false, length = 50)
     private String role;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "prison_id")
+    private Prison prison;
 
     @Column(name = "status", nullable = false, length = 16)
     private String status = ACTIVE;
@@ -136,6 +143,10 @@ public class User {
     public String getRole() {
         return role;
     }
+
+    public Prison getPrison() { return prison; }
+
+    public void assignPrison(Prison prison) { this.prison = prison; }
 
     public String getStatus() {
         return status;

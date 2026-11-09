@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 
 /** Fields are optional; null values are left unchanged. */
 public record UpdateUserDetailsRequest(
@@ -22,8 +23,15 @@ public record UpdateUserDetailsRequest(
 
         String role,
 
-        Set<String> permissions
+        Set<String> permissions,
+
+        @Schema(description = "Assign the staff account to another prison. Super Admin accounts remain system-wide.", nullable = true)
+        UUID prisonId
 ) {
+    public UpdateUserDetailsRequest(String fullName, String username, String email, String role, Set<String> permissions) {
+        this(fullName, username, email, role, permissions, null);
+    }
+
     public UpdateUserDetailsRequest {
         if (email != null) {
             email = email.trim().toLowerCase(Locale.ROOT);

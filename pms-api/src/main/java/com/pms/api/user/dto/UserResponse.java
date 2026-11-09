@@ -14,6 +14,8 @@ public record UserResponse(
         @Schema(description = "Optional email address, visible through super-admin user management.", nullable = true)
         String email,
         String role,
+        UUID prisonId,
+        String prisonName,
         String status,
         Set<String> permissions,
         Instant createdAt,
@@ -22,6 +24,8 @@ public record UserResponse(
     public static UserResponse from(User user) {
         return new UserResponse(
             user.getPublicUuid(), user.getFullName(), user.getUsername(), user.getEmail(), user.getRole(),
+                user.getPrison() == null ? null : user.getPrison().getPublicUuid(),
+                user.getPrison() == null ? null : user.getPrison().getName(),
                 user.getStatus(), new LinkedHashSet<> (user.getPermissions()), user.getCreatedAt(), user.getUpdatedAt()
         );
     }

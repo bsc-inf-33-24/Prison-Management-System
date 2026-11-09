@@ -18,6 +18,8 @@ public record InmateResponse(
         SentenceDurationUnit sentenceDurationUnit,
         LocalDate sentenceStartDate,
         LocalDate sentenceEndDate,
+        UUID prisonId,
+        String prisonName,
         UUID cellId,
         Instant createdAt,
         Instant updatedAt
@@ -42,6 +44,8 @@ public record InmateResponse(
                 inmate.getSentenceDurationUnit(),
                 inmate.getSentenceStartDate(),
                 inmate.getSentenceEndDate(),
+                inmate.getCurrentPrison() == null ? null : inmate.getCurrentPrison().getPublicUuid(),
+                inmate.getCurrentPrison() == null ? null : inmate.getCurrentPrison().getName(),
                 cellId,
                 inmate.getCreatedAt(),
                 inmate.getUpdatedAt()

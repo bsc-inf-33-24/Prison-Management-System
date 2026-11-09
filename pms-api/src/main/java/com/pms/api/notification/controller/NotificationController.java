@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/notifications")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "09. Notifications", description = "Read and manage the authenticated user's in-app notifications.")
+@Tag(name = "11. Notifications", description = "Read and manage the authenticated user's in-app notifications.")
 public class NotificationController {
 
     private final NotificationService notificationService;

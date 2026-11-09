@@ -13,17 +13,17 @@ public interface CellAllocationRepository extends JpaRepository<CellAllocation, 
 
     Optional<CellAllocation> findByPublicUuid(UUID publicUuid);
 
-    @Query("select count(a) from CellAllocation a where a.cell.id = :cellId")
+    @Query("select count(a) from CellAllocation a where a.cell.id = :cellId and a.releasedAt is null")
     long countByCellId(@Param("cellId") Long cellId);
 
-    @Query("select a.cell.id, count(a) from CellAllocation a where a.cell.id in :cellIds group by a.cell.id")
+    @Query("select a.cell.id, count(a) from CellAllocation a where a.cell.id in :cellIds and a.releasedAt is null group by a.cell.id")
     List<Object[]> countByCellIds(@Param("cellIds") List<Long> cellIds);
 
-    Optional<CellAllocation> findByInmateId(Long inmateId);
+    Optional<CellAllocation> findByInmate_IdAndReleasedAtIsNull(Long inmateId);
 
-    List<CellAllocation> findByCell_IdOrderByAllocatedAtAsc(Long cellId);
+    List<CellAllocation> findByCell_IdAndReleasedAtIsNullOrderByAllocatedAtAsc(Long cellId);
 
     @Modifying
-    @Query("delete from CellAllocation a where a.inmate.id = :inmateId")
-    int deleteByInmateId(@Param("inmateId") Long inmateId);
+    @Query("update CellAllocation a set a.releasedAt = :releasedAt where a.inmate.id = :inmateId and a.releasedAt is null")
+    int releaseByInmateId(@Param("inmateId") Long inmateId, @Param("releasedAt") java.time.Instant releasedAt);
 }

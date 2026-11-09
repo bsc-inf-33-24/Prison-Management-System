@@ -13,6 +13,9 @@ import com.pms.api.common.pagination.PageResponse;
 import com.pms.api.common.pagination.PageableValidator;
 import com.pms.api.common.pagination.PaginationProperties;
 import com.pms.api.notification.service.NotificationService;
+import com.pms.api.prison.entity.Prison;
+import com.pms.api.prison.repository.PrisonRepository;
+import com.pms.api.security.PrisonAccessService;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -30,15 +33,20 @@ public class InmateService {
     private final CellService cellService;
     private final PaginationProperties paginationProperties;
     private final NotificationService notificationService;
+    private final PrisonRepository prisonRepository;
+    private final PrisonAccessService prisonAccess;
 
     public InmateService(InmateRepository inmateRepository,
                          CellService cellService,
                          PaginationProperties paginationProperties,
-                         NotificationService notificationService) {
+                         NotificationService notificationService,
+                         PrisonRepository prisonRepository, PrisonAccessService prisonAccess) {
         this.inmateRepository = inmateRepository;
         this.cellService = cellService;
         this.paginationProperties = paginationProperties;
         this.notificationService = notificationService;
+        this.prisonRepository = prisonRepository;
+        this.prisonAccess = prisonAccess;
     }
 
     @Audited
@@ -54,6 +62,10 @@ public class InmateService {
                 request.sentenceStartDate(),
                 request.sentenceEndDate()
         );
+        Prison prison = prisonRepository.findByPublicUuid(request.prisonId()).orElseThrow(PrisonNotFoundException::new);
+        prisonAccess.requirePrison(request.prisonId());
+        if (!prison.isActive()) throw new PrisonInactiveException();
+        inmate.assignPrison(prison);
         Inmate saved = saveInmate(inmate);
         CellAllocationResponse allocation = cellService.allocate(
                 saved.getPublicUuid(), new AllocateCellRequest(request.cellId()));
@@ -72,7 +84,9 @@ public class InmateService {
         Pageable pageable = PageableValidator.create(page, size, sort,
                 Set.of("id", "firstName", "lastName", "admissionDate", "createdAt"),
                 Sort.by(Sort.Order.asc("id")), paginationProperties);
+        UUID prisonId=prisonAccess.effectivePrison(null);
         Specification<Inmate> specification = Specification.unrestricted();
+        if (prisonId!=null) specification=specification.and((root,query,cb)->cb.equal(root.get("currentPrison").get("publicUuid"),prisonId));
         if (search != null && !search.isBlank()) {
             String value = "%" + escapeLikePattern(search.trim()).toLowerCase(Locale.ROOT) + "%";
             specification = specification.and((root, query, cb) -> cb.or(
@@ -87,6 +101,7 @@ public class InmateService {
 
     @Transactional(readOnly = true)
     public InmateResponse get(UUID inmateId) {
+        prisonAccess.requireInmate(inmateId);
         return InmateResponse.from(findInmate(inmateId));
     }
 
@@ -94,6 +109,7 @@ public class InmateService {
     @Transactional
     public InmateResponse update(UUID inmateId, UpdateInmateDetailsRequest request) {
         Inmate inmate = findInmate(inmateId);
+        prisonAccess.requirePrison(inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid());
         String firstName = updateValue(request.firstName(), inmate.getFirstName());
         String lastName = updateValue(request.lastName(), inmate.getLastName());
         String gender = updateValue(request.gender(), inmate.getGender());
@@ -134,5 +150,8 @@ public class InmateService {
 
     public static class InmateNotFoundException extends RuntimeException {
     }
+
+    public static class PrisonNotFoundException extends RuntimeException { }
+    public static class PrisonInactiveException extends RuntimeException { }
 
 }

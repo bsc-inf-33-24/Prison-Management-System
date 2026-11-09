@@ -21,7 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "05. Incidents and discipline", description = "Log incidents, record outcomes, and review inmate discipline history.")
+@Tag(name = "07. Incidents and discipline", description = "Log incidents, record outcomes, and review inmate discipline history.")
 public class IncidentController {
 
     private final IncidentService incidentService;
@@ -56,4 +56,3 @@ public class IncidentController {
         return incidentService.getHistory(inmateId);
     }
 }
-

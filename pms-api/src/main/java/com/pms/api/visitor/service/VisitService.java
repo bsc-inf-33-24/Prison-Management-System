@@ -13,6 +13,7 @@ import com.pms.api.visitor.dto.VisitRequest;
 import com.pms.api.visitor.dto.VisitResponse;
 import com.pms.api.visitor.entity.Visit;
 import com.pms.api.visitor.repository.VisitRepository;
+import com.pms.api.security.PrisonAccessService;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import java.time.Duration;
@@ -40,19 +41,22 @@ public class VisitService {
     private final AuditService auditService;
     private final ObjectMapper objectMapper;
     private final ZoneId visitTimeZone;
+    private final PrisonAccessService prisonAccess;
 
     public VisitService(VisitRepository visitRepository,
                         InmateRepository inmateRepository,
                         UserRepository userRepository,
                         AuditService auditService,
                         ObjectMapper objectMapper,
-                        @Value("${app.visits.time-zone:Africa/Blantyre}") String visitTimeZone) {
+                        @Value("${app.visits.time-zone:Africa/Blantyre}") String visitTimeZone,
+                        PrisonAccessService prisonAccess) {
         this.visitRepository = visitRepository;
         this.inmateRepository = inmateRepository;
         this.userRepository = userRepository;
         this.auditService = auditService;
         this.objectMapper = objectMapper;
         this.visitTimeZone = ZoneId.of(visitTimeZone);
+        this.prisonAccess = prisonAccess;
     }
 
     @Transactional
@@ -65,6 +69,7 @@ public class VisitService {
         }
         Inmate inmate = inmateRepository.findByPublicUuid(request.inmateId())
                 .orElseThrow(InmateNotFoundException::new);
+        prisonAccess.requirePrison(inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid());
         OffsetDateTime startDateTime = LocalDateTime.of(request.visitDate(), request.startTime())
                 .atZone(visitTimeZone).toOffsetDateTime();
         OffsetDateTime endDateTime = LocalDateTime.of(request.visitDate(), request.endTime())
@@ -74,7 +79,7 @@ public class VisitService {
         User user = userRepository.findByUsername(username).orElseThrow(UserNotFoundException::new);
         Visit visit = new Visit(inmate, startDateTime, endDateTime,
                 calculateDurationMinutes(startDateTime, endDateTime), user,
-                request.visitorFullName().trim());
+                request.visitorFullName().trim(), request.itemsBrought());
         Visit saved = visitRepository.saveAndFlush(visit);
         audit(username, "VISIT_CREATED", "Visit", saved.getPublicUuid().toString(), "{}", visitSummary(saved));
         return VisitResponse.from(saved);
@@ -82,7 +87,9 @@ public class VisitService {
 
     @Transactional(readOnly = true)
     public VisitResponse getVisit(UUID visitId) {
-        return VisitResponse.from(findVisit(visitId));
+        Visit visit=findVisit(visitId);
+        prisonAccess.requirePrison(visit.getInmate().getCurrentPrison()==null?null:visit.getInmate().getCurrentPrison().getPublicUuid());
+        return VisitResponse.from(visit);
     }
 
     @Transactional(readOnly = true)
@@ -94,6 +101,9 @@ public class VisitService {
         validateDateRange(visitDateFrom, visitDateTo);
 
         Specification<Visit> specification = Specification.unrestricted();
+        UUID assignedPrison=prisonAccess.effectivePrison(null);
+        if (assignedPrison!=null) specification=specification.and((root,query,cb)->
+                cb.equal(root.get("inmate").get("currentPrison").get("publicUuid"),assignedPrison));
         if (visitId != null) {
             specification = specification.and(equalLong("id", visitRepository.findByPublicUuid(visitId)
                     .map(Visit::getId).orElse(-1L)));
@@ -129,6 +139,7 @@ public class VisitService {
                                                             OffsetDateTime visitDateTo, int page, int size,
                                                             String sort) {
         Inmate inmate = inmateRepository.findByPublicUuid(inmateId).orElseThrow(InmateNotFoundException::new);
+        prisonAccess.requirePrison(inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid());
         validatePage(page, size);
         validateDateRange(visitDateFrom, visitDateTo);
 
@@ -151,6 +162,7 @@ public class VisitService {
     @Transactional
     public VisitResponse updateVisit(UUID visitId, UpdateVisitRequest request, String username) {
         Visit visit = findVisit(visitId);
+        prisonAccess.requirePrison(visit.getInmate().getCurrentPrison()==null?null:visit.getInmate().getCurrentPrison().getPublicUuid());
         if (request == null) {
             throw new IllegalArgumentException("Visit details are required.");
         }
@@ -158,7 +170,7 @@ public class VisitService {
 
         Visit prior = new Visit(visit.getInmate(), visit.getStartDateTime(), visit.getEndDateTime(),
                 visit.getDurationMinutes(),
-                visit.getLoggedBy(), visit.getVisitorFullName());
+                visit.getLoggedBy(), visit.getVisitorFullName(), visit.getItemsBrought());
         visit.updateDetails(request.startDateTime(), request.endDateTime(),
                 calculateDurationMinutes(request.startDateTime(), request.endDateTime()));
         Visit saved = visitRepository.saveAndFlush(visit);

@@ -42,6 +42,9 @@ public record InmateRequest(
         @NotNull(message = "sentence end date is required")
         LocalDate sentenceEndDate,
 
+        @NotNull(message = "Prison Id is required")
+        UUID prisonId,
+
         @NotNull(message = "cell Id is required")
         UUID cellId
 ) {

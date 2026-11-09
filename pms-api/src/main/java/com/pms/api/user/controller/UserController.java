@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/users")
 @PreAuthorize("hasRole('SUPER_ADMIN')")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "02. User management", description = "Create users and update user details, status, roles, and permissions.")
+@Tag(name = "03. User management", description = "Create users and update user details, status, roles, and permissions.")
 public class UserController {
 
     private final UserService userService;
@@ -54,7 +54,8 @@ public class UserController {
                       "username": "records01",
                       "email": "records.officer@example.test",
                       "password": "Records123!",
-                      "role": "Records Officer"
+                      "role": "Records Officer",
+                      "prisonId": "9b91b52d-d631-4bea-a1df-f8b66473dc0a"
                     }
                     """))))
         @ApiResponses({
@@ -116,4 +117,3 @@ public class UserController {
     }
 
 }
-
