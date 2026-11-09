@@ -66,14 +66,16 @@ Save the returned `accessToken` as `TOKEN_ADMIN`.
 Repeat with these role values and unique usernames:
 
 ```text
-discip01   Disciplinary Officer   Discip123!
-case01     Case Officer           Case123!
-visitor01  Visitor Officer        Visitor123!
-rehab01    Rehabilitation Officer Rehab123!
-ordinary1  Duty Officer            Duty123!
+discip01   Disciplinary Officer Discip123!
+case01     Case Officer         Case123!
+visitor01  Visitor Officer      Visitor123!
+instruct1  Instructor           Instruct123!
+prison01   Prison Officer       Prison123!
+program01  Program Facilitator  Program123!
+ordinary1  Duty Officer         Duty123!
 ```
 
-Login each account with `POST /api/v1/auth/login` and save `TOKEN_RECORDS`, `TOKEN_DISCIPLINE`, `TOKEN_CASE`, `TOKEN_VISITOR`, `TOKEN_REHAB`, and `TOKEN_ORDINARY`.
+Login each account with `POST /api/v1/auth/login` and save a token for each role, including `TOKEN_PRISON` and `TOKEN_PROGRAM`.
 
 ## 3. Authentication inputs
 
@@ -339,7 +341,7 @@ GET /api/v1/inmates/{inmateId}/visits?visitorName=Test&visitorIdNumber=NID-TEST-
 
 ## 9. Rehabilitation
 
-Create/update with `TOKEN_REHAB`; list/history also allow `TOKEN_RECORDS`.
+Create/update with `TOKEN_PROGRAM`; list/history also allow `TOKEN_RECORDS`.
 
 ### Program
 

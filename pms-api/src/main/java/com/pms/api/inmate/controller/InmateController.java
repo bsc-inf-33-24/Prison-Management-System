@@ -39,7 +39,7 @@ public class InmateController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN', 'PRISON_OFFICER')")
     @Operation(summary = "Enroll an inmate",
             description = "Creates the inmate at the selected prison and allocates the inmate to a cell in that prison in one transaction.")
     @ApiResponses({

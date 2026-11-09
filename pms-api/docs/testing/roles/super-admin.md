@@ -12,7 +12,7 @@ The optional `email` field accepts a valid email address. Omit it for accounts w
 {"fullName":"Test Records Officer","username":"records01","password":"Records123!","role":"Records Officer"}
 ```
 
-Allowed role strings: `Super Admin`, `Records Officer`, `Disciplinary Officer`, `Case Officer`, `Visitor Officer`, `Rehabilitation Officer`, `Medical Officer`, `Duty Officer`. Password length is 8–16 characters.
+Allowed role strings: `Super Admin`, `Records Officer`, `Disciplinary Officer`, `Case Officer`, `Visitor Officer`, `Instructor`, `Medical Officer`, `Duty Officer`, `Prison Officer`, `Program Facilitator`. Password length is 8–16 characters.
 
 - `GET /api/v1/users?status=active&role=Records%20Officer&search=records&page=0&size=20&sort=createdAt,desc`
 - `GET /api/v1/users/{userUUID}`

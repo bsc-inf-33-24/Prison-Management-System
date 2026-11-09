@@ -87,6 +87,12 @@ class InmateApiSecurityIntegrationTest {
                 continue;
             }
             String token = tokenForRole(role);
+            if (role.equals("Prison Officer")) {
+                expectStatus(token, "GET", INMATES_PATH, null, 403);
+                expectStatus(token, "GET", UNKNOWN_INMATE_PATH, null, 403);
+                expectStatus(token, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 403);
+                continue;
+            }
             expectStatus(token, "POST", INMATES_PATH, validRequest(), 403);
             expectStatus(token, "GET", INMATES_PATH, null, 403);
             expectStatus(token, "GET", UNKNOWN_INMATE_PATH, null, 403);
@@ -130,6 +136,11 @@ class InmateApiSecurityIntegrationTest {
         inmateHandlers.forEach(handler ->
                 assertNotNull(handler.getMethodAnnotation(PreAuthorize.class),
                         handler.getMethod().getName() + " must declare @PreAuthorize."));
+        var enrollHandler = inmateHandlers.stream()
+            .filter(handler -> handler.getMethod().getName().equals("enroll"))
+            .findFirst()
+            .orElseThrow();
+        assertTrue(enrollHandler.getMethodAnnotation(PreAuthorize.class).value().contains("PRISON_OFFICER"));
     }
 
     private void expectEveryEndpointStatus(String token, int expectedStatus) throws Exception {
