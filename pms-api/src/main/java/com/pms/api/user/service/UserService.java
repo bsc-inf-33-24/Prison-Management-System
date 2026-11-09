@@ -38,16 +38,19 @@ public class UserService implements UserDetailsService {
     private final PaginationProperties paginationProperties;
     private final NotificationService notificationService;
     private final PrisonRepository prisonRepository;
+    private final NewAccountEmailService newAccountEmailService;
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        com.pms.api.auth.service.PasswordPolicy passwordPolicy,
                        PaginationProperties paginationProperties,
-                       NotificationService notificationService, PrisonRepository prisonRepository) {
+                       NotificationService notificationService, PrisonRepository prisonRepository,
+                       org.springframework.beans.factory.ObjectProvider<NewAccountEmailService> emailServiceProvider) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.passwordPolicy = passwordPolicy;
         this.paginationProperties = paginationProperties;
         this.notificationService = notificationService;
         this.prisonRepository = prisonRepository;
+        this.newAccountEmailService = emailServiceProvider.getIfAvailable();
     }
 
     @Audited
@@ -87,6 +90,7 @@ public class UserService implements UserDetailsService {
                 "Your user account has been created.",
                 saved.getPublicUuid(),
                 Set.of("Super Admin"));
+        if (newAccountEmailService != null) newAccountEmailService.sendPasswordChangeInstruction(saved);
         return UserResponse.from(saved);
     }
 
