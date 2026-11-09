@@ -62,7 +62,7 @@ public class RehabilitationController {
 
     @PostMapping("/programs")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PROGRAM_FACILITATOR')")
+    @PreAuthorize("hasRole('PROGRAM_FACILITATOR')")
     @Operation(summary = "Create a rehabilitation program")
     public ProgramResponse createProgram(@Valid @RequestBody CreateProgramRequest request,
                                          @AuthenticationPrincipal UserDetails currentUser) {
@@ -70,7 +70,7 @@ public class RehabilitationController {
     }
 
     @GetMapping("/programs")
-    @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR','SUPER_ADMIN','RECORDS_OFFICER','INSTRUCTOR')")
+    @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR','RECORDS_OFFICER','INSTRUCTOR')")
     @Operation(summary = "List and search rehabilitation programs",
             description = "Each program includes the inmates currently enrolled in it.")
     public Page<ProgramResponse> listPrograms(
@@ -85,14 +85,14 @@ public class RehabilitationController {
     }
 
     @GetMapping("/programs/{programId}")
-    @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'RECORDS_OFFICER', 'SUPER_ADMIN', 'INSTRUCTOR')")
+    @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'RECORDS_OFFICER', 'INSTRUCTOR')")
     @Operation(summary = "Get a rehabilitation program")
     public ProgramDetailResponse getProgram(@PathVariable UUID programId, @AuthenticationPrincipal UserDetails currentUser) {
         return programService.getDetails(programId, currentUser.getUsername());
     }
 
     @PatchMapping("/programs/{programId}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','PROGRAM_FACILITATOR')")
+    @PreAuthorize("hasRole('PROGRAM_FACILITATOR')")
     @Operation(summary = "Update rehabilitation program details")
     public ProgramResponse updateProgram(@PathVariable UUID programId,
                                          @Valid @RequestBody UpdateProgramRequest request,
@@ -102,7 +102,7 @@ public class RehabilitationController {
 
     @PostMapping("/programs/enrollments")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('PROGRAM_FACILITATOR')")
     @Operation(summary = "Enroll an inmate in a rehabilitation program")
     public EnrollmentResponse createEnrollment(@Valid @RequestBody CreateEnrollmentRequest request,
                                                 @AuthenticationPrincipal UserDetails currentUser) {
@@ -110,7 +110,7 @@ public class RehabilitationController {
     }
 
     @GetMapping("/programs/enrollments")
-    @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'RECORDS_OFFICER', 'INSTRUCTOR')")
     @Operation(summary = "List and search rehabilitation program enrollments")
     public Page<EnrollmentResponse> listEnrollments(
             @RequestParam(required = false) UUID inmateId,
@@ -129,7 +129,7 @@ public class RehabilitationController {
 
     @PostMapping("/programs/attendance")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'INSTRUCTOR', 'PROGRAM_FACILITATOR')")
+    @PreAuthorize("hasAnyRole('INSTRUCTOR', 'PROGRAM_FACILITATOR')")
     @Operation(summary = "Record attendance for a rehabilitation program session")
     public AttendanceResponse createAttendance(@Valid @RequestBody RecordAttendanceRequest request,
                                          @AuthenticationPrincipal UserDetails currentUser) {
@@ -138,7 +138,7 @@ public class RehabilitationController {
 
     @PostMapping("/programs/attendance/bulk")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'SUPER_ADMIN', 'INSTRUCTOR')")
+    @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'INSTRUCTOR')")
     @Operation(summary = "Record attendance for multiple inmates in one session")
     public List<AttendanceResponse> createBulkAttendance(
             @Valid @RequestBody BulkRecordAttendanceRequest request,
@@ -147,7 +147,7 @@ public class RehabilitationController {
     }
 
     @GetMapping("/programs/attendance")
-    @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'RECORDS_OFFICER', 'INSTRUCTOR')")
     @Operation(summary = "List and search inmate program attendance records",
             description = "Combine optional filters to find attendance by inmate, program name, status, or session date range. "
                     + "Date bounds are inclusive and use YYYY-MM-DD. Results default to newest session first; page size is limited to 100.")

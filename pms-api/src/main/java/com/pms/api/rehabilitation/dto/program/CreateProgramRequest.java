@@ -7,11 +7,10 @@ import java.util.UUID;
 public record CreateProgramRequest(
         @NotBlank @Size(max = 255) String name,
         @Size(max = 10000) String description,
-        @Size(max = 255) String instructor,
         @Size(max = 255) String schedule,
         UUID instructorUserId
 ) {
-    public CreateProgramRequest(String name, String description, String instructor, String schedule) {
-        this(name, description, instructor, schedule, null);
+    public CreateProgramRequest(String name, String description, String schedule) {
+        this(name, description, schedule, null);
     }
 }

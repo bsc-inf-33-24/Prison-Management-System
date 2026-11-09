@@ -100,6 +100,11 @@ public class AttendanceService {
                                          LocalDate sessionDateTo, Pageable pageable) {
         Specification<AttendanceRecord> specification =
                 Specification.unrestricted();
+        var actor = prisonAccess.currentUser();
+        if ("Instructor".equals(actor.getRole()) || "Program Facilitator".equals(actor.getRole())) {
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(root.get("enrollment").get("program").get("instructorUser").get("id"), actor.getId()));
+        }
         UUID assignedPrison=prisonAccess.effectivePrison(null);
         if (assignedPrison!=null) specification=specification.and((root,query,cb)->
                 cb.equal(root.get("enrollment").get("inmate").get("currentPrison").get("publicUuid"),assignedPrison));

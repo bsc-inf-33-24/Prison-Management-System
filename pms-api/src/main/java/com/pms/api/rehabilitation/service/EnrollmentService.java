@@ -84,6 +84,11 @@ public class EnrollmentService {
                                          String programName, String status, Pageable pageable) {
         Specification<Enrollment> specification =
                 Specification.unrestricted();
+        var actor = prisonAccess.currentUser();
+        if ("Instructor".equals(actor.getRole()) || "Program Facilitator".equals(actor.getRole())) {
+            specification = specification.and((root, query, cb) -> 
+                    cb.equal(root.get("program").get("instructorUser").get("id"), actor.getId()));
+        }
         UUID assignedPrison=prisonAccess.effectivePrison(null);
         if (assignedPrison!=null) specification=specification.and((root,query,cb)->
                 cb.equal(root.get("inmate").get("currentPrison").get("publicUuid"),assignedPrison));

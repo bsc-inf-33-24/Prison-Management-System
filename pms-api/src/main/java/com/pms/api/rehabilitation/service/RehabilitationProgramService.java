@@ -50,16 +50,21 @@ public class RehabilitationProgramService {
 
     @Transactional
     public ProgramResponse create(CreateProgramRequest request, String username) {
+        User actor = userRepository.findByUsername(username).orElseThrow();
+        if ("Program Facilitator".equals(actor.getRole()) && request.instructorUserId() != null && !request.instructorUserId().equals(actor.getPublicUuid())) {
+            throw new org.springframework.security.access.AccessDeniedException("Program facilitator can only assign themselves as the instructor.");
+        }
         RehabilitationProgram program = new RehabilitationProgram(
                 request.name().trim(),
                 request.description(),
-                request.instructor() == null ? "" : request.instructor().trim(),
+                "",
                 request.schedule(),
                 ACTIVE
         );
-        if (request.instructorUserId() != null) program.assignInstructorUser(validInstructor(request.instructorUserId()));
-        if (program.getInstructor().isBlank() && program.getInstructorUser() != null) {
-            program.updateDetails(program.getName(), program.getDescription(), program.getInstructorUser().getFullName(), program.getSchedule());
+        if (request.instructorUserId() != null) {
+            User instructor = validInstructor(request.instructorUserId());
+            program.assignInstructorUser(instructor);
+            program.updateDetails(program.getName(), program.getDescription(), instructor.getFullName(), program.getSchedule());
         }
         RehabilitationProgram saved = programRepository.save(program);
         auditService.record(username, "PROGRAM_CREATED", "RehabProgram", saved.getPublicUuid().toString(), null,
@@ -97,7 +102,7 @@ public class RehabilitationProgramService {
         }
         if (username != null) {
             User user = userRepository.findByUsername(username).orElseThrow();
-            if ("Instructor".equals(user.getRole())) {
+            if ("Instructor".equals(user.getRole()) || "Program Facilitator".equals(user.getRole())) {
                 specification = specification.and((root, query, cb) -> cb.equal(root.get("instructorUser").get("id"), user.getId()));
             }
         }
@@ -127,7 +132,8 @@ public class RehabilitationProgramService {
     public ProgramDetailResponse getDetails(UUID programId, String username) {
         RehabilitationProgram program = findProgram(programId);
         User user = userRepository.findByUsername(username).orElseThrow();
-        if ("Instructor".equals(user.getRole()) && (program.getInstructorUser() == null || !program.getInstructorUser().getId().equals(user.getId()))) {
+        if (("Instructor".equals(user.getRole()) || "Program Facilitator".equals(user.getRole()))
+                && (program.getInstructorUser() == null || !program.getInstructorUser().getId().equals(user.getId()))) {
             throw new org.springframework.security.access.AccessDeniedException("Program is not assigned to this instructor.");
         }
         return ProgramDetailResponse.from(program,
@@ -155,12 +161,24 @@ public class RehabilitationProgramService {
     @Transactional
     public ProgramResponse update(UUID programId, UpdateProgramRequest request, String username) {
         RehabilitationProgram program = findProgram(programId);
-        if (request.instructorUserId() != null) program.assignInstructorUser(validInstructor(request.instructorUserId()));
+        User actor = userRepository.findByUsername(username).orElseThrow();
+        if (("Instructor".equals(actor.getRole()) || "Program Facilitator".equals(actor.getRole()))
+                && (program.getInstructorUser() == null || !program.getInstructorUser().getId().equals(actor.getId()))) {
+            throw new org.springframework.security.access.AccessDeniedException("Program is not assigned to this instructor.");
+        }
+        if (request.instructorUserId() != null) {
+            User instructor = validInstructor(request.instructorUserId());
+            if ("Program Facilitator".equals(actor.getRole()) && !instructor.getId().equals(actor.getId())) {
+                throw new org.springframework.security.access.AccessDeniedException("Program facilitator can only assign themselves as the instructor.");
+            }
+            program.assignInstructorUser(instructor);
+            program.updateDetails(program.getName(), program.getDescription(), instructor.getFullName(), program.getSchedule());
+        }
         String oldValues = "name=" + program.getName() + ",instructor=" + program.getInstructor();
         program.updateDetails(
                 request.name().trim(),
                 request.description(),
-                request.instructor() == null ? program.getInstructor() : request.instructor().trim(),
+                program.getInstructorUser() == null ? program.getInstructor() : program.getInstructorUser().getFullName(),
                 request.schedule()
         );
         auditService.record(username, "PROGRAM_UPDATED", "RehabProgram", program.getPublicUuid().toString(), oldValues,

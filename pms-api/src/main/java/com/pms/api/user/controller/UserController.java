@@ -31,7 +31,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/users")
-@PreAuthorize("hasRole('SUPER_ADMIN')")
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "03. User management", description = "Create users and update user details, status, roles, and permissions.")
 public class UserController {
@@ -75,27 +74,28 @@ public class UserController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("false")
     @Operation(summary = "List users")
     public PageResponse<UserResponse> findAll(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) UUID prisonId,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) List<String> sort) {
-        return userService.findAll(status, role, search, page, size, sort);
+        return userService.findAll(status, role, search, prisonId, page, size, sort);
     }
 
     @GetMapping("/{userId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("false")
     @Operation(summary = "Get a user")
     public UserResponse findById(@PathVariable UUID userId) {
         return userService.findById(userId);
     }
 
     @PatchMapping("/{userId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("false")
     @Operation(summary = "Update a user's details")
     public UserResponse updateDetails(@PathVariable UUID userId,
                                       @Valid @RequestBody UpdateUserDetailsRequest request) {
@@ -103,14 +103,14 @@ public class UserController {
     }
 
     @PatchMapping("/{userId}/deactivate")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("false")
     @Operation(summary = "Deactivate a user")
     public UserResponse deactivate(@PathVariable UUID userId) {
         return userService.deactivate(userId);
     }
 
     @PatchMapping("/{userId}/reactivate")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("false")
     @Operation(summary = "Reactivate a user")
     public UserResponse reactivate(@PathVariable UUID userId) {
         return userService.reactivate(userId);

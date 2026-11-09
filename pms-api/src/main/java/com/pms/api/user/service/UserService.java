@@ -92,7 +92,7 @@ public class UserService implements UserDetailsService {
 
     @Transactional(readOnly = true)
     public PageResponse<UserResponse> findAll(String status, String role, String search,
-                                               Integer page, Integer size, List<String> sort) {
+                                               UUID prisonId, Integer page, Integer size, List<String> sort) {
         Pageable pageable = PageableValidator.create(page, size, sort,
                 Set.of("id", "fullName", "username", "role", "status", "createdAt"),
                 Sort.by(Sort.Order.asc("id")), paginationProperties);
@@ -107,6 +107,10 @@ public class UserService implements UserDetailsService {
         if (role != null && !role.isBlank()) {
             validateRole(role);
             specification = specification.and((root, query, cb) -> cb.equal(root.get("role"), role.trim()));
+        }
+        if (prisonId != null) {
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(root.get("prison").get("publicUuid"), prisonId));
         }
         if (search != null && !search.isBlank()) {
             String value = "%" + escapeLike(search.trim()).toLowerCase(Locale.ROOT) + "%";
