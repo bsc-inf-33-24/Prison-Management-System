@@ -76,6 +76,8 @@
 
 
 
+ALTER TABLE inmates
+    ADD COLUMN IF NOT EXISTS release_reminder_sent_at TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS idx_inmates_projected_release_date
     ON inmates(projected_release_date)
