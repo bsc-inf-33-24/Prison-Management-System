@@ -74,7 +74,7 @@ public class UserController {
     }
 
     @GetMapping
-    @PreAuthorize("false")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "List users")
     public PageResponse<UserResponse> findAll(
             @RequestParam(required = false) String status,
@@ -88,14 +88,14 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    @PreAuthorize("false")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Get a user")
     public UserResponse findById(@PathVariable UUID userId) {
         return userService.findById(userId);
     }
 
     @PatchMapping("/{userId}")
-    @PreAuthorize("false")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Update a user's details")
     public UserResponse updateDetails(@PathVariable UUID userId,
                                       @Valid @RequestBody UpdateUserDetailsRequest request) {
@@ -103,14 +103,14 @@ public class UserController {
     }
 
     @PatchMapping("/{userId}/deactivate")
-    @PreAuthorize("false")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Deactivate a user")
     public UserResponse deactivate(@PathVariable UUID userId) {
         return userService.deactivate(userId);
     }
 
     @PatchMapping("/{userId}/reactivate")
-    @PreAuthorize("false")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Reactivate a user")
     public UserResponse reactivate(@PathVariable UUID userId) {
         return userService.reactivate(userId);

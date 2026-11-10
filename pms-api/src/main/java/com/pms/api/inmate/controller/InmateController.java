@@ -52,7 +52,7 @@ public class InmateController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER')")
     @Operation(summary = "List inmate records")
     public PageResponse<InmateResponse> list(@RequestParam(required = false) String search,
                                              @RequestParam(required = false) String gender,
@@ -63,14 +63,14 @@ public class InmateController {
     }
 
     @GetMapping("/{inmateId}")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER')")
     @Operation(summary = "Get an inmate record")
     public InmateResponse get(@PathVariable UUID inmateId) {
         return inmateService.get(inmateId);
     }
 
     @PatchMapping("/{inmateId}")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER')")
     @Operation(summary = "Update an inmate record",
             description = "Updates inmate details.")
     public InmateResponse update(@PathVariable UUID inmateId,

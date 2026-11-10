@@ -83,21 +83,21 @@ class InmateApiSecurityIntegrationTest {
         expectStatus(superAdminToken, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 404);
 
         for (String role : User.ALLOWED_ROLES) {
-            if (role.equals("Records Officer") || role.equals("Super Admin")) {
+            if (role.equals("Records Officer") || role.equals("Super Admin") || role.equals("Prison Officer")) {
                 continue;
             }
             String token = tokenForRole(role);
-            if (role.equals("Prison Officer")) {
-                expectStatus(token, "GET", INMATES_PATH, null, 403);
-                expectStatus(token, "GET", UNKNOWN_INMATE_PATH, null, 403);
-                expectStatus(token, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 403);
-                continue;
-            }
             expectStatus(token, "POST", INMATES_PATH, validRequest(), 403);
             expectStatus(token, "GET", INMATES_PATH, null, 403);
             expectStatus(token, "GET", UNKNOWN_INMATE_PATH, null, 403);
             expectStatus(token, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 403);
         }
+
+        String prisonOfficerToken = tokenForRole("Prison Officer");
+        expectStatus(prisonOfficerToken, "POST", INMATES_PATH, validRequest(), 201);
+        expectStatus(prisonOfficerToken, "GET", INMATES_PATH, null, 200);
+        expectStatus(prisonOfficerToken, "GET", UNKNOWN_INMATE_PATH, null, 404);
+        expectStatus(prisonOfficerToken, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 404);
     }
 
     @Test

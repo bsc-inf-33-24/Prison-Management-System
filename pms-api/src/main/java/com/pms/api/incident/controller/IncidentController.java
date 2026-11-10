@@ -50,7 +50,7 @@ public class IncidentController {
 
     // Disciplinary Officers and Super Admins can view an inmate's history.
     @GetMapping("/inmates/{inmateId}/incidents")
-    @PreAuthorize("hasRole('DISCIPLINARY_OFFICER')")
+    @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'PRISON_OFFICER')")
     @Operation(summary = "Get an inmate's incident history")
     public List<IncidentHistoryItemResponse> getHistory(@PathVariable UUID inmateId) {
         return incidentService.getHistory(inmateId);
