@@ -36,7 +36,7 @@ public record InmateRequest(
         @NotNull(message = "admission date is required")
         LocalDate admissionDate,
 
-	@NotBlank(message = "inmates offence is missing or invalid")
+	    @NotBlank(message = "inmates offence is missing or invalid")
         @Size(min = 1, max = 500)
         String offence,
 
@@ -51,9 +51,6 @@ public record InmateRequest(
         @DecimalMin("0.0") @DecimalMax("100.0") @Digits(integer = 3, fraction = 2)
         @Schema(description = "Optional remission percentage for a fixed-term sentence (0 to 100). Applied as a reduction to the original sentence duration to calculate the projected release date. Ignored for LIFE and UNDETERMINED sentences.")
         java.math.BigDecimal remissionPercentage,
-
-        @NotNull(message = "Prison Id is required")
-        UUID prisonId,
 
         @NotNull(message = "cell Id is required")
         UUID cellId

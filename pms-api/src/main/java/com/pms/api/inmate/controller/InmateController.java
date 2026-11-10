@@ -41,7 +41,7 @@ public class InmateController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('PRISON_OFFICER')")
     @Operation(summary = "Enroll an inmate",
-            description = "Creates the inmate at the selected prison and allocates the inmate to a cell in that prison in one transaction.")
+            description = "Creates the inmate at the authenticated Prison Officer's assigned prison and allocates the inmate to a cell in that prison in one transaction.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Inmate created and allocated to the selected cell."),
             @ApiResponse(responseCode = "409", description = "The selected cell is full."),
