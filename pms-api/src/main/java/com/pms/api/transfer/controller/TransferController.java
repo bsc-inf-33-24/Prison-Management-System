@@ -46,6 +46,6 @@ public class TransferController {
     public TransferResponse approve(@PathVariable UUID id,@Valid @RequestBody ApproveTransferRequest request) {
         return service.approve(id,request);
     }
-    @PostMapping("/{id}/reject") @PreAuthorize("false") public TransferResponse reject(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.reject(id,request); }
-    @PostMapping("/{id}/cancel") @PreAuthorize("false") public TransferResponse cancel(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.cancel(id,request); }
+    @PostMapping("/{id}/reject") @PreAuthorize("hasRole('SUPER_ADMIN')") public TransferResponse reject(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.reject(id,request); }
+    @PostMapping("/{id}/cancel") @PreAuthorize("hasRole('SUPER_ADMIN')") public TransferResponse cancel(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.cancel(id,request); }
 }
