@@ -1,6 +1,7 @@
 package com.pms.api;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.pms.api.security.jwt.JwtService;
@@ -48,6 +49,51 @@ class RehabilitationApiSecurityIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(programRequest))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void facilitatorCanAssignOnlyActiveInstructorAccounts() throws Exception {
+        User instructor = saveUser("Instructor");
+        User inactiveInstructor = saveUser("Instructor");
+        inactiveInstructor.deactivate();
+        userRepository.saveAndFlush(inactiveInstructor);
+        User otherRole = saveUser("Records Officer");
+
+        String base = "{\"name\":\"Assigned Program\",\"schedule\":\"Monday\",\"instructorUserId\":\"%s\"}";
+        mockMvc.perform(post("/api/v1/programs")
+                        .header("Authorization", "Bearer " + tokenForRole("Program Facilitator"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(base.formatted(instructor.getPublicUuid())))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/v1/programs")
+                        .header("Authorization", "Bearer " + tokenForRole("Program Facilitator"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(base.formatted(inactiveInstructor.getPublicUuid())))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/v1/programs")
+                        .header("Authorization", "Bearer " + tokenForRole("Program Facilitator"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(base.formatted(otherRole.getPublicUuid())))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void superAdminCanListTransfersAndExistingRolesRetainAccess() throws Exception {
+        for (String role : Set.of("Super Admin", "Records Officer", "Prison Officer")) {
+            mockMvc.perform(get("/api/v1/transfers")
+                            .header("Authorization", "Bearer " + tokenForRole(role)))
+                    .andExpect(status().isOk());
+        }
+        mockMvc.perform(get("/api/v1/transfers")
+                        .header("Authorization", "Bearer " + tokenForRole("Instructor")))
+                .andExpect(status().isForbidden());
+    }
+
+    private User saveUser(String role) {
+        String username = "s" + UUID.randomUUID().toString().replace("-", "").substring(0, 15);
+        return userRepository.saveAndFlush(new User("Security Test", username, "unused-password-hash", role, Set.of()));
     }
 
     private String tokenForRole(String role) {
