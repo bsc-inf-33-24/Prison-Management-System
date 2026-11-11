@@ -10,6 +10,7 @@ import com.pms.api.prison.service.PrisonService;
 import com.pms.api.transfer.entity.InmateTransfer;
 import com.pms.api.transfer.service.TransferService;
 import com.pms.api.visitor.service.VisitService;
+import com.pms.api.roster.service.RosterService;
 import com.pms.api.common.pagination.InvalidPaginationException;
 import com.pms.api.common.pagination.InvalidSortException;
 import org.slf4j.Logger;
@@ -234,6 +235,45 @@ public class ApiExceptionHandler {
     @ExceptionHandler(VisitService.UserNotFoundException.class)
     public ResponseEntity<ApiError> handleVisitUserNotFound() {
         return problem(HttpStatus.NOT_FOUND, "User not found.");
+    }
+
+    @ExceptionHandler({RosterService.RosterNotFoundException.class, RosterService.ShiftNotFoundException.class,
+            RosterService.PrisonNotFoundException.class, RosterService.OfficerNotFoundException.class})
+    public ResponseEntity<ApiError> handleRosterResourceNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Roster, shift, prison, or officer not found.");
+    }
+
+    @ExceptionHandler(RosterService.InactivePrisonException.class)
+    public ResponseEntity<ApiError> handleInactiveRosterPrison() {
+        return problem(HttpStatus.CONFLICT, "Rosters cannot be created for an inactive prison.");
+    }
+
+    @ExceptionHandler(RosterService.OverlappingShiftException.class)
+    public ResponseEntity<ApiError> handleOverlappingRosterShift() {
+        return problem(HttpStatus.CONFLICT, "The officer already has an overlapping shift.");
+    }
+
+    @ExceptionHandler(RosterService.InvalidRosterStateException.class)
+    public ResponseEntity<ApiError> handleInvalidRosterState(RosterService.InvalidRosterStateException exception) {
+        return problem(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    @ExceptionHandler(RosterService.InvalidOfficerAssignmentException.class)
+    public ResponseEntity<ApiError> handleInvalidRosterOfficer() {
+        return problem(HttpStatus.BAD_REQUEST,
+                "The assigned officer must be active, have the Prison Officer role, and belong to the roster's prison.");
+    }
+
+    @ExceptionHandler(RosterService.InvalidShiftTimeException.class)
+    public ResponseEntity<ApiError> handleInvalidRosterShiftTime() {
+        return problem(HttpStatus.BAD_REQUEST,
+                "The shift end must be after its start and the duration cannot exceed 24 hours.");
+    }
+
+    @ExceptionHandler(RosterService.ShiftOutsideRosterPeriodException.class)
+    public ResponseEntity<ApiError> handleShiftOutsideRosterPeriod() {
+        return problem(HttpStatus.BAD_REQUEST,
+                "The shift must fall within the roster's inclusive date range.");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
