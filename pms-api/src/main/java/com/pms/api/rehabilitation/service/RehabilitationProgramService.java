@@ -51,9 +51,6 @@ public class RehabilitationProgramService {
     @Transactional
     public ProgramResponse create(CreateProgramRequest request, String username) {
         User actor = userRepository.findByUsername(username).orElseThrow();
-        if ("Program Facilitator".equals(actor.getRole()) && request.instructorUserId() != null && !request.instructorUserId().equals(actor.getPublicUuid())) {
-            throw new org.springframework.security.access.AccessDeniedException("Program facilitator can only assign themselves as the instructor.");
-        }
         RehabilitationProgram program = new RehabilitationProgram(
                 request.name().trim(),
                 request.description(),

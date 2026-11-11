@@ -34,7 +34,7 @@ public class TransferController {
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
     public TransferResponse create(@Valid @RequestBody CreateTransferRequest request) { return service.create(request); }
     @GetMapping
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','PRISON_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','PRISON_OFFICER','SUPER_ADMIN')")
     public PageResponse<TransferResponse> list(@RequestParam(required=false) TransferStatus status,
             @RequestParam(required=false) UUID prisonId,@RequestParam(required=false) Integer page,
             @RequestParam(required=false) Integer size,@RequestParam(required=false) List<String> sort) {
