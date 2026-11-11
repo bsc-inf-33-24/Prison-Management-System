@@ -191,6 +191,25 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 |---|---|---:|---|---|
 | `GET` | `/actuator/health` | No | Public | Spring Actuator health endpoint |
 
+### 4.11 Duty rosters
+
+| Method | Path | Auth | Roles | Purpose |
+|---|---|---:|---|---|
+| `POST` | `/api/v1/rosters` | Yes | `Duty Officer`, `Super Admin` | Create a draft roster |
+| `GET` | `/api/v1/rosters` | Yes | `Duty Officer`, `Super Admin` | List rosters in the caller's prison, or filter by `prisonId` as Super Admin |
+| `GET` | `/api/v1/rosters/{rosterId}` | Yes | `Duty Officer`, `Super Admin` | View a roster and its shifts |
+| `PATCH` | `/api/v1/rosters/{rosterId}` | Yes | `Duty Officer`, `Super Admin` | Change the date range of a draft roster |
+| `POST` | `/api/v1/rosters/{rosterId}/shifts` | Yes | `Duty Officer`, `Super Admin` | Add a shift to a draft roster |
+| `PATCH` | `/api/v1/rosters/{rosterId}/shifts/{shiftId}` | Yes | `Duty Officer`, `Super Admin` | Update a shift; published changes notify affected officers |
+| `DELETE` | `/api/v1/rosters/{rosterId}/shifts/{shiftId}` | Yes | `Duty Officer`, `Super Admin` | Remove a draft shift or cancel a published shift |
+| `POST` | `/api/v1/rosters/{rosterId}/publish` | Yes | `Duty Officer`, `Super Admin` | Revalidate and publish a roster |
+| `POST` | `/api/v1/rosters/{rosterId}/close` | Yes | `Duty Officer`, `Super Admin` | Close a published roster after its period ends |
+| `GET` | `/api/v1/me/shifts?from=&to=` | Yes | `Prison Officer` | View the authenticated officer's published shifts |
+
+Roster dates are inclusive in the configured roster time zone (`ROSTERS_TIME_ZONE`, default `Africa/Blantyre`). Shift timestamps must be ISO-8601 offset date-times. A shift may end exactly at midnight after the roster's final date, and its duration may not exceed 24 hours. An officer must be active, have the `Prison Officer` role, and belong to the roster's prison. Overlaps use half-open time ranges and return `409 Conflict`; roster mutations lock the assigned officer row while checking and saving to serialize concurrent assignments.
+
+Only a Duty Officer's assigned prison is accessible. Super Admins must supply `prisonId` when creating a roster and may use it to filter lists. Each roster response contains public UUIDs, status, timestamps, and shifts. Publishing creates one in-app notification per distinct assigned officer; published shift updates, reassignments, and cancellations notify the affected officer(s). Draft shifts are not returned by `/api/v1/me/shifts`.
+
 ## 5. Request and response details by area
 
 ### 5.1 Authentication endpoints
