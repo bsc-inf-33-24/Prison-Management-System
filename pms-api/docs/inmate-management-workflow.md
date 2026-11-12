@@ -185,6 +185,7 @@ POST /api/v1/incidents
 {
   "incidentDate": "2026-10-16",
   "description": "Unauthorized altercation",
+  "outcome": "Warning issued",
   "participants": [
     {
       "inmateId": "inmate-public-uuid",
@@ -199,11 +200,11 @@ The incident uses a join record to connect inmates to incidents and store each p
 Incident endpoints include:
 
 ```text
-PATCH /api/v1/incidents/{incidentUuid}/outcome
+POST  /api/v1/incidents
 GET   /api/v1/inmates/{inmateUuid}/incidents
 ```
 
-Recording an outcome changes an incident from open to resolved. The operation is write-once and a second outcome update is rejected.
+The optional outcome must be nonblank and at most 255 characters. Supplying it creates the incident as resolved; omitting it creates an open incident with a null outcome. Outcomes are recorded during incident creation.
 
 ## 6. Rehabilitation programs, enrollment, and attendance
 

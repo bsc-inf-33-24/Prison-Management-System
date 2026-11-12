@@ -14,18 +14,14 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
+import com.pms.api.prison.entity.Prison;
+import com.pms.api.prison.repository.PrisonRepository;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,9 +32,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-// Covers Issue #27's functional acceptance criteria: incident creation and
-// retrieval, role_in_incident preservation, outcome recording (including the
-// write-once / concurrency-safe behaviour), and validation.
+// Covers incident creation and retrieval, role_in_incident preservation,
+// optional outcome validation, and response behaviour.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
@@ -56,6 +51,9 @@ class IncidentApiFunctionalIntegrationTest {
     private InmateRepository inmateRepository;
 
     @Autowired
+    private PrisonRepository prisonRepository;
+
+    @Autowired
     private JwtService jwtService;
 
     @Autowired
@@ -63,18 +61,19 @@ class IncidentApiFunctionalIntegrationTest {
 
     private String disciplinaryOfficerToken;
     private String reportingOfficerFullName;
-    private String superAdminToken;
+    private Prison testPrison;
 
     @BeforeEach
     void setUp() {
+        testPrison = prisonRepository.saveAndFlush(new Prison(
+                "I" + UUID.randomUUID().toString().replace("-", "").substring(0, 10),
+                "Incident Test Prison", null));
         reportingOfficerFullName = "Officer " + UUID.randomUUID().toString().substring(0, 8);
-        User disciplinaryOfficer = userRepository.saveAndFlush(new User(
-                reportingOfficerFullName, uniqueUsername("d"), "unused-password-hash", "Disciplinary Officer", Set.of()));
+        User disciplinaryOfficer = new User(
+                reportingOfficerFullName, uniqueUsername("d"), "unused-password-hash", "Disciplinary Officer", Set.of());
+        disciplinaryOfficer.assignPrison(testPrison);
+        disciplinaryOfficer = userRepository.saveAndFlush(disciplinaryOfficer);
         disciplinaryOfficerToken = jwtService.generateToken(disciplinaryOfficer);
-
-        User superAdmin = userRepository.saveAndFlush(
-                new User("Admin Test", uniqueUsername("a"), "unused-password-hash", "Super Admin", Set.of()));
-        superAdminToken = jwtService.generateToken(superAdmin);
     }
 
     @Test
@@ -97,12 +96,13 @@ class IncidentApiFunctionalIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isString())
                 .andExpect(jsonPath("$.status").value("open"))
-                .andExpect(jsonPath("$.outcome").doesNotExist())
                 .andExpect(jsonPath("$.reportedBy").value(reportingOfficerFullName))
                 .andExpect(jsonPath("$.participants.length()").value(2))
                 .andReturn();
 
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
+        assertTrue(response.has("outcome"));
+        assertTrue(response.path("outcome").isNull());
         assertTrue(hasParticipantWithRole(response, inmateA.getPublicUuid(), "Instigator"));
         assertTrue(hasParticipantWithRole(response, inmateB.getPublicUuid(), "Bystander"));
     }
@@ -163,74 +163,77 @@ class IncidentApiFunctionalIntegrationTest {
     }
 
     @Test
-    void recordsOutcomeOnceAndRejectsASecondAttemptWithConflict() throws Exception {
+    void logsIncidentWithOutcomeAsResolved() throws Exception {
         Inmate inmate = createInmate();
-        JsonNode created = logIncident(inmate.getPublicUuid(), "Role");
-        String incidentId = created.path("id").asText();
+        ObjectNode request = baseRequest("Incident with outcome.");
+        request.set("participants", participants(participant(inmate.getPublicUuid(), "Role")));
+        request.put("outcome", "Verbal warning issued.");
 
-        ObjectNode outcomeRequest = objectMapper.createObjectNode();
-        outcomeRequest.put("outcome", "Verbal warning issued.");
-
-        mockMvc.perform(patch(INCIDENTS_PATH + "/" + incidentId + "/outcome")
+        mockMvc.perform(post(INCIDENTS_PATH)
                         .header("Authorization", "Bearer " + disciplinaryOfficerToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(outcomeRequest)))
-                .andExpect(status().isOk())
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("resolved"))
                 .andExpect(jsonPath("$.outcome").value("Verbal warning issued."));
-
-        mockMvc.perform(patch(INCIDENTS_PATH + "/" + incidentId + "/outcome")
-                        .header("Authorization", "Bearer " + disciplinaryOfficerToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(outcomeRequest)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409));
     }
 
     @Test
-    void outcomeOnUnknownIncidentReturnsNotFound() throws Exception {
-        ObjectNode outcomeRequest = objectMapper.createObjectNode();
-        outcomeRequest.put("outcome", "N/A");
+    void acceptsExplicitNullOutcomeAsOpen() throws Exception {
+        Inmate inmate = createInmate();
+        ObjectNode request = baseRequest("Incident with null outcome.");
+        request.set("participants", participants(participant(inmate.getPublicUuid(), "Role")));
+        request.putNull("outcome");
 
+        mockMvc.perform(post(INCIDENTS_PATH)
+                        .header("Authorization", "Bearer " + disciplinaryOfficerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("open"))
+                .andExpect(jsonPath("$.outcome").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    void acceptsOutcomeOf255Characters() throws Exception {
+        Inmate inmate = createInmate();
+        ObjectNode request = baseRequest("Incident with maximum-length outcome.");
+        request.set("participants", participants(participant(inmate.getPublicUuid(), "Role")));
+        request.put("outcome", "x".repeat(255));
+
+        mockMvc.perform(post(INCIDENTS_PATH)
+                        .header("Authorization", "Bearer " + disciplinaryOfficerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("resolved"))
+                .andExpect(jsonPath("$.outcome").value("x".repeat(255)));
+    }
+
+    @Test
+    void rejectsEmptyOutcome() throws Exception {
+        assertOutcomeRejected("");
+    }
+
+    @Test
+    void rejectsWhitespaceOnlyOutcome() throws Exception {
+        assertOutcomeRejected(" \t\n ");
+    }
+
+    @Test
+    void rejectsOutcomeLongerThan255Characters() throws Exception {
+        assertOutcomeRejected("x".repeat(256));
+    }
+
+    @Test
+    void oldPatchOutcomeEndpointIsNoLongerAvailable() throws Exception {
+        ObjectNode request = objectMapper.createObjectNode();
+        request.put("outcome", "No longer supported.");
         mockMvc.perform(patch(INCIDENTS_PATH + "/" + UUID.randomUUID() + "/outcome")
                         .header("Authorization", "Bearer " + disciplinaryOfficerToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(outcomeRequest)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404));
-    }
-
-    @Test
-    void concurrentOutcomeAttemptsCannotBothSucceed() throws Exception {
-        Inmate inmate = createInmate();
-        JsonNode created = logIncident(inmate.getPublicUuid(), "Role");
-        String incidentId = created.path("id").asText();
-
-        ExecutorService executor = Executors.newFixedThreadPool(2);
-        CyclicBarrier barrier = new CyclicBarrier(2);
-        try {
-            Callable<Integer> attempt = () -> {
-                barrier.await();
-                ObjectNode outcomeRequest = objectMapper.createObjectNode();
-                outcomeRequest.put("outcome", "Racing outcome " + Thread.currentThread().getId());
-                return mockMvc.perform(patch(INCIDENTS_PATH + "/" + incidentId + "/outcome")
-                                .header("Authorization", "Bearer " + disciplinaryOfficerToken)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(outcomeRequest)))
-                        .andReturn().getResponse().getStatus();
-            };
-
-            Future<Integer> first = executor.submit(attempt);
-            Future<Integer> second = executor.submit(attempt);
-            List<Integer> results = List.of(first.get(), second.get());
-
-            assertEquals(1, results.stream().filter(status -> status == 200).count(),
-                    "exactly one concurrent outcome attempt should succeed");
-            assertEquals(1, results.stream().filter(status -> status == 409).count(),
-                    "exactly one concurrent outcome attempt should be rejected as a conflict");
-        } finally {
-            executor.shutdownNow();
-        }
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -255,13 +258,26 @@ class IncidentApiFunctionalIntegrationTest {
     @Test
     void historyForUnknownInmateReturnsNotFound() throws Exception {
         mockMvc.perform(get("/api/v1/inmates/" + UUID.randomUUID() + "/incidents")
-                        .header("Authorization", "Bearer " + superAdminToken))
+                        .header("Authorization", "Bearer " + disciplinaryOfficerToken))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
     }
 
     private JsonNode logIncident(UUID inmateId, String role) throws Exception {
         return logIncidentOn(LocalDate.now(), inmateId, role);
+    }
+
+    private void assertOutcomeRejected(String outcome) throws Exception {
+        Inmate inmate = createInmate();
+        ObjectNode request = baseRequest("Invalid outcome test.");
+        request.set("participants", participants(participant(inmate.getPublicUuid(), "Role")));
+        request.put("outcome", outcome);
+        mockMvc.perform(post(INCIDENTS_PATH)
+                        .header("Authorization", "Bearer " + disciplinaryOfficerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
     }
 
     private JsonNode logIncidentOn(LocalDate date, UUID inmateId, String role) throws Exception {
@@ -279,9 +295,11 @@ class IncidentApiFunctionalIntegrationTest {
     }
 
     private Inmate createInmate() {
-        return inmateRepository.saveAndFlush(new Inmate(
+        Inmate inmate = new Inmate(
                 "Test", "Inmate", LocalDate.of(1990, 1, 1), "Other",
-                LocalDate.of(2025, 1, 1), null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 1)));
+                LocalDate.of(2025, 1, 1), null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 1));
+        inmate.assignPrison(testPrison);
+        return inmateRepository.saveAndFlush(inmate);
     }
 
     private ObjectNode baseRequest(String description) {

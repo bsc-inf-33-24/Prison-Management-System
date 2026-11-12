@@ -143,7 +143,6 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
 | `POST` | `/api/v1/incidents` | Yes | `Records Officer`, `Disciplinary Officer`, `Super Admin` | Log an incident |
-| `PATCH` | `/api/v1/incidents/{incidentId}/outcome` | Yes | `Disciplinary Officer`, `Super Admin` | Record an outcome |
 | `GET` | `/api/v1/inmates/{inmateId}/incidents` | Yes | `Disciplinary Officer`, `Super Admin` | Read an inmate’s incident history |
 
 ### 4.6 Medical visits
@@ -586,7 +585,8 @@ Request body:
     }
   ],
   "incidentDate": "2026-10-29",
-  "description": "Inmate quarrel in the recreation yard."
+  "description": "Inmate quarrel in the recreation yard.",
+  "outcome": "Warning issued"
 }
 ```
 
@@ -597,22 +597,34 @@ Validation:
 - `incidentDate` cannot be in the future
 - `description` required
 - duplicate inmate IDs are rejected
+- `outcome` is optional; when supplied it must not be blank and must be at most 255 characters
 
-Success `201 Created` returns an `IncidentResponse` with the recorded incident details and the linked inmate set.
+Omit `outcome` or supply it as `null` to create the incident with `open` status and a null outcome. Supplying a nonblank outcome creates it with `resolved` status and stores the outcome.
 
-#### `PATCH /api/v1/incidents/{incidentId}/outcome`
-
-Purpose: record a disciplinary outcome for an incident that was already logged.
-
-Request body:
+Success `201 Created` returns an `IncidentResponse` with the recorded incident details and linked inmate set. For the request above, the response includes:
 
 ```json
 {
-  "outcome": "Warning issued"
+  "id": "0ecb9777-8fa9-4c36-9527-011e6b9684de",
+  "incidentDate": "2026-10-29",
+  "description": "Inmate quarrel in the recreation yard.",
+  "status": "resolved",
+  "outcome": "Warning issued",
+  "reportedBy": "Officer Name",
+  "participants": [
+    {
+      "inmateId": "7d0df6a2-0da6-4309-9c2d-7c50b1f939e3",
+      "roleInIncident": "Primary participant"
+    },
+    {
+      "inmateId": "a46fd6f8-1db1-4e4d-9bcb-c1d7be4f2d7d",
+      "roleInIncident": "Witness"
+    }
+  ]
 }
 ```
 
-`outcome` is required, nonblank, and at most 255 characters. Success `200 OK` returns the updated `IncidentResponse`. Unknown incident is `404`; an already-recorded outcome is `409 Conflict`.
+Without `outcome`, the response has `"status": "open"` and `"outcome": null`.
 
 `IncidentResponse` contains `id` (public UUID), `incidentDate`, `description`, `status`, nullable `outcome`, `reportedBy` (text name, not a user ID), and `participants` entries (`inmateId` public UUID and nullable `roleInIncident`).
 

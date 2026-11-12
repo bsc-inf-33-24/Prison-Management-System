@@ -10,6 +10,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
+import com.pms.api.prison.entity.Prison;
+import com.pms.api.prison.repository.PrisonRepository;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
@@ -23,6 +25,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,7 +41,6 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 // Covers Issue #27's security acceptance criteria for the Incident endpoints:
@@ -62,6 +64,9 @@ class IncidentApiSecurityIntegrationTest {
     private InmateRepository inmateRepository;
 
     @Autowired
+    private PrisonRepository prisonRepository;
+
+    @Autowired
     private JwtService jwtService;
 
     @Autowired
@@ -74,8 +79,17 @@ class IncidentApiSecurityIntegrationTest {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
+    private Prison testPrison;
+
+    @BeforeEach
+    void setUp() {
+        testPrison = prisonRepository.saveAndFlush(new Prison(
+                "S" + UUID.randomUUID().toString().replace("-", "").substring(0, 10),
+                "Incident Security Test Prison", null));
+    }
+
     @Test
-    void disciplinaryOfficersAndSuperAdminsCanLogIncidentsAndRecordOutcomes() throws Exception {
+    void roleRestrictionsMatchIncidentControllerAuthorization() throws Exception {
         Inmate inmate = createInmate();
         String historyPath = "/api/v1/inmates/" + inmate.getPublicUuid() + "/incidents";
 
@@ -83,24 +97,25 @@ class IncidentApiSecurityIntegrationTest {
         expectStatus(disciplinaryOfficerToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 201);
         expectStatus(disciplinaryOfficerToken, "GET", historyPath, null, 200);
 
+        String prisonOfficerToken = tokenForRole("Prison Officer");
+        expectStatus(prisonOfficerToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 201);
+        expectStatus(prisonOfficerToken, "GET", historyPath, null, 200);
+
         String superAdminToken = tokenForRole("Super Admin");
-        // Super Admin may read history and log incidents.
-        expectStatus(superAdminToken, "GET", historyPath, null, 200);
-        expectStatus(superAdminToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 201);
+        expectStatus(superAdminToken, "GET", historyPath, null, 403);
+        expectStatus(superAdminToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 403);
 
         String recordsOfficerToken = tokenForRole("Records Officer");
         expectStatus(recordsOfficerToken, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 201);
         expectStatus(recordsOfficerToken, "GET", historyPath, null, 403);
-        expectStatus(recordsOfficerToken, "PATCH", INCIDENTS_PATH + "/1/outcome", outcomeRequest(), 403);
 
         for (String role : User.ALLOWED_ROLES) {
-            if (role.equals("Disciplinary Officer") || role.equals("Super Admin")) {
+            if (role.equals("Disciplinary Officer") || role.equals("Prison Officer")
+                    || role.equals("Super Admin") || role.equals("Records Officer")) {
                 continue;
             }
             String token = tokenForRole(role);
-            if (!role.equals("Records Officer")) {
-                expectStatus(token, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 403);
-            }
+            expectStatus(token, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 403);
             expectStatus(token, "GET", historyPath, null, 403);
         }
     }
@@ -109,12 +124,9 @@ class IncidentApiSecurityIntegrationTest {
     void rejectsMissingInvalidAndExpiredTokensOnEveryEndpoint() throws Exception {
         Inmate inmate = createInmate();
         String historyPath = "/api/v1/inmates/" + inmate.getPublicUuid() + "/incidents";
-        String outcomePath = INCIDENTS_PATH + "/1/outcome";
-
         for (String token : new String[] { null, "not-a-valid-jwt", expiredToken() }) {
             expectStatus(token, "POST", INCIDENTS_PATH, incidentRequest(inmate.getPublicUuid()), 401);
             expectStatus(token, "GET", historyPath, null, 401);
-            expectStatus(token, "PATCH", outcomePath, outcomeRequest(), 401);
         }
     }
 
@@ -136,7 +148,7 @@ class IncidentApiSecurityIntegrationTest {
                         .equals("com.pms.api.incident.controller"))
                 .toList();
 
-        assertEquals(3, incidentHandlers.size());
+        assertEquals(2, incidentHandlers.size());
         incidentHandlers.forEach(handler ->
                 assertNotNull(handler.getMethodAnnotation(PreAuthorize.class),
                         handler.getMethod().getName() + " must declare @PreAuthorize."));
@@ -147,7 +159,6 @@ class IncidentApiSecurityIntegrationTest {
         MockHttpServletRequestBuilder request = switch (method) {
             case "POST" -> post(path);
             case "GET" -> get(path);
-            case "PATCH" -> patch(path);
             default -> throw new IllegalArgumentException("Unsupported test HTTP method.");
         };
         if (token != null) {
@@ -176,13 +187,19 @@ class IncidentApiSecurityIntegrationTest {
 
     private User createUser(String role) {
         String username = "si" + UUID.randomUUID().toString().replace("-", "").substring(0, 14);
-        return userRepository.saveAndFlush(new User("Security Test", username, "unused-password-hash", role, Set.of()));
+        User user = new User("Security Test", username, "unused-password-hash", role, Set.of());
+        if (!role.equals("Super Admin")) {
+            user.assignPrison(testPrison);
+        }
+        return userRepository.saveAndFlush(user);
     }
 
     private Inmate createInmate() {
-        return inmateRepository.saveAndFlush(new Inmate(
+        Inmate inmate = new Inmate(
                 "Security", "Test", LocalDate.of(1990, 1, 1), "Other",
-                LocalDate.of(2025, 1, 1), null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 1)));
+                LocalDate.of(2025, 1, 1), null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 1));
+        inmate.assignPrison(testPrison);
+        return inmateRepository.saveAndFlush(inmate);
     }
 
     private String incidentRequest(UUID inmateId) {
@@ -195,16 +212,6 @@ class IncidentApiSecurityIntegrationTest {
         participant.put("roleInIncident", "Involved");
         participants.add(participant);
         request.set("participants", participants);
-        try {
-            return objectMapper.writeValueAsString(request);
-        } catch (IOException exception) {
-            throw new IllegalStateException("Could not serialize test request.", exception);
-        }
-    }
-
-    private String outcomeRequest() {
-        ObjectNode request = objectMapper.createObjectNode();
-        request.put("outcome", "Security test outcome.");
         try {
             return objectMapper.writeValueAsString(request);
         } catch (IOException exception) {

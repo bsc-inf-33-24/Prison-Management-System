@@ -3,7 +3,6 @@ package com.pms.api.incident.service;
 import com.pms.api.incident.dto.IncidentHistoryItemResponse;
 import com.pms.api.incident.dto.IncidentResponse;
 import com.pms.api.incident.dto.LogIncidentRequest;
-import com.pms.api.incident.dto.RecordOutcomeRequest;
 import com.pms.api.incident.entity.Incident;
 import com.pms.api.incident.entity.IncidentInmate;
 import com.pms.api.incident.repository.IncidentInmateRepository;
@@ -89,7 +88,8 @@ public class IncidentService {
         User reportingOfficer = userRepository.findByUsername(reportingUsername)
                 .orElseThrow(() -> new IllegalStateException("Authenticated user no longer exists."));
 
-        Incident incident = Incident.logNew(request.incidentDate(), request.description(), reportingOfficer.getFullName());
+        Incident incident = Incident.logNew(
+                request.incidentDate(), request.description(), reportingOfficer.getFullName(), request.outcome());
         // Save (and therefore flush) the incident first so its IDENTITY
         // column is populated - IncidentInmate's composite key needs the
         // real incident_id, which doesn't exist until this insert happens.
@@ -107,38 +107,6 @@ public class IncidentService {
                 java.util.Set.of("Disciplinary Officer", "Duty Officer"));
 
         return toResponse(incident, incidentInmateRepository.findByIncidentId(incident.getId()));
-    }
-
-    @Transactional
-    public IncidentResponse recordOutcome(UUID incidentId, RecordOutcomeRequest request) {
-        // Confirms the incident exists at all, so we can tell "doesn't
-        // exist" (404) apart from "exists but already resolved" (409).
-        Incident incident = incidentRepository.findByPublicUuid(incidentId)
-                .orElseThrow(IncidentNotFoundException::new);
-        incidentInmateRepository.findByIncidentId(incident.getId()).forEach(participant ->
-                prisonAccess.requirePrison(participant.getInmate().getCurrentPrison()==null?null:
-                        participant.getInmate().getCurrentPrison().getPublicUuid()));
-
-        // Write-once, concurrency-safe: this only updates a row that is
-        // still "open" right now. A second call - whether it arrives after
-        // the first finished, or races it - either sees status already
-        // 'resolved' or loses the race at the database level, and either
-        // way gets 0 rows updated here.
-        int updated = incidentRepository.recordOutcomeIfOpen(
-                incident.getId(), request.outcome(), Incident.STATUS_RESOLVED, Incident.STATUS_OPEN);
-        if (updated == 0) {
-            throw new OutcomeAlreadyRecordedException();
-        }
-
-        Incident updatedIncident = incidentRepository.findByPublicUuid(incidentId)
-                .orElseThrow(IncidentNotFoundException::new);
-        notificationService.notifyRoles(
-                "INCIDENT_RESOLVED",
-                "Incident outcome recorded",
-                "An outcome has been recorded for an inmate incident.",
-                updatedIncident.getPublicUuid(),
-                java.util.Set.of("Disciplinary Officer", "Duty Officer"));
-        return toResponse(updatedIncident, incidentInmateRepository.findByIncidentId(updatedIncident.getId()));
     }
 
     @Transactional(readOnly = true)
@@ -174,5 +142,4 @@ public class IncidentService {
     public static class IncidentInmateNotFoundException extends RuntimeException { }
     public static class DuplicateInmateIdsException extends RuntimeException { }
     public static class InvalidParticipantException extends RuntimeException { }
-    public static class OutcomeAlreadyRecordedException extends RuntimeException { }
 }
