@@ -43,8 +43,7 @@ public class Incident {
     @Column(name = "status", length = 50)
     private String status;
 
-    // V5 caps this at VARCHAR(255) - deliberately narrower than you might
-    // expect for free text, so RecordOutcomeRequest validates the same limit.
+    // V5 caps this at VARCHAR(255), matching the request validation limit.
     @Column(name = "outcome", length = 255)
     private String outcome;
 
@@ -60,18 +59,16 @@ public class Incident {
     protected Incident() {
     }
 
-    private Incident(LocalDate incidentDate, String description, String reportedBy) {
+    private Incident(LocalDate incidentDate, String description, String reportedBy, String outcome) {
         this.incidentDate = incidentDate;
         this.description = description;
         this.reportedBy = reportedBy;
-        this.status = STATUS_OPEN;
+        this.outcome = outcome;
+        this.status = outcome == null ? STATUS_OPEN : STATUS_RESOLVED;
     }
 
-    // Named factory method instead of a public constructor - reads clearly
-    // at the call site (Incident.logNew(...)) and keeps the "always starts
-    // open" rule enforceable in one place.
-    public static Incident logNew(LocalDate incidentDate, String description, String reportedBy) {
-        return new Incident(incidentDate, description, reportedBy);
+    public static Incident logNew(LocalDate incidentDate, String description, String reportedBy, String outcome) {
+        return new Incident(incidentDate, description, reportedBy, outcome);
     }
 
     public Long getId() {

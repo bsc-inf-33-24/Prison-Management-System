@@ -6,7 +6,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -27,7 +29,13 @@ public record LogIncidentRequest(
         LocalDate incidentDate,
 
         @NotBlank(message = "Description is required.")
-        String description
+        String description,
+
+        @Size(max = 255, message = "Outcome must be at most 255 characters.")
+        @Pattern(regexp = "(?s).*\\S.*", message = "Outcome must not be blank.")
+        @Schema(nullable = true, requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+                description = "Optional incident outcome. If supplied, the incident is created as resolved; if omitted or null, it is open. Must contain a non-whitespace character and be at most 255 characters.")
+        String outcome
 ) {
 
     // One inmate's involvement in the incident, including their role - this

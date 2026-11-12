@@ -262,7 +262,7 @@ The update body is the same as creation. Test duration `0`, invalid status, rele
 
 ## 7. Incidents and discipline
 
-Create and resolve using `TOKEN_DISCIPLINE`; history requires `TOKEN_DISCIPLINE` or `TOKEN_ADMIN`.
+Create using `TOKEN_DISCIPLINE`; history requires `TOKEN_DISCIPLINE` or `TOKEN_ADMIN`.
 
 `POST /api/v1/incidents`
 
@@ -272,24 +272,19 @@ Create and resolve using `TOKEN_DISCIPLINE`; history requires `TOKEN_DISCIPLINE`
     { "inmateId": 1, "roleInIncident": "Subject" }
   ],
   "incidentDate": "2026-01-20",
-  "description": "Test disciplinary incident"
+  "description": "Test disciplinary incident",
+  "outcome": "Written warning issued"
 }
 ```
 
-Replace `1` with `INMATE_ID` and save `INCIDENT_ID`.
+Replace `1` with `INMATE_ID`. The optional `outcome` must be nonblank and at most 255 characters; supplying it creates the incident as resolved. Omitting it creates an open incident with a null outcome.
 
 ```text
-PATCH /api/v1/incidents/{incidentId}/outcome
+POST  /api/v1/incidents
 GET   /api/v1/inmates/{inmateId}/incidents
 ```
 
-Outcome body:
-
-```json
-{ "outcome": "Written warning issued" }
-```
-
-Test multiple participants, duplicate participants, nonexistent inmates, future dates, blank outcomes, and resolving the same incident twice.
+Test multiple participants, duplicate participants, nonexistent inmates, future dates, empty and whitespace-only outcomes, and outcomes longer than 255 characters.
 
 ## 8. Visitors and visits
 

@@ -3,7 +3,6 @@ package com.pms.api.incident.controller;
 import com.pms.api.incident.dto.IncidentHistoryItemResponse;
 import com.pms.api.incident.dto.IncidentResponse;
 import com.pms.api.incident.dto.LogIncidentRequest;
-import com.pms.api.incident.dto.RecordOutcomeRequest;
 import com.pms.api.incident.service.IncidentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -30,22 +29,15 @@ public class IncidentController {
         this.incidentService = incidentService;
     }
 
-    // Records Officers may log incidents; only disciplinary officers and Super Admins may resolve them.
+    // The reporter is derived from the authenticated user; an optional outcome is recorded at creation.
     @PostMapping("/incidents")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'DISCIPLINARY_OFFICER', 'PRISON_OFFICER')")
-    @Operation(summary = "Log an inmate incident")
+    @Operation(summary = "Log an inmate incident",
+            description = "An optional nonblank outcome (up to 255 characters) creates the incident as resolved; without one, it is created as open.")
     public IncidentResponse logIncident(@Valid @RequestBody LogIncidentRequest request,
                                          @AuthenticationPrincipal UserDetails currentUser) {
         return incidentService.logIncident(request, currentUser.getUsername());
-    }
-
-    @PatchMapping("/incidents/{incidentId}/outcome")
-    @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'PRISON_OFFICER')")
-    @Operation(summary = "Record a disciplinary outcome")
-    public IncidentResponse recordOutcome(@PathVariable UUID incidentId,
-                                           @Valid @RequestBody RecordOutcomeRequest request) {
-        return incidentService.recordOutcome(incidentId, request);
     }
 
     // Disciplinary Officers and Super Admins can view an inmate's history.

@@ -166,11 +166,6 @@ public class ApiExceptionHandler {
         return problem(HttpStatus.BAD_REQUEST, "Inmate entries cannot be null.");
     }
 
-    @ExceptionHandler(IncidentService.OutcomeAlreadyRecordedException.class)
-    public ResponseEntity<ApiError> handleOutcomeAlreadyRecorded() {
-        return problem(HttpStatus.CONFLICT, "This incident already has a recorded outcome.");
-    }
-
     @ExceptionHandler(CellService.CellNotFoundException.class)
     public ResponseEntity<ApiError> handleCellNotFound() {
         return problem(HttpStatus.NOT_FOUND, "Cell not found.");
