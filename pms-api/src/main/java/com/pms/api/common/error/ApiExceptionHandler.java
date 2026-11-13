@@ -29,6 +29,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import com.pms.api.auth.service.PasswordPolicy;
 import com.pms.api.auth.service.UnavailableRecoveryTokenDelivery;
+import com.pms.api.sentence.service.SentenceService;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -47,6 +48,16 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(InmateService.InmateNotFoundException.class)
     public ResponseEntity<ApiError> handleInmateNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Inmate not found.");
+    }
+
+    @ExceptionHandler(SentenceService.SentenceNotFoundException.class)
+    public ResponseEntity<ApiError> handleSentenceNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Sentence not found.");
+    }
+
+    @ExceptionHandler(SentenceService.InmateNotFoundException.class)
+    public ResponseEntity<ApiError> handleSentenceInmateNotFound() {
         return problem(HttpStatus.NOT_FOUND, "Inmate not found.");
     }
 

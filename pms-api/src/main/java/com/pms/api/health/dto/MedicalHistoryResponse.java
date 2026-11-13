@@ -7,6 +7,7 @@ import java.util.UUID;
 public record MedicalHistoryResponse(
         UUID inmateId,
         String inmateName,
+        String medicalHistoryAtEnrollment,
         List<MedicalVisitResponse> visits
 ) {
 
@@ -14,6 +15,7 @@ public record MedicalHistoryResponse(
         return new MedicalHistoryResponse(
                 inmate.getPublicUuid(),
                 inmate.getFirstName() + " " + inmate.getLastName(),
+                inmate.getMedicalHistory(),
                 visits);
     }
 }
