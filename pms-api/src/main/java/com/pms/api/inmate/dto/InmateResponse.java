@@ -1,8 +1,7 @@
 package com.pms.api.inmate.dto;
 
 import com.pms.api.inmate.entity.Inmate;
-import com.pms.api.inmate.entity.SentenceDurationUnit;
-import com.pms.api.inmate.entity.SentenceType;
+import com.pms.api.inmate.entity.InmateType;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -14,48 +13,34 @@ public record InmateResponse(
         LocalDate dateOfBirth,
         String gender,
         LocalDate admissionDate,
-        String offence,
-        Integer sentenceDurationValue,
-        SentenceDurationUnit sentenceDurationUnit,
-        LocalDate sentenceStartDate,
-        SentenceType sentenceType,
-        LocalDate sentenceEndDate,
-        java.math.BigDecimal remissionPercentage,
-        LocalDate projectedReleaseDate,
+        InmateType inmateType,
+        String bio,
+        LocalDate expectedCourtDate,
+        String nextOfKinName,
+        String nextOfKinRelationship,
+        String nextOfKinPhone,
+        String nextOfKinEmail,
+        String contactPhone,
+        String contactEmail,
         UUID prisonId,
         String prisonName,
         UUID cellId,
         Instant createdAt,
         Instant updatedAt
 ) {
-
     public static InmateResponse from(Inmate inmate) {
-        return from(inmate, inmate.getCellAllocation() == null
-                ? null
+        return from(inmate, inmate.getCellAllocation() == null ? null
                 : inmate.getCellAllocation().getCell().getPublicUuid());
     }
 
     public static InmateResponse from(Inmate inmate, UUID cellId) {
-        return new InmateResponse(
-                inmate.getPublicUuid(),
-                inmate.getFirstName(),
-                inmate.getLastName(),
-                inmate.getDateOfBirth(),
-                inmate.getGender(),
-                inmate.getAdmissionDate(),
-                inmate.getOffence(),
-                inmate.getSentenceDurationValue(),
-                inmate.getSentenceDurationUnit(),
-                inmate.getSentenceStartDate(),
-                inmate.getSentenceType(),
-                inmate.getSentenceEndDate(),
-                inmate.getRemissionPercentage(),
-                inmate.getProjectedReleaseDate(),
+        return new InmateResponse(inmate.getPublicUuid(), inmate.getFirstName(), inmate.getLastName(),
+                inmate.getDateOfBirth(), inmate.getGender(), inmate.getAdmissionDate(), inmate.getInmateType(),
+                inmate.getBio(), inmate.getExpectedCourtDate(),
+                inmate.getNextOfKinName(), inmate.getNextOfKinRelationship(), inmate.getNextOfKinPhone(),
+                inmate.getNextOfKinEmail(), inmate.getContactPhone(), inmate.getContactEmail(),
                 inmate.getCurrentPrison() == null ? null : inmate.getCurrentPrison().getPublicUuid(),
-                inmate.getCurrentPrison() == null ? null : inmate.getCurrentPrison().getName(),
-                cellId,
-                inmate.getCreatedAt(),
-                inmate.getUpdatedAt()
-        );
+                inmate.getCurrentPrison() == null ? null : inmate.getCurrentPrison().getName(), cellId,
+                inmate.getCreatedAt(), inmate.getUpdatedAt());
     }
 }

@@ -58,11 +58,16 @@ public class InmateService {
                 request.dateOfBirth(),
                 request.gender().trim(),
                 request.admissionDate(),
-                request.offence() == null ? null : request.offence().trim(),
-                request.sentenceStartDate(),
-                request.sentenceType(),
-                request.sentenceEndDate(),
-                request.remissionPercentage()
+                request.inmateType(),
+                request.bio().trim(),
+                request.medicalHistory().trim(),
+                request.expectedCourtDate(),
+                request.nextOfKinName().trim(),
+                request.nextOfKinRelationship().trim(),
+                request.nextOfKinPhone().trim(),
+                request.nextOfKinEmail(),
+                request.contactPhone(),
+                request.contactEmail()
         );
         UUID prisonId = prisonAccess.effectivePrison(null);
         Prison prison = prisonRepository.findByPublicUuid(prisonId).orElseThrow(PrisonNotFoundException::new);
