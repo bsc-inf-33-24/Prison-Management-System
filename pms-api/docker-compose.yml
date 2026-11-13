@@ -16,17 +16,38 @@ services:
       timeout: 3s
       retries: 10
 
+  minio:
+    image: quay.io/minio/aistor/minio:latest
+    container_name: pms-minio
+    command: server /data --console-address ":9001" --license /minio.license
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-pms-minio-dev}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-pms-minio-dev-password-change}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+      - ./secrets/minio.license:/minio.license:ro
+
   app:
     build: .
     container_name: pms-app
     depends_on:
       db:
         condition: service_healthy
+      minio:
+        condition: service_started
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/pms
       SPRING_DATASOURCE_USERNAME: pms_user
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:8081}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_BUCKET: inmate-photos
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-pms-minio-dev}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-pms-minio-dev-password-change}
       INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
       RECOVERY_EMAIL_ENABLED: ${RECOVERY_EMAIL_ENABLED:-${MAIL_HOST:+true}}
@@ -42,3 +63,4 @@ services:
 
 volumes:
   pms-data:
+  minio-data:

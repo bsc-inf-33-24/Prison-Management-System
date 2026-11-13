@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Pageable;
@@ -35,23 +36,32 @@ public class InmateService {
     private final NotificationService notificationService;
     private final PrisonRepository prisonRepository;
     private final PrisonAccessService prisonAccess;
+    private final InmatePhotoService inmatePhotoService;
 
     public InmateService(InmateRepository inmateRepository,
                          CellService cellService,
                          PaginationProperties paginationProperties,
                          NotificationService notificationService,
-                         PrisonRepository prisonRepository, PrisonAccessService prisonAccess) {
+                         PrisonRepository prisonRepository, PrisonAccessService prisonAccess,
+                         InmatePhotoService inmatePhotoService) {
         this.inmateRepository = inmateRepository;
         this.cellService = cellService;
         this.paginationProperties = paginationProperties;
         this.notificationService = notificationService;
         this.prisonRepository = prisonRepository;
         this.prisonAccess = prisonAccess;
+        this.inmatePhotoService = inmatePhotoService;
     }
 
     @Audited
     @Transactional
     public InmateResponse enroll(InmateRequest request) {
+        return enroll(request, null, null);
+    }
+
+    @Audited
+    @Transactional
+    public InmateResponse enroll(InmateRequest request, MultipartFile photo, String reportingUsername) {
         Inmate inmate = new Inmate(
                 request.firstName().trim(),
                 request.lastName().trim(),
@@ -76,6 +86,9 @@ public class InmateService {
         Inmate saved = saveInmate(inmate);
         CellAllocationResponse allocation = cellService.allocate(
                 saved.getPublicUuid(), new AllocateCellRequest(request.cellId()));
+        if (photo != null && !photo.isEmpty()) {
+            inmatePhotoService.store(saved, photo, reportingUsername);
+        }
         notificationService.notifyRoles(
                 "INMATE_REGISTERED",
                 "Inmate registered",
