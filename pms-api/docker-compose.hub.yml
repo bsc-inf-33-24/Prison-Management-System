@@ -15,15 +15,34 @@ services:
       timeout: 3s
       retries: 10
 
+  minio:
+    image: quay.io/minio/aistor/minio:latest
+    command: server /data --console-address ":9001" --license /minio.license
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-pms-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+      - ./secrets/minio.license:/minio.license:ro
+
   app:
     image: ${DOCKERHUB_USERNAME:?Set DOCKERHUB_USERNAME in .env}/pms-api:${PMS_API_TAG:?Set PMS_API_TAG to a published commit SHA in .env}
     depends_on:
       db:
         condition: service_healthy
+      minio:
+        condition: service_started
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/pms
       SPRING_DATASOURCE_USERNAME: pms_user
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_BUCKET: inmate-photos
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-pms-minio}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME:-admin}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?Set INITIAL_ADMIN_PASSWORD in .env}
@@ -40,3 +59,4 @@ services:
 
 volumes:
   pms-data:
+  minio-data:

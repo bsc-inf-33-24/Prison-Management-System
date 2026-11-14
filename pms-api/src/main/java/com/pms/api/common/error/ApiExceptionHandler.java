@@ -30,6 +30,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import com.pms.api.auth.service.PasswordPolicy;
 import com.pms.api.auth.service.UnavailableRecoveryTokenDelivery;
 import com.pms.api.sentence.service.SentenceService;
+import com.pms.api.inmate.service.InmatePhotoService;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -59,6 +60,21 @@ public class ApiExceptionHandler {
     @ExceptionHandler(SentenceService.InmateNotFoundException.class)
     public ResponseEntity<ApiError> handleSentenceInmateNotFound() {
         return problem(HttpStatus.NOT_FOUND, "Inmate not found.");
+    }
+
+    @ExceptionHandler(InmatePhotoService.InmateNotFoundException.class)
+    public ResponseEntity<ApiError> handlePhotoInmateNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Inmate not found.");
+    }
+
+    @ExceptionHandler(InmatePhotoService.PhotoNotFoundException.class)
+    public ResponseEntity<ApiError> handlePhotoNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Inmate photo not found.");
+    }
+
+    @ExceptionHandler(InmatePhotoService.PhotoStorageException.class)
+    public ResponseEntity<ApiError> handlePhotoStorageUnavailable() {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Inmate photo storage is unavailable.");
     }
 
     @ExceptionHandler(UserService.UsernameAlreadyExistsException.class)
