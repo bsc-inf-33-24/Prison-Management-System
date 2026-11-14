@@ -42,7 +42,7 @@ public class CellController {
     }
 
     @GetMapping("/cells")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
     @Operation(summary = "List cells")
     public PageResponse<CellResponse> listCells(@RequestParam(required = false) String blockName,
                                                 @RequestParam(required = false) UUID prisonId,
@@ -54,7 +54,7 @@ public class CellController {
     }
 
     @GetMapping("/cells/{cellId}")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
     @Operation(summary = "Get a cell")
     public CellDetailResponse getCell(@PathVariable UUID cellId) {
         return cellService.getCell(cellId);
