@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Encoding;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -63,9 +64,10 @@ public class InmateController {
     @PreAuthorize("hasRole('PRISON_OFFICER')")
     @Operation(summary = "Enroll an inmate with a photo",
             description = "Accepts the enrollment JSON and an optional JPEG or PNG photo in one multipart request.",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(
                     mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                    schema = @Schema(type = "object"))))
+                    schema = @Schema(implementation = com.pms.api.inmate.dto.InmatePhotoEnrollmentRequest.class),
+                    encoding = @Encoding(name = "inmate", contentType = MediaType.APPLICATION_JSON_VALUE))))
     public InmateResponse enrollWithPhoto(@Valid @RequestPart("inmate") InmateRequest request,
                                           @RequestPart(value = "photo", required = false) MultipartFile photo,
                                           @AuthenticationPrincipal UserDetails currentUser) {
