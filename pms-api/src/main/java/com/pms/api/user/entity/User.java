@@ -36,6 +36,7 @@ public class User {
 
     public static final Set<String> ALLOWED_ROLES = Set.of(
             "Super Admin",
+            "Commissioner",
             "Records Officer",
             "Disciplinary Officer",
             "Case Officer",

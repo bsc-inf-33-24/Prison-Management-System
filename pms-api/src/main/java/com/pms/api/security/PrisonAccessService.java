@@ -31,12 +31,12 @@ public class PrisonAccessService {
         this.users=users; this.blocks=blocks; this.inmates=inmates; this.cells=cells; this.transfers=transfers;
     }
 
-    public boolean isGlobalAdmin() { return "Super Admin".equals(currentUser().getRole()); }
+    public boolean isGlobalAdmin() { return "Super Admin".equals(currentUser().getRole()) || "Commissioner".equals(currentUser().getRole()); }
 
-    /** Null means an unrestricted Super Admin; otherwise it is the account's prison UUID. */
+    /** Null means an unrestricted system-wide role; otherwise it is the account's prison UUID. */
     public UUID effectivePrison(UUID requestedPrisonId) {
         User user=currentUser();
-        if ("Super Admin".equals(user.getRole())) return requestedPrisonId;
+        if (isGlobalAdmin()) return requestedPrisonId;
         if (user.getPrison()==null || !user.getPrison().isActive()) deny();
         UUID assigned=user.getPrison()==null?null:user.getPrison().getPublicUuid();
         if (assigned==null || (requestedPrisonId!=null && !assigned.equals(requestedPrisonId))) deny();

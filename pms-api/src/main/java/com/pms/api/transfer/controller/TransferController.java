@@ -34,18 +34,18 @@ public class TransferController {
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
     public TransferResponse create(@Valid @RequestBody CreateTransferRequest request) { return service.create(request); }
     @GetMapping
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','PRISON_OFFICER','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','PRISON_OFFICER','SUPER_ADMIN','COMMISSIONER')")
     public PageResponse<TransferResponse> list(@RequestParam(required=false) TransferStatus status,
             @RequestParam(required=false) UUID prisonId,@RequestParam(required=false) Integer page,
             @RequestParam(required=false) Integer size,@RequestParam(required=false) List<String> sort) {
         return service.list(status,prisonId,page,size,sort);
     }
     @PostMapping("/{id}/approve")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','COMMISSIONER')")
     @Operation(summary = "Approve and complete an inmate transfer")
     public TransferResponse approve(@PathVariable UUID id,@Valid @RequestBody ApproveTransferRequest request) {
         return service.approve(id,request);
     }
-    @PostMapping("/{id}/reject") @PreAuthorize("hasRole('SUPER_ADMIN')") public TransferResponse reject(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.reject(id,request); }
+    @PostMapping("/{id}/reject") @PreAuthorize("hasAnyRole('SUPER_ADMIN','COMMISSIONER')") public TransferResponse reject(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.reject(id,request); }
     @PostMapping("/{id}/cancel") @PreAuthorize("hasRole('SUPER_ADMIN')") public TransferResponse cancel(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.cancel(id,request); }
 }
