@@ -145,20 +145,15 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 | `POST` | `/api/v1/incidents` | Yes | `Records Officer`, `Disciplinary Officer`, `Super Admin` | Log an incident |
 | `GET` | `/api/v1/inmates/{inmateId}/incidents` | Yes | `Disciplinary Officer`, `Super Admin` | Read an inmate’s incident history |
 
-### 4.6 Medical visits
+### 4.6 Visits
 
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
-| `POST` | `/api/v1/medical-visits` | Yes | `Medical Officer`, `Super Admin` | Record a medical visit |
-| `GET` | `/api/v1/medical-visits` | Yes | `Medical Officer`, `Super Admin` | Search an inmate’s medical history |
-
-### 4.7 Visitor records
-
-| Method | Path | Auth | Roles | Purpose |
-|---|---|---:|---|---|
-| `POST` | `/api/v1/visits` | Yes | `Visitor Officer`, `Super Admin`, `Records Officer` | Create a visitor record |
-| `GET` | `/api/v1/visits` | Yes | `Visitor Officer`, `Super Admin`, `Records Officer` | Search visits |
-| `GET` | `/api/v1/inmates/{inmateId}/visits` | Yes | `Visitor Officer`, `Super Admin`, `Records Officer` | Fetch an inmate’s visit history |
+| `POST` | `/api/v1/visits` | Yes | `Visitor Officer`, `Records Officer`, `Case Officer`, `Medical Officer`, `Super Admin` | Create a family, legal, or health visit (type-specific role enforced) |
+| `GET` | `/api/v1/visits` | Yes | `Visitor Officer`, `Records Officer`, `Case Officer`, `Medical Officer`, `Super Admin` | Search visits by inmate, type, date, and other filters |
+| `GET` | `/api/v1/inmates/{inmateId}/visits` | Yes | `Visitor Officer`, `Records Officer`, `Case Officer`, `Medical Officer`, `Super Admin` | Fetch filtered visit history |
+| `POST` | `/api/v1/medical-visits` | Yes | `Medical Officer` | Legacy health-visit endpoint; writes to the shared Visits module |
+| `GET` | `/api/v1/medical-visits` | Yes | `Medical Officer` | Legacy health-history endpoint |
 
 ### 4.8 Rehabilitation
 
@@ -634,93 +629,39 @@ Purpose: retrieve a single inmate’s incident history.
 
 Success `200 OK` returns a list of `IncidentHistoryItemResponse` objects.
 
-### 5.6 Medical visits
-
-#### `POST /api/v1/medical-visits`
-
-Purpose: record an inmate’s medical consultation.
-
-Request body:
-
-```json
-{
-  "inmateId": "7d0df6a2-0da6-4309-9c2d-7c50b1f939e3",
-  "visitDate": "2026-10-29",
-  "sickness": "Fever and headache",
-  "diagnosis": "Mild dehydration",
-  "medicationsProvided": "Oral rehydration salts",
-  "recommendations": "Rest and hydration for 24 hours"
-}
-```
-
-Validation:
-
-- `inmateId` required
-- `visitDate` required and not in the future
-- `sickness` and `diagnosis` required
-- text fields are capped at 10000 characters
-
-Success `201 Created` returns a `MedicalVisitResponse` describing the recorded visit.
-
-The response fields are `id` (public UUID), `visitDate`, `sickness`, `diagnosis`, nullable `medicationsProvided` and `recommendations`, `recordedBy` (officer full name), and `recordedAt` (instant). `GET /api/v1/medical-visits` returns a medical history resource; the controller accepts the inmate public UUID as required `inmateId` and optional `name`.
-
-```json
-{
-  "id": "8d1e0e92-9416-4cdc-847e-6be688a4e8d1",
-  "visitDate": "2026-10-29",
-  "sickness": "Fever and headache",
-  "diagnosis": "Mild dehydration",
-  "medicationsProvided": "Oral rehydration salts",
-  "recommendations": "Rest and hydration for 24 hours",
-  "recordedBy": "Medical Officer",
-  "recordedAt": "2026-10-29T10:00:00Z"
-}
-```
-
-#### `GET /api/v1/medical-visits`
-
-Query parameters:
-
-- `inmateId`: required UUID
-- `name`: optional string filter by inmate name
-
-Success `200 OK` returns `MedicalHistoryResponse`.
-
-### 5.7 Visitor tracking
+### 5.6 Unified visits
 
 #### `POST /api/v1/visits`
 
-Purpose: record a visitor visit.
+Purpose: create a family, legal, or health visit. The visit type determines the required details and role.
 
 Request body:
 
 ```json
 {
+  "visitType": "FAMILY",
   "visitorFullName": "Amina Phiri",
   "inmateId": "7d0df6a2-0da6-4309-9c2d-7c50b1f939e3",
   "visitDate": "2026-10-29",
   "startTime": "09:30",
-  "endTime": "10:15"
+  "endTime": "10:15",
+  "itemsBrought": "Books"
 }
 ```
 
-Validation:
+For `LEGAL`, supply `legalCaseNumber` and optionally `legalRepresentative` instead of family details. Only a Case Officer or Records Officer may create a legal visit.
 
-- `visitorFullName` required, up to 255 characters
-- `inmateId` required
-- `visitDate` required
-- `startTime` and `endTime` required
-- `endTime` must not be earlier than `startTime`
-- duration is calculated server-side
+For `HEALTH`, supply `complaint`, `diagnosis`, and optionally `medicationsProvided` and `recommendations`. Only a Medical Officer may create or view these details. All types require `inmateId`, `visitDate`, `startTime`, and `endTime`; the duration is calculated server-side.
 
-Success `201 Created` returns `VisitResponse`.
+Success `201 Created` returns `VisitResponse`. Family, legal, and health details are stored in records linked to the shared visit. Responses omit type-specific details the caller is not authorized to view.
 
 #### `GET /api/v1/visits`
 
 Query parameters:
 
 - `visitId`: optional UUID
-- `visitorName`: optional string filter
+- `visitorName`: optional family-visitor name filter
+- `visitType`: optional `FAMILY`, `LEGAL`, or `HEALTH`
 - `inmateId`: optional UUID
 - `inmateName`: optional name filter
 - `visitDateFrom`: optional `OffsetDateTime`
@@ -739,13 +680,16 @@ Purpose: fetch the visit history for one inmate.
 Optional filters:
 
 - `visitorName`
+- `visitType`
 - `visitDateFrom`
 - `visitDateTo`
 - `page` (default `0`), `size` (default `20`, max `100`), `sort` (same sort aliases as visit search; default `startDateTime,desc`)
 
 This route first resolves the inmate UUID; an unknown inmate returns `404`.
 
-Representative `VisitResponse` shape:
+`VisitResponse` includes `visitType`, the shared visit timing and recording/audit fields, and only the type-specific details allowed for the caller. A health visit returned to a non-medical role does not include complaint, diagnosis, medication, or recommendation values.
+
+Representative family `VisitResponse` shape:
 
 ```json
 {
@@ -762,6 +706,10 @@ Representative `VisitResponse` shape:
   "updatedAt": "2026-10-29T07:30:00Z"
 }
 ```
+
+### 5.7 Legacy medical visits
+
+`POST /api/v1/medical-visits` and `GET /api/v1/medical-visits` remain available during frontend migration. New and historical medical visits are also represented as `HEALTH` visits in `/api/v1/visits`; both recording paths keep the shared and legacy medical history records synchronized. Only Medical Officers can use these endpoints.
 
 ### 5.8 Rehabilitation
 

@@ -3,6 +3,8 @@ package com.pms.api.visitor.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.api.common.audit.AuditService;
+import com.pms.api.health.entity.MedicalVisit;
+import com.pms.api.health.repository.MedicalVisitRepository;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.user.entity.User;
@@ -10,7 +12,11 @@ import com.pms.api.user.repository.UserRepository;
 import com.pms.api.visitor.dto.VisitHistoryResponse;
 import com.pms.api.visitor.dto.VisitRequest;
 import com.pms.api.visitor.dto.VisitResponse;
+import com.pms.api.visitor.entity.FamilyVisitDetails;
+import com.pms.api.visitor.entity.HealthVisitDetails;
+import com.pms.api.visitor.entity.LegalVisitDetails;
 import com.pms.api.visitor.entity.Visit;
+import com.pms.api.visitor.entity.VisitType;
 import com.pms.api.visitor.repository.VisitRepository;
 import com.pms.api.security.PrisonAccessService;
 import jakarta.persistence.criteria.Join;
@@ -21,7 +27,9 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class VisitService {
 
     private final VisitRepository visitRepository;
+    private final MedicalVisitRepository medicalVisitRepository;
     private final InmateRepository inmateRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
@@ -43,6 +52,7 @@ public class VisitService {
     private final PrisonAccessService prisonAccess;
 
     public VisitService(VisitRepository visitRepository,
+                        MedicalVisitRepository medicalVisitRepository,
                         InmateRepository inmateRepository,
                         UserRepository userRepository,
                         AuditService auditService,
@@ -50,6 +60,7 @@ public class VisitService {
                         @Value("${app.visits.time-zone:Africa/Blantyre}") String visitTimeZone,
                         PrisonAccessService prisonAccess) {
         this.visitRepository = visitRepository;
+        this.medicalVisitRepository = medicalVisitRepository;
         this.inmateRepository = inmateRepository;
         this.userRepository = userRepository;
         this.auditService = auditService;
@@ -63,9 +74,18 @@ public class VisitService {
         if (request == null) {
             throw new IllegalArgumentException("Visit details are required.");
         }
-        if (isBlank(request.visitorFullName())) {
+        VisitType visitType = request.visitType() == null ? VisitType.FAMILY : request.visitType();
+        if (visitType == VisitType.FAMILY && isBlank(request.visitorFullName())) {
             throw new IllegalArgumentException("Visitor name is required.");
         }
+        if (visitType == VisitType.HEALTH && (isBlank(request.complaint()) || isBlank(request.diagnosis()))) {
+            throw new IllegalArgumentException("Health visit complaint and diagnosis are required.");
+        }
+        if (visitType == VisitType.LEGAL && isBlank(request.legalCaseNumber())) {
+            throw new IllegalArgumentException("Legal case number is required.");
+        }
+        User user = userRepository.findByUsername(username).orElseThrow(UserNotFoundException::new);
+        requireCreatePermission(user, visitType);
         Inmate inmate = inmateRepository.findByPublicUuid(request.inmateId())
                 .orElseThrow(InmateNotFoundException::new);
         prisonAccess.requirePrison(inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid());
@@ -75,22 +95,47 @@ public class VisitService {
                 .atZone(visitTimeZone).toOffsetDateTime();
         validateVisitTimes(startDateTime, endDateTime);
 
-        User user = userRepository.findByUsername(username).orElseThrow(UserNotFoundException::new);
+        UUID publicUuid = null;
+        String complaint = null;
+        String diagnosis = null;
+        String medications = null;
+        String recommendations = null;
+        if (visitType == VisitType.HEALTH) {
+            complaint = request.complaint().trim();
+            diagnosis = request.diagnosis().trim();
+            medications = normalizeOptionalText(request.medicationsProvided());
+            recommendations = normalizeOptionalText(request.recommendations());
+            MedicalVisit medicalVisit = medicalVisitRepository.save(new MedicalVisit(
+                    inmate, user, request.visitDate(), complaint, diagnosis, medications, recommendations));
+            publicUuid = medicalVisit.getPublicUuid();
+        }
+
         Visit visit = new Visit(inmate, startDateTime, endDateTime,
-                calculateDurationMinutes(startDateTime, endDateTime), user,
-                request.visitorFullName().trim(), request.itemsBrought());
+                calculateDurationMinutes(startDateTime, endDateTime), user, visitType, publicUuid);
+        if (visitType == VisitType.FAMILY) {
+            visit.setFamilyDetails(new FamilyVisitDetails(
+                    request.visitorFullName().trim(), normalizeOptionalText(request.itemsBrought())));
+        } else if (visitType == VisitType.LEGAL) {
+            visit.setLegalDetails(new LegalVisitDetails(
+                    request.legalCaseNumber().trim(), normalizeOptionalText(request.legalRepresentative())));
+        } else {
+            visit.setHealthDetails(new HealthVisitDetails(complaint, diagnosis, medications, recommendations));
+            visit.markReminderSent(java.time.Instant.now());
+        }
         Visit saved = visitRepository.saveAndFlush(visit);
         audit(username, "VISIT_CREATED", "Visit", saved.getPublicUuid().toString(), "{}", visitSummary(saved));
-        return VisitResponse.from(saved);
+        return VisitResponse.from(saved, canViewFamilyDetails(user), canViewLegalDetails(user),
+                canViewHealthDetails(user));
     }
 
     @Transactional(readOnly = true)
-    public Page<VisitResponse> searchVisits(UUID visitId, String visitorName, UUID inmateId,
-                                            String inmateName,
+    public Page<VisitResponse> searchVisits(UUID visitId, String visitorName, String visitType,
+                                            UUID inmateId, String inmateName,
                                             OffsetDateTime visitDateFrom, OffsetDateTime visitDateTo,
-                                            UUID loggedBy, int page, int size, String sort) {
+                                            UUID loggedBy, int page, int size, String sort, String username) {
         validatePage(page, size);
         validateDateRange(visitDateFrom, visitDateTo);
+        User user = userRepository.findByUsername(username).orElseThrow(UserNotFoundException::new);
 
         Specification<Visit> specification = Specification.unrestricted();
         UUID assignedPrison=prisonAccess.effectivePrison(null);
@@ -102,6 +147,9 @@ public class VisitService {
         }
         if (!isBlank(visitorName)) {
             specification = specification.and(visitorNameContains(visitorName));
+        }
+        if (!isBlank(visitType)) {
+            specification = specification.and(equalEnum("visitType", VisitType.valueOf(visitType.trim().toUpperCase(Locale.ROOT))));
         }
         if (inmateId != null) {
             specification = specification.and(equalRelatedId("inmate", inmateRepository.findByPublicUuid(inmateId)
@@ -122,15 +170,18 @@ public class VisitService {
         }
 
         Pageable pageable = PageRequest.of(page, size, parseSort(sort, "startDateTime", Sort.Direction.DESC));
-        return visitRepository.findAll(specification, pageable).map(VisitResponse::from);
+        return visitRepository.findAll(specification, pageable)
+                .map(visit -> VisitResponse.from(visit, canViewFamilyDetails(user),
+                        canViewLegalDetails(user), canViewHealthDetails(user)));
     }
 
     @Transactional(readOnly = true)
-    public Page<VisitHistoryResponse> getInmateVisitHistory(UUID inmateId, String visitorName,
+    public Page<VisitHistoryResponse> getInmateVisitHistory(UUID inmateId, String visitorName, String visitType,
                                                             OffsetDateTime visitDateFrom,
                                                             OffsetDateTime visitDateTo, int page, int size,
-                                                            String sort) {
+                                                            String sort, String username) {
         Inmate inmate = inmateRepository.findByPublicUuid(inmateId).orElseThrow(InmateNotFoundException::new);
+        User user = userRepository.findByUsername(username).orElseThrow(UserNotFoundException::new);
         prisonAccess.requirePrison(inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid());
         validatePage(page, size);
         validateDateRange(visitDateFrom, visitDateTo);
@@ -140,6 +191,9 @@ public class VisitService {
         if (!isBlank(visitorName)) {
             specification = specification.and(visitorNameContains(visitorName));
         }
+        if (!isBlank(visitType)) {
+            specification = specification.and(equalEnum("visitType", VisitType.valueOf(visitType.trim().toUpperCase(Locale.ROOT))));
+        }
         if (visitDateFrom != null) {
             specification = specification.and(greaterThanOrEqualTo("startDateTime", visitDateFrom));
         }
@@ -148,10 +202,15 @@ public class VisitService {
         }
 
         Pageable pageable = PageRequest.of(page, size, parseSort(sort, "startDateTime", Sort.Direction.DESC));
-        return visitRepository.findAll(specification, pageable).map(VisitHistoryResponse::from);
+        return visitRepository.findAll(specification, pageable)
+                .map(visit -> VisitHistoryResponse.from(visit, canViewFamilyDetails(user)));
     }
 
     private static Specification<Visit> equalLong(String fieldName, Long value) {
+        return (root, query, cb) -> cb.equal(root.get(fieldName), value);
+    }
+
+    private static <T> Specification<Visit> equalEnum(String fieldName, T value) {
         return (root, query, cb) -> cb.equal(root.get(fieldName), value);
     }
 
@@ -168,7 +227,11 @@ public class VisitService {
     }
 
     private static Specification<Visit> visitorNameContains(String value) {
-        return textContains("visitorFullName", value);
+        String pattern = likePattern(value);
+        return (root, query, cb) -> {
+            Join<Object, Object> family = root.join("familyDetails", JoinType.LEFT);
+            return cb.like(cb.lower(family.get("visitorFullName")), pattern, '!');
+        };
     }
 
     private static Specification<Visit> inmateNumberContains(String value) {
@@ -220,7 +283,7 @@ public class VisitService {
             case "visitDate", "visitDateTime", "startDateTime" -> "startDateTime";
             case "endDateTime" -> "endDateTime";
             case "loggedBy" -> "loggedBy.id";
-            case "visitorName" -> "visitorFullName";
+            case "visitorName" -> "familyDetails.visitorFullName";
             case "inmateName" -> "inmate.firstName";
             default -> defaultField;
         };
@@ -263,6 +326,42 @@ public class VisitService {
         return value == null || value.isBlank();
     }
 
+    private static String normalizeOptionalText(String value) {
+        return isBlank(value) ? null : value.trim();
+    }
+
+    private static void requireCreatePermission(User user, VisitType visitType) {
+        boolean allowed = switch (visitType) {
+            case FAMILY -> hasRole(user, "Visitor Officer", "Records Officer", "Super Admin");
+            case LEGAL -> hasRole(user, "Case Officer", "Records Officer", "Super Admin");
+            case HEALTH -> hasRole(user, "Medical Officer");
+        };
+        if (!allowed) {
+            throw new AccessDeniedException("Your role cannot record this visit type.");
+        }
+    }
+
+    private static boolean canViewFamilyDetails(User user) {
+        return hasRole(user, "Visitor Officer", "Records Officer", "Super Admin");
+    }
+
+    private static boolean canViewLegalDetails(User user) {
+        return hasRole(user, "Case Officer", "Records Officer", "Super Admin");
+    }
+
+    private static boolean canViewHealthDetails(User user) {
+        return hasRole(user, "Medical Officer");
+    }
+
+    private static boolean hasRole(User user, String... roles) {
+        for (String role : roles) {
+            if (role.equals(user.getRole())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void audit(String username, String action, String entityName, String publicRecordId,
                        String oldValues, String newValues) {
         auditService.record(username, action, entityName, publicRecordId,
@@ -271,7 +370,9 @@ public class VisitService {
 
     private String visitSummary(Visit visit) {
         try {
-            return objectMapper.writeValueAsString(VisitResponse.from(visit));
+            return objectMapper.writeValueAsString(Map.of(
+                    "visitId", visit.getPublicUuid(),
+                    "visitType", visit.getVisitType()));
         } catch (JsonProcessingException exception) {
             return "{}";
         }

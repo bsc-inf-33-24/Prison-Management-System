@@ -4,12 +4,15 @@ import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -29,11 +32,9 @@ public class Visit {
     @Column(name = "public_uuid", nullable = false, updatable = false, unique = true)
     private UUID publicUuid = UUID.randomUUID();
 
-    @Column(name = "visitor_full_name", nullable = false, length = 255)
-    private String visitorFullName;
-
-    @Column(name = "items_brought", length = 1000)
-    private String itemsBrought;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visit_type", nullable = false, length = 20)
+    private VisitType visitType = VisitType.FAMILY;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "inmate_id", nullable = false)
@@ -61,19 +62,37 @@ public class Visit {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @OneToOne(mappedBy = "visit", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true,
+            fetch = FetchType.LAZY)
+    private FamilyVisitDetails familyDetails;
+
+    @OneToOne(mappedBy = "visit", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true,
+            fetch = FetchType.LAZY)
+    private LegalVisitDetails legalDetails;
+
+    @OneToOne(mappedBy = "visit", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true,
+            fetch = FetchType.LAZY)
+    private HealthVisitDetails healthDetails;
+
     protected Visit() {
     }
 
     public Visit(Inmate inmate, OffsetDateTime startDateTime, OffsetDateTime endDateTime,
-                 Integer durationMinutes, User loggedBy,
-                 String visitorFullName, String itemsBrought) {
+                 Integer durationMinutes, User loggedBy, VisitType visitType) {
+        this(inmate, startDateTime, endDateTime, durationMinutes, loggedBy, visitType, null);
+    }
+
+    public Visit(Inmate inmate, OffsetDateTime startDateTime, OffsetDateTime endDateTime,
+                 Integer durationMinutes, User loggedBy, VisitType visitType, UUID publicUuid) {
         this.inmate = inmate;
         this.startDateTime = startDateTime;
         this.endDateTime = endDateTime;
         this.durationMinutes = durationMinutes;
         this.loggedBy = loggedBy;
-        this.visitorFullName = visitorFullName;
-        this.itemsBrought = itemsBrought;
+        this.visitType = visitType == null ? VisitType.FAMILY : visitType;
+        if (publicUuid != null) {
+            this.publicUuid = publicUuid;
+        }
     }
 
     @PrePersist
@@ -96,16 +115,45 @@ public class Visit {
         return publicUuid;
     }
 
-    public String getVisitorFullName() {
-        return visitorFullName;
-    }
-
-    public String getItemsBrought() {
-        return itemsBrought;
+    public VisitType getVisitType() {
+        return visitType;
     }
 
     public Inmate getInmate() {
         return inmate;
+    }
+
+    public FamilyVisitDetails getFamilyDetails() {
+        return familyDetails;
+    }
+
+    public void setFamilyDetails(FamilyVisitDetails familyDetails) {
+        this.familyDetails = familyDetails;
+        if (familyDetails != null) {
+            familyDetails.setVisit(this);
+        }
+    }
+
+    public LegalVisitDetails getLegalDetails() {
+        return legalDetails;
+    }
+
+    public void setLegalDetails(LegalVisitDetails legalDetails) {
+        this.legalDetails = legalDetails;
+        if (legalDetails != null) {
+            legalDetails.setVisit(this);
+        }
+    }
+
+    public HealthVisitDetails getHealthDetails() {
+        return healthDetails;
+    }
+
+    public void setHealthDetails(HealthVisitDetails healthDetails) {
+        this.healthDetails = healthDetails;
+        if (healthDetails != null) {
+            healthDetails.setVisit(this);
+        }
     }
 
     public OffsetDateTime getStartDateTime() {
@@ -126,6 +174,10 @@ public class Visit {
 
     public User getLoggedBy() {
         return loggedBy;
+    }
+
+    public void markReminderSent(Instant sentAt) {
+        this.endReminderSentAt = sentAt;
     }
 
     public Instant getCreatedAt() {

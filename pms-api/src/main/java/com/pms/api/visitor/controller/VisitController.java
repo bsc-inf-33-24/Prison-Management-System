@@ -36,21 +36,22 @@ public class VisitController {
         this.visitService = visitService;
     }
 
-    @Operation(summary = "Record a visit", description = "Record visitor name, inmate, visit date, and start/end times; duration is calculated.")
+    @Operation(summary = "Record a visit", description = "Record a family, legal, or health visit. Health details are restricted to Medical Officers.")
     @PostMapping("/visits")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER', 'CASE_OFFICER', 'MEDICAL_OFFICER', 'SUPER_ADMIN')")
     public VisitResponse recordVisit(@Valid @RequestBody VisitRequest request,
                                     @AuthenticationPrincipal UserDetails currentUser) {
         return visitService.recordVisit(request, currentUser.getUsername());
     }
 
-    @Operation(summary = "Search visits", description = "Filter visits by recorded visitor details, inmate, date range, and recording officer.")
+    @Operation(summary = "Search visits", description = "Filter visits by type, recorded visitor details, inmate, date range, and recording officer.")
     @GetMapping("/visits")
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER', 'CASE_OFFICER', 'MEDICAL_OFFICER', 'SUPER_ADMIN')")
     public Page<VisitResponse> searchVisits(
             @RequestParam(required = false) UUID visitId,
             @RequestParam(required = false) String visitorName,
+            @RequestParam(required = false) String visitType,
             @RequestParam(required = false) UUID inmateId,
             @RequestParam(required = false) String inmateName,
             @RequestParam(required = false) OffsetDateTime visitDateFrom,
@@ -58,23 +59,27 @@ public class VisitController {
             @RequestParam(required = false) UUID loggedBy,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String sort) {
-        return visitService.searchVisits(visitId, visitorName, inmateId,
-                inmateName, visitDateFrom, visitDateTo, loggedBy, page, size, sort);
+            @RequestParam(required = false) String sort,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        return visitService.searchVisits(visitId, visitorName, visitType, inmateId,
+                inmateName, visitDateFrom, visitDateTo, loggedBy, page, size, sort, currentUser.getUsername());
     }
 
-    @Operation(summary = "Get an inmate's visit history", description = "Returns visits associated with the specified inmate, including each visitor's name.")
+    @Operation(summary = "Get an inmate's visit history", description = "Returns visits associated with the specified inmate, including each visitor's name and visit type.")
     @GetMapping("/inmates/{inmateId}/visits")
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER', 'CASE_OFFICER', 'MEDICAL_OFFICER', 'SUPER_ADMIN')")
     public Page<VisitHistoryResponse> getInmateVisitHistory(
             @PathVariable UUID inmateId,
             @RequestParam(required = false) String visitorName,
+            @RequestParam(required = false) String visitType,
             @RequestParam(required = false) OffsetDateTime visitDateFrom,
             @RequestParam(required = false) OffsetDateTime visitDateTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String sort) {
-        return visitService.getInmateVisitHistory(inmateId, visitorName, visitDateFrom, visitDateTo, page, size, sort);
+            @RequestParam(required = false) String sort,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        return visitService.getInmateVisitHistory(inmateId, visitorName, visitType, visitDateFrom, visitDateTo,
+                page, size, sort, currentUser.getUsername());
     }
 
 }
