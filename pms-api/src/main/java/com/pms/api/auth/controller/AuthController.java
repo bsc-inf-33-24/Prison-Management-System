@@ -8,6 +8,7 @@ import com.pms.api.auth.dto.PasswordRecoveryResponse;
 import com.pms.api.auth.dto.ResetPasswordRequest;
 import com.pms.api.auth.service.AuthService;
 import com.pms.api.common.error.ApiError;
+import com.pms.api.user.dto.UserResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -53,6 +55,20 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
         AuthService.LoginResult result = authService.login(request);
         return ResponseEntity.ok(result.response());
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Get current authenticated user", description = "Returns the authenticated user's profile as known by the server.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Authenticated user profile was returned.",
+                    content = @Content(schema = @Schema(implementation = UserResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Authentication is required.",
+                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
+    public ResponseEntity<UserResponse> me(@AuthenticationPrincipal UserDetails currentUser) {
+        return ResponseEntity.ok(authService.me(currentUser.getUsername()));
     }
 
     @PostMapping("/logout")

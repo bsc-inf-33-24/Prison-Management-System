@@ -3,8 +3,10 @@ package com.pms.api;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -84,6 +86,27 @@ class UserEmailAuthenticationIntegrationTest {
         login(email.toUpperCase(java.util.Locale.ROOT), "Records123!").andExpect(status().isOk());
         login("  " + email.toUpperCase(java.util.Locale.ROOT) + "  ", "Records123!")
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void returnsAuthenticatedUserProfileFromMeEndpoint() throws Exception {
+        String username = uniqueUsername();
+        String email = "me." + UUID.randomUUID() + "@example.test";
+        createUser(username, email, true);
+
+        String loginResponse = login(username, "Records123!").andExpect(status().isOk()).andReturn()
+                .getResponse().getContentAsString();
+        String bearerToken = objectMapper.readTree(loginResponse).path("accessToken").asText();
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + bearerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value(username))
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.role").value("Records Officer"));
+
+        mockMvc.perform(get("/api/v1/auth/me"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

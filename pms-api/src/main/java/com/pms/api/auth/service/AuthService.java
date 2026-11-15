@@ -4,6 +4,7 @@ import com.pms.api.auth.dto.*;
 import com.pms.api.auth.entity.PasswordResetToken;
 import com.pms.api.auth.repository.PasswordResetTokenRepository;
 import com.pms.api.security.jwt.JwtService;
+import com.pms.api.user.dto.UserResponse;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
 import com.pms.api.user.service.UserService;
@@ -68,6 +69,12 @@ public class AuthService {
             if (knownUser != null && knownUser.isActive()) knownUser.recordFailedLogin(maximumLoginAttempts, Instant.now().plus(lockoutDuration));
             throw new BadCredentialsException("Invalid username or password.");
         }
+    }
+
+    public UserResponse me(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user no longer exists."));
+        return UserResponse.from(user);
     }
 
     @Transactional
