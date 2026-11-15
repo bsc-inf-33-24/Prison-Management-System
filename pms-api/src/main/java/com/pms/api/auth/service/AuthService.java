@@ -2,7 +2,9 @@ package com.pms.api.auth.service;
 
 import com.pms.api.auth.dto.*;
 import com.pms.api.auth.entity.PasswordResetToken;
+import com.pms.api.auth.entity.RefreshToken;
 import com.pms.api.auth.repository.PasswordResetTokenRepository;
+import com.pms.api.auth.repository.RefreshTokenRepository;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.dto.UserResponse;
 import com.pms.api.user.entity.User;
@@ -16,6 +18,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -36,19 +39,24 @@ public class AuthService {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetTokenRepository resetTokens;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final RecoveryTokenDelivery recoveryDelivery;
     private final Duration resetTtl;
+    private final Duration refreshTokenTtl;
     private final int maximumLoginAttempts;
     private final Duration lockoutDuration;
 
     public AuthService(AuthenticationManager authenticationManager, JwtService jwtService, UserRepository userRepository,
                        UserService userService, PasswordEncoder passwordEncoder, PasswordResetTokenRepository resetTokens,
-                       RecoveryTokenDelivery recoveryDelivery, @Value("${auth.password-reset-ttl:PT15M}") Duration resetTtl,
+                       RefreshTokenRepository refreshTokenRepository, RecoveryTokenDelivery recoveryDelivery,
+                       @Value("${auth.password-reset-ttl:PT15M}") Duration resetTtl,
+                       @Value("${jwt.refresh-token-ttl:P7D}") Duration refreshTokenTtl,
                        @Value("${auth.login.max-failed-attempts:5}") int maximumLoginAttempts,
                        @Value("${auth.login.lockout-duration:PT15M}") Duration lockoutDuration) {
         this.authenticationManager = authenticationManager; this.jwtService = jwtService; this.userRepository = userRepository;
         this.userService = userService; this.passwordEncoder = passwordEncoder; this.resetTokens = resetTokens;
-        this.recoveryDelivery = recoveryDelivery; this.resetTtl = resetTtl; this.maximumLoginAttempts = maximumLoginAttempts; this.lockoutDuration = lockoutDuration;
+        this.refreshTokenRepository = refreshTokenRepository; this.recoveryDelivery = recoveryDelivery; this.resetTtl = resetTtl;
+        this.refreshTokenTtl = refreshTokenTtl; this.maximumLoginAttempts = maximumLoginAttempts; this.lockoutDuration = lockoutDuration;
     }
 
     @Transactional(noRollbackFor = org.springframework.security.core.AuthenticationException.class)
@@ -64,17 +72,53 @@ public class AuthService {
                     new UsernamePasswordAuthenticationToken(canonicalUsername, request.getPassword()));
             User user = userRepository.findByUsername(authentication.getName()).orElseThrow(() -> new BadCredentialsException("Invalid username or password."));
             user.resetLoginFailures();
-            return new LoginResult(new AuthResponse(jwtService.generateToken(user), "Bearer"));
+            String refreshToken = issueRefreshToken(user);
+            return new LoginResult(new AuthResponse(jwtService.generateToken(user), "Bearer"), refreshToken);
         } catch (org.springframework.security.core.AuthenticationException exception) {
             if (knownUser != null && knownUser.isActive()) knownUser.recordFailedLogin(maximumLoginAttempts, Instant.now().plus(lockoutDuration));
             throw new BadCredentialsException("Invalid username or password.");
         }
     }
 
+    @Transactional
+    public RefreshResult refresh(String rawRefreshToken) {
+        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
+            throw new InvalidRefreshTokenException();
+        }
+        String tokenHash = hash(rawRefreshToken.trim());
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(InvalidRefreshTokenException::new);
+        User user = refreshToken.getUser();
+        Instant now = Instant.now();
+        if (!refreshToken.isActive(now)) {
+            revokeAllRefreshTokensForUser(user, now);
+            throw new InvalidRefreshTokenException();
+        }
+
+        String rotatedToken = issueRefreshToken(user, refreshToken);
+        return new RefreshResult(new AuthResponse(jwtService.generateToken(user), "Bearer"), rotatedToken);
+    }
+
     public UserResponse me(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalStateException("Authenticated user no longer exists."));
         return UserResponse.from(user);
+    }
+
+    public UserResponse me(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user no longer exists."));
+        return UserResponse.from(user);
+    }
+
+    @Transactional
+    public void revokeAllRefreshTokensForUser(User user) {
+        revokeAllRefreshTokensForUser(user, Instant.now());
+    }
+
+    @Transactional
+    public void revokeAllRefreshTokensForUser(User user, Instant revokedAt) {
+        refreshTokenRepository.revokeAllActiveForUser(user, revokedAt);
     }
 
     @Transactional
@@ -100,6 +144,7 @@ public class AuthService {
         User user = token.getUser();
         token.consume(Instant.now());
         userService.changePassword(user, request.newPassword());
+        revokeAllRefreshTokensForUser(user);
         resetTokens.deleteOutstandingForUser(user.getId());
     }
 
@@ -109,19 +154,47 @@ public class AuthService {
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) throw new InvalidCurrentPasswordException();
         if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) throw new PasswordReuseException();
         userService.changePassword(user, request.newPassword());
+        revokeAllRefreshTokensForUser(user);
         resetTokens.deleteOutstandingForUser(user.getId());
     }
 
     @Transactional
-    public void logout(String username) { userRepository.findByUsername(username).ifPresent(User::invalidateAuthentication); }
+    public void logout(String username) {
+        userRepository.findByUsername(username).ifPresent(user -> {
+            user.invalidateAuthentication();
+            revokeAllRefreshTokensForUser(user);
+        });
+    }
+
+    private String issueRefreshToken(User user) {
+        String rawToken = UUID.randomUUID() + ":" + UUID.randomUUID();
+        String tokenHash = hash(rawToken);
+        refreshTokenRepository.save(new RefreshToken(user, tokenHash, Instant.now().plus(refreshTokenTtl)));
+        return rawToken;
+    }
+
+    private String issueRefreshToken(User user, RefreshToken replacedToken) {
+        String rawToken = UUID.randomUUID() + ":" + UUID.randomUUID();
+        String tokenHash = hash(rawToken);
+        Instant now = Instant.now();
+        RefreshToken nextToken = new RefreshToken(user, tokenHash, now.plus(refreshTokenTtl));
+        refreshTokenRepository.save(nextToken);
+
+        replacedToken.revoke(now);
+        replacedToken.setReplacedByToken(nextToken);
+        refreshTokenRepository.save(replacedToken);
+        return rawToken;
+    }
 
     private static String randomRecoveryCode() { return String.format(Locale.ROOT, "%06d", RANDOM.nextInt(RESET_CODE_BOUND)); }
     public static String hash(String value) { try { return toHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); } catch (NoSuchAlgorithmException e) { throw new IllegalStateException(e); } }
     private static String toHex(byte[] bytes) { StringBuilder out = new StringBuilder(64); for (byte b : bytes) out.append(String.format("%02x", b)); return out.toString(); }
 
-    public record LoginResult(AuthResponse response) { }
+    public record LoginResult(AuthResponse response, String refreshToken) { }
+    public record RefreshResult(AuthResponse response, String refreshToken) { }
     public static class AccountLockedException extends RuntimeException { }
     public static class InvalidCurrentPasswordException extends RuntimeException { }
     public static class PasswordReuseException extends RuntimeException { }
     public static class InvalidResetTokenException extends RuntimeException { }
+    public static class InvalidRefreshTokenException extends RuntimeException { }
 }

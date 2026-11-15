@@ -159,6 +159,9 @@ public class ApiExceptionHandler {
     @ExceptionHandler(AuthService.InvalidResetTokenException.class)
     public ResponseEntity<ApiError> handleInvalidResetToken() { return problem(HttpStatus.BAD_REQUEST, "The password reset request is invalid or expired."); }
 
+    @ExceptionHandler(AuthService.InvalidRefreshTokenException.class)
+    public ResponseEntity<ApiError> handleInvalidRefreshToken() { return problem(HttpStatus.UNAUTHORIZED, "The refresh token is invalid, expired, or revoked."); }
+
     @ExceptionHandler(PasswordPolicy.WeakPasswordException.class)
     public ResponseEntity<ApiError> handleWeakPassword() {
         return problem(HttpStatus.BAD_REQUEST,

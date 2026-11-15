@@ -81,8 +81,8 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/actuator/health", "/api/v1/auth/login", "/api/v1/auth/password/forgot",
-                                "/api/v1/auth/password/reset",
+                        .requestMatchers("/actuator/health", "/api/v1/auth/login", "/api/v1/auth/refresh",
+                                "/api/v1/auth/password/forgot", "/api/v1/auth/password/reset",
                                 "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )

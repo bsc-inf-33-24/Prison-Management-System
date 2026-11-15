@@ -17,11 +17,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.Duration;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -52,8 +57,26 @@ public class AuthController {
             @ApiResponse(responseCode = "429", description = "The account is temporarily locked after too many failed attempts.",
                     content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request, jakarta.servlet.http.HttpServletResponse response) {
         AuthService.LoginResult result = authService.login(request);
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.refreshToken(), Duration.ofDays(7)).toString());
+        return ResponseEntity.ok(result.response());
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "Refresh access token", description = "Validates a refresh token from the secure cookie and issues a new access token while rotating the refresh token.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "A new access token was issued.",
+                    content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+            @ApiResponse(responseCode = "401", description = "The refresh token is missing, expired, revoked, or invalid.",
+                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
+    public ResponseEntity<AuthResponse> refresh(@CookieValue(value = "refresh_token", required = false) String refreshTokenCookie,
+                                              @RequestHeader(value = "X-Refresh-Token", required = false) String refreshTokenHeader,
+                                              jakarta.servlet.http.HttpServletResponse response) {
+        String refreshToken = refreshTokenCookie != null && !refreshTokenCookie.isBlank() ? refreshTokenCookie : refreshTokenHeader;
+        AuthService.RefreshResult result = authService.refresh(refreshToken);
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.refreshToken(), Duration.ofDays(7)).toString());
         return ResponseEntity.ok(result.response());
     }
 
@@ -74,9 +97,11 @@ public class AuthController {
     @PostMapping("/logout")
     @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Log out", description = "Invalidates all currently issued access tokens for the authenticated user.")
-    public ResponseEntity<Void> logout(@AuthenticationPrincipal UserDetails currentUser) {
+    @Operation(summary = "Log out", description = "Revokes all active sessions for the authenticated user and clears the refresh-token cookie.")
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal UserDetails currentUser,
+                                      jakarta.servlet.http.HttpServletResponse response) {
         authService.logout(currentUser.getUsername());
+        response.addHeader(HttpHeaders.SET_COOKIE, clearRefreshTokenCookie().toString());
         return ResponseEntity.noContent().build();
     }
 
@@ -96,11 +121,33 @@ public class AuthController {
     @PostMapping("/password/change")
     @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Change password", description = "Changes the authenticated user's password and invalidates existing access tokens.")
+    @Operation(summary = "Change password", description = "Changes the authenticated user's password and invalidates all active sessions.")
     public ResponseEntity<Void> changePassword(@AuthenticationPrincipal UserDetails currentUser,
-                                                @Valid @RequestBody ChangePasswordRequest request) {
+                                                @Valid @RequestBody ChangePasswordRequest request,
+                                                jakarta.servlet.http.HttpServletResponse response) {
         authService.changePassword(currentUser.getUsername(), request);
+        response.addHeader(HttpHeaders.SET_COOKIE, clearRefreshTokenCookie().toString());
         return ResponseEntity.noContent().build();
+    }
+
+    private ResponseCookie refreshTokenCookie(String token, Duration maxAge) {
+        return ResponseCookie.from("refresh_token", token)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(maxAge)
+                .build();
+    }
+
+    private ResponseCookie clearRefreshTokenCookie() {
+        return ResponseCookie.from("refresh_token", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(0)
+                .build();
     }
 
 }

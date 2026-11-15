@@ -1,5 +1,6 @@
 package com.pms.api.user.service;
 
+import com.pms.api.auth.repository.RefreshTokenRepository;
 import com.pms.api.user.dto.CreateUserRequest;
 import com.pms.api.user.dto.UpdateUserDetailsRequest;
 import com.pms.api.user.dto.UserResponse;
@@ -38,11 +39,13 @@ public class UserService implements UserDetailsService {
     private final PaginationProperties paginationProperties;
     private final NotificationService notificationService;
     private final PrisonRepository prisonRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final NewAccountEmailService newAccountEmailService;
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        com.pms.api.auth.service.PasswordPolicy passwordPolicy,
                        PaginationProperties paginationProperties,
                        NotificationService notificationService, PrisonRepository prisonRepository,
+                       RefreshTokenRepository refreshTokenRepository,
                        org.springframework.beans.factory.ObjectProvider<NewAccountEmailService> emailServiceProvider) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -50,6 +53,7 @@ public class UserService implements UserDetailsService {
         this.paginationProperties = paginationProperties;
         this.notificationService = notificationService;
         this.prisonRepository = prisonRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
         this.newAccountEmailService = emailServiceProvider.getIfAvailable();
     }
 
@@ -153,6 +157,7 @@ public class UserService implements UserDetailsService {
         User user = getUser(userId);
         boolean wasActive = user.isActive();
         user.deactivate();
+        refreshTokenRepository.revokeAllActiveForUser(user, java.time.Instant.now());
         if (wasActive) {
             notificationService.notifyRoles(
                     "USER_ACCOUNT_DEACTIVATED",
