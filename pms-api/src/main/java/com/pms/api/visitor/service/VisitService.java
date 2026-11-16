@@ -203,7 +203,8 @@ public class VisitService {
 
         Pageable pageable = PageRequest.of(page, size, parseSort(sort, "startDateTime", Sort.Direction.DESC));
         return visitRepository.findAll(specification, pageable)
-                .map(visit -> VisitHistoryResponse.from(visit, canViewFamilyDetails(user)));
+                .map(visit -> VisitHistoryResponse.from(visit, canViewFamilyDetails(user),
+                        canViewLegalDetails(user)));
     }
 
     private static Specification<Visit> equalLong(String fieldName, Long value) {

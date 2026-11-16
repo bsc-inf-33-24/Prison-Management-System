@@ -16,7 +16,7 @@ Create `records01` with role `Records Officer`, log in, and use the returned `ac
 
 - Cases list/detail and inmate cases: `GET /api/v1/cases?...`, `GET /api/v1/cases/{caseUUID}`, `GET /api/v1/inmates/{inmateUUID}/cases?...`.
 - Sentences: `POST/GET /api/v1/sentences`, `GET /api/v1/sentences/{sentenceUUID}`, `GET /api/v1/inmates/{inmateUUID}/sentences?...`, `PUT /api/v1/sentences/{sentenceUUID}`. Use the sentence body in the [full guide](../api-testing-user-guide.md#6-crimes-cases-and-sentences), with UUID IDs.
-- Visitors/visits: list and detail `GET` endpoints, including `GET /api/v1/inmates/{inmateUUID}/visits?...`.
+- Visits: create family and legal visits with `POST /api/v1/visits`; list/search through `GET /api/v1/visits?...` and `GET /api/v1/inmates/{inmateUUID}/visits?...`. Responses include family visitor and legal case details.
 - Rehabilitation: list/detail programs, list enrollments/attendance, and history endpoints. Use the [full guide](../api-testing-user-guide.md#9-rehabilitation) for filters.
 
 ## Create incidents and submit transfers
@@ -37,4 +37,4 @@ Records Officers can also use the other transfer endpoints, subject to the priso
 
 ## Denied checks
 
-Expect `403` when enrolling/updating inmates, allocating cells, creating/updating cases, managing crimes, recording incident outcomes, creating/updating visits, or writing rehabilitation records.
+Expect `403` when enrolling/updating inmates, allocating cells, creating/updating cases, managing crimes, recording incident outcomes, creating health visits, or writing rehabilitation records.
