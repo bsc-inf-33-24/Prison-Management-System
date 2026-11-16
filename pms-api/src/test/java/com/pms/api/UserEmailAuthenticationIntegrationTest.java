@@ -3,8 +3,10 @@ package com.pms.api;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -16,6 +18,7 @@ import com.pms.api.auth.service.RecoveryTokenDelivery;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
+import jakarta.servlet.http.Cookie;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -83,6 +86,53 @@ class UserEmailAuthenticationIntegrationTest {
         login(email, "Records123!").andExpect(status().isOk());
         login(email.toUpperCase(java.util.Locale.ROOT), "Records123!").andExpect(status().isOk());
         login("  " + email.toUpperCase(java.util.Locale.ROOT) + "  ", "Records123!")
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void returnsAuthenticatedUserProfileFromMeEndpoint() throws Exception {
+        String username = uniqueUsername();
+        String email = "me." + UUID.randomUUID() + "@example.test";
+        createUser(username, email, true);
+
+        String loginResponse = login(username, "Records123!").andExpect(status().isOk()).andReturn()
+                .getResponse().getContentAsString();
+        String bearerToken = objectMapper.readTree(loginResponse).path("accessToken").asText();
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + bearerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value(username))
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.role").value("Records Officer"));
+
+        mockMvc.perform(get("/api/v1/auth/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void refreshTokenRotatesAndRejectsReplay() throws Exception {
+        String username = uniqueUsername();
+        String email = "refresh." + UUID.randomUUID() + "@example.test";
+        createUser(username, email, true);
+
+        String loginResponse = login(username, "Records123!").andExpect(status().isOk()).andReturn()
+                .getResponse().getContentAsString();
+        String accessToken = objectMapper.readTree(loginResponse).path("accessToken").asText();
+        String refreshToken = extractRefreshTokenFromCookie(login(username, "Records123!")
+                .andExpect(status().isOk()).andReturn().getResponse().getHeader("Set-Cookie"));
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .cookie(new Cookie("refresh_token", refreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty());
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .cookie(new Cookie("refresh_token", refreshToken)))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk());
     }
 
@@ -324,6 +374,14 @@ class UserEmailAuthenticationIntegrationTest {
         User admin = userRepository.saveAndFlush(
                 new User("Test Admin", username, "unused-password-hash", "Super Admin", Set.of()));
         return jwtService.generateToken(admin);
+    }
+
+    private String extractRefreshTokenFromCookie(String setCookieHeader) {
+        if (setCookieHeader == null || setCookieHeader.isBlank()) {
+            throw new IllegalArgumentException("Refresh token cookie was not set.");
+        }
+        String[] parts = setCookieHeader.split(";");
+        return parts[0].substring("refresh_token=".length());
     }
 
     private String uniqueUsername() {
