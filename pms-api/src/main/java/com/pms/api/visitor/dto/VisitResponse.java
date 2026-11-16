@@ -1,5 +1,6 @@
 package com.pms.api.visitor.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.visitor.entity.Visit;
 import com.pms.api.visitor.entity.VisitType;
@@ -8,6 +9,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record VisitResponse(
         UUID id,
         VisitType visitType,

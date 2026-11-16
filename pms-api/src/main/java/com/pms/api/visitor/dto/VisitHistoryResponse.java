@@ -2,10 +2,12 @@ package com.pms.api.visitor.dto;
 
 import com.pms.api.visitor.entity.Visit;
 import com.pms.api.visitor.entity.VisitType;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record VisitHistoryResponse(
         UUID id,
         VisitType visitType,

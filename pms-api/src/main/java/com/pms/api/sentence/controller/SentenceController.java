@@ -49,4 +49,25 @@ public class SentenceController {
     @GetMapping("/sentences/{sentenceId}/remissions")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
     public List<RemissionResponse> listRemissions(@PathVariable UUID sentenceId) { return service.listRemissions(sentenceId); }
+
+    @PostMapping("/sentences/{sentenceId}/extensions")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER', 'SUPER_ADMIN', 'COMMISSIONER')")
+    public SentenceExtensionResponse requestExtension(@PathVariable UUID sentenceId,
+            @Valid @RequestBody CreateSentenceExtensionRequest request) {
+        return service.requestExtension(sentenceId, request);
+    }
+
+    @GetMapping("/sentences/{sentenceId}/extensions")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER', 'SUPER_ADMIN', 'COMMISSIONER')")
+    public List<SentenceExtensionResponse> listExtensions(@PathVariable UUID sentenceId) {
+        return service.listExtensions(sentenceId);
+    }
+
+    @PostMapping("/sentence-extensions/{requestId}/decision")
+    @PreAuthorize("hasRole('COMMISSIONER')")
+    public SentenceExtensionResponse decideExtension(@PathVariable UUID requestId,
+            @Valid @RequestBody DecideSentenceExtensionRequest request) {
+        return service.decideExtension(requestId, request);
+    }
 }

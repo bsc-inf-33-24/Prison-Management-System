@@ -149,11 +149,14 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
-| `POST` | `/api/v1/visits` | Yes | `Visitor Officer`, `Records Officer`, `Case Officer`, `Medical Officer`, `Super Admin` | Create a family, legal, or health visit (type-specific role enforced) |
+| `POST` | `/api/v1/visits/family-friends` | Yes | `Visitor Officer`, `Records Officer`, `Super Admin` | Record a family or friend visit |
+| `POST` | `/api/v1/visits/legal` | Yes | `Case Officer`, `Records Officer`, `Super Admin` | Record a legal visit |
+| `POST` | `/api/v1/visits/medical` | Yes | `Medical Officer`, `Super Admin` | Record a medical visit |
 | `GET` | `/api/v1/visits` | Yes | `Visitor Officer`, `Records Officer`, `Case Officer`, `Medical Officer`, `Super Admin` | Search visits by inmate, type, date, and other filters |
 | `GET` | `/api/v1/inmates/{inmateId}/visits` | Yes | `Visitor Officer`, `Records Officer`, `Case Officer`, `Medical Officer`, `Super Admin` | Fetch filtered visit history |
-| `POST` | `/api/v1/medical-visits` | Yes | `Medical Officer` | Legacy health-visit endpoint; writes to the shared Visits module |
-| `GET` | `/api/v1/medical-visits` | Yes | `Medical Officer` | Legacy health-history endpoint |
+| `GET` | `/api/v1/inmates/{inmateId}/visits/family-friends` | Yes | `Visitor Officer`, `Records Officer`, `Super Admin` | Fetch family and friend visits for an inmate |
+| `GET` | `/api/v1/inmates/{inmateId}/visits/legal` | Yes | `Case Officer`, `Records Officer`, `Super Admin` | Fetch legal visits for an inmate |
+| `GET` | `/api/v1/medical-visits` | Yes | `Medical Officer`, `Super Admin` | View medical history (compatibility endpoint) |
 
 ### 4.8 Rehabilitation
 
@@ -203,6 +206,26 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 Roster dates are inclusive in the configured roster time zone (`ROSTERS_TIME_ZONE`, default `Africa/Blantyre`). Shift timestamps must be ISO-8601 offset date-times. A shift may end exactly at midnight after the roster's final date, and its duration may not exceed 24 hours. An officer must be active, have the `Prison Officer` role, and belong to the roster's prison. Overlaps use half-open time ranges and return `409 Conflict`; roster mutations lock the assigned officer row while checking and saving to serialize concurrent assignments.
 
 Only a Duty Officer's assigned prison is accessible. Super Admins must supply `prisonId` when creating a roster and may use it to filter lists. Each roster response contains public UUIDs, status, timestamps, and shifts. Publishing creates one in-app notification per distinct assigned officer; published shift updates, reassignments, and cancellations notify the affected officer(s). Draft shifts are not returned by `/api/v1/me/shifts`.
+
+### 4.12 Sentence extension approvals
+
+| Method | Path | Auth | Roles | Purpose |
+|---|---|---:|---|---|
+| `POST` | `/api/v1/sentences/{sentenceId}/extensions` | Yes | `Records Officer`, `Prison Officer`, `Super Admin`, `Commissioner` | Request a fixed-term sentence extension |
+| `GET` | `/api/v1/sentences/{sentenceId}/extensions` | Yes | `Records Officer`, `Prison Officer`, `Super Admin`, `Commissioner` | View extension request and decision history |
+| `POST` | `/api/v1/sentence-extensions/{requestId}/decision` | Yes | `Records Officer`, `Prison Officer`, `Super Admin`, `Commissioner` | Approve or reject a request as a different user |
+
+Requests require `proposedEndDate` later than the current end date and a nonblank `reason`. A pending request does not change the sentence. One pending request is allowed per sentence; a new request can be submitted after the previous one is decided. A reviewer cannot be the requester. Approval changes the sentence end date; rejection leaves it unchanged. Each history record includes the original and proposed end dates, reason, requester, reviewer, decision, and request/decision timestamps. Local staff are restricted to the inmate's current prison; Super Admins and Commissioners have system-wide access.
+
+Decision request:
+
+```json
+{
+  "decision": "APPROVED"
+}
+```
+
+Use `"REJECTED"` to reject. Invalid dates return `400`; duplicate pending requests, self-review, and stale/already-decided requests return `409`.
 
 ## 5. Request and response details by area
 
@@ -633,27 +656,23 @@ Success `200 OK` returns a list of `IncidentHistoryItemResponse` objects.
 
 #### `POST /api/v1/visits`
 
-Purpose: create a family, legal, or health visit. The visit type determines the required details and role.
+Visit recording is split into three endpoints so each request contains only the fields for its visit type. All three are grouped under **09. Visits Management** in Swagger.
 
-Request body:
+#### `POST /api/v1/visits/family-friends`
 
-```json
-{
-  "visitType": "FAMILY",
-  "visitorFullName": "Amina Phiri",
-  "inmateId": "7d0df6a2-0da6-4309-9c2d-7c50b1f939e3",
-  "visitDate": "2026-10-29",
-  "startTime": "09:30",
-  "endTime": "10:15",
-  "itemsBrought": "Books"
-}
-```
+Records a family or friend visit. Required fields are `visitorFullName`, `inmateId`, `visitDate`, `startTime`, and `endTime`. `itemsBrought` is optional.
 
-For `LEGAL`, supply `legalCaseNumber` and optionally `legalRepresentative` instead of family details. Only a Case Officer or Records Officer may create a legal visit.
+#### `POST /api/v1/visits/legal`
 
-For `HEALTH`, supply `complaint`, `diagnosis`, and optionally `medicationsProvided` and `recommendations`. Only a Medical Officer may create or view these details. All types require `inmateId`, `visitDate`, `startTime`, and `endTime`; the duration is calculated server-side.
+Records a legal visit. Required fields are `inmateId`, `visitDate`, `startTime`, `endTime`, and `legalCaseNumber`. `legalRepresentative` is optional.
 
-Success `201 Created` returns `VisitResponse`. Family, legal, and health details are stored in records linked to the shared visit. Responses omit type-specific details the caller is not authorized to view.
+#### `POST /api/v1/visits/medical`
+
+Records a medical visit. The body uses `RecordMedicalVisitRequest`: `inmateId`, `visitDate`, `sickness`, and `diagnosis` are required; `medicationsProvided` and `recommendations` are optional. The medical history record and shared `HEALTH` visit record are written together.
+
+`POST /api/v1/visits` and `POST /api/v1/medical-visits` remain available as hidden compatibility routes for existing clients. New clients should use the three type-specific endpoints.
+
+Successful family requests return `FamilyVisitResponse`, legal requests return `VisitResponse`, and medical requests return `MedicalVisitResponse`. Family responses contain only family visit data and do not include legal or medical details. Staff access is limited to the inmate's prison, except for system-wide roles.
 
 #### `GET /api/v1/visits`
 
@@ -689,6 +708,12 @@ This route first resolves the inmate UUID; an unknown inmate returns `404`. Auth
 
 `VisitHistoryResponse` includes `visitType`, shared visit timing and recording fields, and authorized type-specific details: family visits may include `visitorName` and `visitor`; legal visits may include `legalCaseNumber` and `legalRepresentative`. Unauthorized type-specific values are null.
 
+#### Type-specific inmate history
+
+Use `GET /api/v1/inmates/{inmateId}/visits/family-friends` or `GET /api/v1/inmates/{inmateId}/visits/legal` for paginated histories that are fixed to that visit type. Both accept the applicable date bounds, `page`, `size`, and `sort` parameters described above; family history also accepts `visitorName`. The family route returns `FamilyVisitHistoryResponse`, which contains no legal visit fields. Neither route can be broadened to include another visit type with a query parameter.
+
+Medical history remains available through `GET /api/v1/medical-visits?inmateId=...&name=...`, restricted to Medical Officers and Super Admins.
+
 Representative family `VisitResponse` shape:
 
 ```json
@@ -707,9 +732,9 @@ Representative family `VisitResponse` shape:
 }
 ```
 
-### 5.7 Legacy medical visits
+### 5.7 Medical history compatibility endpoint
 
-`POST /api/v1/medical-visits` and `GET /api/v1/medical-visits` remain available during frontend migration. New and historical medical visits are also represented as `HEALTH` visits in `/api/v1/visits`; both recording paths keep the shared and legacy medical history records synchronized. Only Medical Officers can use these endpoints.
+`GET /api/v1/medical-visits` remains available for querying an inmate's medical history. Medical visit recording should use `POST /api/v1/visits/medical`; the legacy `POST /api/v1/medical-visits` path remains hidden in Swagger for existing clients. Both write paths keep medical history and shared `HEALTH` visits synchronized.
 
 ### 5.8 Rehabilitation
 

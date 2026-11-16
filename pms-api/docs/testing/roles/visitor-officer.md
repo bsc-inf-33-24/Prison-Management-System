@@ -14,13 +14,13 @@ Save the returned UUID as `VISITOR_UUID`. Read with `GET /api/v1/visitors/{visit
 
 ## Visits
 
-Record a family visit with `POST /api/v1/visits`:
+Record a family or friend visit with `POST /api/v1/visits/family-friends`:
 
 ```json
-{"visitType":"FAMILY","visitorFullName":"Test Visitor","inmateId":"<INMATE_UUID>","visitDate":"2026-01-15","startTime":"10:00","endTime":"11:00"}
+{"visitorFullName":"Test Visitor","inmateId":"<INMATE_UUID>","visitDate":"2026-01-15","startTime":"10:00","endTime":"11:00"}
 ```
 
-Search using `GET /api/v1/visits?inmateId=<INMATE_UUID>&visitType=FAMILY&page=0&size=20` or review history with `GET /api/v1/inmates/{inmateUUID}/visits?page=0&size=20`. Legal visits are recorded in the same module by Case Officers and Records Officers.
+Search using `GET /api/v1/visits?inmateId=<INMATE_UUID>&visitType=FAMILY&page=0&size=20`, review all history with `GET /api/v1/inmates/{inmateUUID}/visits?page=0&size=20`, or retrieve only family/friend visits with `GET /api/v1/inmates/{inmateUUID}/visits/family-friends?page=0&size=20`. Legal visits are recorded with `POST /api/v1/visits/legal` by Case Officers and Records Officers and retrieved from the legal-specific inmate history route by authorized staff.
 
 ## Denied checks
 

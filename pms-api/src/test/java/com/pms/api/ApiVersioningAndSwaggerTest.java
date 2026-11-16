@@ -47,11 +47,27 @@ class ApiVersioningAndSwaggerTest {
                 .doesNotContain("\"/api/cells\"")
                 .doesNotContain("\"/api/incidents\"")
                 .doesNotContain("/api/v1/rehabilitation/programs")
-                .doesNotContain("/api/v1/cases")
-                .doesNotContain("/api/v1/sentences");
+                .doesNotContain("/api/v1/cases");
 
         JsonNode document = objectMapper.readTree(docs);
         assertThat(document.at("/paths/~1api~1v1~1visits~1{visitId}").isMissingNode()).isTrue();
+        assertThat(document.at("/paths/~1api~1v1~1medical-visits/get/tags/0").asText())
+                .isEqualTo("09. Visits Management");
+        assertThat(document.at("/paths/~1api~1v1~1visits~1medical/post/tags/0").asText())
+                .isEqualTo("09. Visits Management");
+        assertThat(document.at("/paths/~1api~1v1~1visits~1legal/post/tags/0").asText())
+                .isEqualTo("09. Visits Management");
+        assertThat(document.at("/paths/~1api~1v1~1visits~1family-friends/post/tags/0").asText())
+                .isEqualTo("09. Visits Management");
+        assertThat(document.at("/paths/~1api~1v1~1inmates~1{inmateId}~1visits~1family-friends/get/tags/0").asText())
+                .isEqualTo("09. Visits Management");
+        assertThat(document.at("/paths/~1api~1v1~1inmates~1{inmateId}~1visits~1legal/get/tags/0").asText())
+                .isEqualTo("09. Visits Management");
+        assertThat(document.at("/paths/~1api~1v1~1inmates~1{inmateId}~1visits~1medical").isMissingNode())
+                .isTrue();
+        assertThat(document.at("/paths/~1api~1v1~1visits/post").isMissingNode()).isTrue();
+        assertThat(document.at("/paths/~1api~1v1~1medical-visits/post").isMissingNode()).isTrue();
+        assertThat(document.path("tags").toString()).doesNotContain("08. Medical visits");
         assertThat(document.at("/paths/~1api~1v1~1users/get").isObject()).isTrue();
         assertThat(document.at("/components/schemas/UserResponse/properties/prisonId").isObject()).isTrue();
         assertThat(document.at("/components/schemas/UserResponse/properties/prisonName").isObject()).isTrue();

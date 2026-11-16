@@ -10,12 +10,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
+import com.pms.api.prison.entity.Prison;
+import com.pms.api.prison.repository.PrisonRepository;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
 import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -34,6 +37,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 class MedicalVisitApiIntegrationTest {
 
     private static final String MEDICAL_VISITS_PATH = "/api/v1/medical-visits";
+    private static final String RECORD_MEDICAL_VISIT_PATH = "/api/v1/visits/medical";
 
     @Autowired
     private MockMvc mockMvc;
@@ -45,6 +49,9 @@ class MedicalVisitApiIntegrationTest {
     private InmateRepository inmateRepository;
 
     @Autowired
+    private PrisonRepository prisonRepository;
+
+    @Autowired
     private JwtService jwtService;
 
     @Autowired
@@ -53,6 +60,15 @@ class MedicalVisitApiIntegrationTest {
     @Autowired
     @Qualifier("requestMappingHandlerMapping")
     private RequestMappingHandlerMapping handlerMapping;
+
+    private Prison testPrison;
+
+    @BeforeEach
+    void setUp() {
+        testPrison = prisonRepository.saveAndFlush(new Prison(
+                "MV" + UUID.randomUUID().toString().replace("-", "").substring(0, 10),
+                "Medical Visit Test Prison", null));
+    }
 
     @Test
     void recordsEachVisitAndReturnsHistoryInDateOrder() throws Exception {
@@ -107,7 +123,6 @@ class MedicalVisitApiIntegrationTest {
         assertEquals(401, mockMvc.perform(get(MEDICAL_VISITS_PATH)
                         .param("inmateId", inmate.getPublicUuid().toString()))
                 .andReturn().getResponse().getStatus());
-
         for (String role : User.ALLOWED_ROLES) {
             if ("Medical Officer".equals(role) || "Super Admin".equals(role)) {
                 continue;
@@ -141,10 +156,24 @@ class MedicalVisitApiIntegrationTest {
     }
 
     @Test
-    void medicalControllerMethodsDeclareRoleAuthorization() {
+    void legacyMedicalVisitPostRemainsAvailable() throws Exception {
+        Inmate inmate = createInmate();
+        String token = jwtService.generateToken(createUser("Medical Officer"));
+        assertEquals(201, mockMvc.perform(post(MEDICAL_VISITS_PATH)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(medicalVisitRequest(
+                                inmate.getPublicUuid(), LocalDate.now(), "Cough", "Bronchitis")))
+                .andReturn().getResponse().getStatus());
+    }
+
+    @Test
+    void medicalCompatibilityEndpointsAreManagedByVisitsControllerAndDeclareRoleAuthorization() {
         var handlers = handlerMapping.getHandlerMethods().values().stream()
                 .filter(handler -> handler.getBeanType().getPackageName()
-                        .equals("com.pms.api.health.controller"))
+                        .equals("com.pms.api.visitor.controller"))
+                .filter(handler -> handler.getMethod().getName().equals("recordMedicalVisit")
+                        || handler.getMethod().getName().equals("getMedicalHistory"))
                 .toList();
 
         assertEquals(2, handlers.size());
@@ -154,7 +183,7 @@ class MedicalVisitApiIntegrationTest {
     }
 
     private MvcResult postVisit(String token, String body) throws Exception {
-        var request = post(MEDICAL_VISITS_PATH)
+        var request = post(RECORD_MEDICAL_VISIT_PATH)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body);
         if (token != null) {
@@ -165,14 +194,17 @@ class MedicalVisitApiIntegrationTest {
 
     private User createUser(String role) {
         String username = "mv" + UUID.randomUUID().toString().replace("-", "").substring(0, 14);
-        return userRepository.saveAndFlush(
-                new User("Medical Test Officer", username, "unused-password-hash", role, Set.of()));
+        User user = new User("Medical Test Officer", username, "unused-password-hash", role, Set.of());
+        if (!"Super Admin".equals(role)) user.assignPrison(testPrison);
+        return userRepository.saveAndFlush(user);
     }
 
     private Inmate createInmate() {
-        return inmateRepository.saveAndFlush(new Inmate(
+        Inmate inmate = new Inmate(
                 "Medical", "Test", LocalDate.of(1990, 1, 1), "Other",
-                LocalDate.of(2025, 1, 1), null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 1)));
+                LocalDate.of(2025, 1, 1), null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 1));
+        inmate.assignPrison(testPrison);
+        return inmateRepository.saveAndFlush(inmate);
     }
 
     private String medicalVisitRequest(UUID inmateId, LocalDate visitDate, String sickness, String diagnosis)
