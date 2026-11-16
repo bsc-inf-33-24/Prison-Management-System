@@ -312,22 +312,24 @@ GET /api/v1/visitors?fullName=Test&idNumber=NID-TEST-001&phone=991&relationshipT
 
 ### Visit
 
-`POST /api/v1/visits`
+Record a family or friend visit with `POST /api/v1/visits/family-friends`:
 
 ```json
 {
-  "visitorId": 1,
-  "inmateId": 1,
-  "visitDateTime": "2026-01-15T10:00:00+02:00",
-  "durationMinutes": 60
+  "visitorFullName": "Test Visitor",
+  "inmateId": "<INMATE_UUID>",
+  "visitDate": "2026-01-15",
+  "startTime": "10:00",
+  "endTime": "11:00",
+  "itemsBrought": "Books"
 }
 ```
 
-Replace IDs with `VISITOR_ID` and `INMATE_ID`; save `VISIT_ID`.
+Use `POST /api/v1/visits/legal` for legal visits (`inmateId`, `visitDate`, `startTime`, `endTime`, and `legalCaseNumber`), or `POST /api/v1/visits/medical` for medical visits (`inmateId`, `visitDate`, `sickness`, and `diagnosis`). These three creation endpoints are shown together in the Visits Management Swagger section.
 
 ```text
-GET /api/v1/visits?visitorId=1&visitorName=Test&visitorIdNumber=NID-TEST-001&inmateId=1&inmateName=John&visitDateFrom=2026-01-01T00:00:00%2B02:00&visitDateTo=2026-12-31T23:59:59%2B02:00&loggedBy=1&page=0&size=20&sort=visitDateTime,desc
-GET /api/v1/inmates/{inmateId}/visits?visitorName=Test&visitorIdNumber=NID-TEST-001&page=0&size=20&sort=visitDateTime,desc
+GET /api/v1/visits?inmateId=<INMATE_UUID>&visitType=FAMILY&page=0&size=20
+GET /api/v1/inmates/<INMATE_UUID>/visits?page=0&size=20
 ```
 
 ## 9. Rehabilitation

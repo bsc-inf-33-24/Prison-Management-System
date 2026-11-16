@@ -14,22 +14,14 @@ Save the returned UUID as `VISITOR_UUID`. Read with `GET /api/v1/visitors/{visit
 
 ## Visits
 
-`POST /api/v1/visits`:
+Record a family or friend visit with `POST /api/v1/visits/family-friends`:
 
 ```json
-{"visitorId":"<VISITOR_UUID>","inmateId":"<INMATE_UUID>","visitDateTime":"2026-01-15T10:00:00+02:00","durationMinutes":60}
+{"visitorFullName":"Test Visitor","inmateId":"<INMATE_UUID>","visitDate":"2026-01-15","startTime":"10:00","endTime":"11:00"}
 ```
 
-Save returned visit UUID. Read using `GET /api/v1/visits/{visitUUID}`, `GET /api/v1/visits?visitorId=<VISITOR_UUID>&inmateId=<INMATE_UUID>&page=0&size=20`, and `GET /api/v1/inmates/{inmateUUID}/visits?page=0&size=20`.
-
-`PUT /api/v1/visits/{visitUUID}`:
-
-```json
-{"visitDateTime":"2026-01-16T11:00:00+02:00","durationMinutes":90}
-```
-
-Test duration `-1` and `1441` as invalid values.
+Search using `GET /api/v1/visits?inmateId=<INMATE_UUID>&visitType=FAMILY&page=0&size=20`, review all history with `GET /api/v1/inmates/{inmateUUID}/visits?page=0&size=20`, or retrieve only family/friend visits with `GET /api/v1/inmates/{inmateUUID}/visits/family-friends?page=0&size=20`. Legal visits are recorded with `POST /api/v1/visits/legal` by Case Officers and Records Officers and retrieved from the legal-specific inmate history route by authorized staff.
 
 ## Denied checks
 
-Expect `403` for visitor/visit creation or visit updates with Records, Case, or Duty Officer tokens.
+Expect `403` when recording a family visit with a Case Officer or Duty Officer token. Records Officers can record and view both family and legal visits; they cannot record health visits.

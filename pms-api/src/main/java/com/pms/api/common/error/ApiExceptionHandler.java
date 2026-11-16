@@ -57,6 +57,17 @@ public class ApiExceptionHandler {
         return problem(HttpStatus.NOT_FOUND, "Sentence not found.");
     }
 
+    @ExceptionHandler(SentenceService.SentenceExtensionNotFoundException.class)
+    public ResponseEntity<ApiError> handleSentenceExtensionNotFound() {
+        return problem(HttpStatus.NOT_FOUND, "Sentence extension request not found.");
+    }
+
+    @ExceptionHandler(SentenceService.SentenceExtensionConflictException.class)
+    public ResponseEntity<ApiError> handleSentenceExtensionConflict() {
+        return problem(HttpStatus.CONFLICT,
+                "The sentence extension request conflicts with its current status or sentence.");
+    }
+
     @ExceptionHandler(SentenceService.InmateNotFoundException.class)
     public ResponseEntity<ApiError> handleSentenceInmateNotFound() {
         return problem(HttpStatus.NOT_FOUND, "Inmate not found.");

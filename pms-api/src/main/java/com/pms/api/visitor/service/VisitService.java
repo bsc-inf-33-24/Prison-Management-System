@@ -10,6 +10,10 @@ import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
 import com.pms.api.visitor.dto.VisitHistoryResponse;
+import com.pms.api.visitor.dto.FamilyVisitHistoryResponse;
+import com.pms.api.visitor.dto.FamilyVisitResponse;
+import com.pms.api.visitor.dto.RecordFamilyVisitRequest;
+import com.pms.api.visitor.dto.RecordLegalVisitRequest;
 import com.pms.api.visitor.dto.VisitRequest;
 import com.pms.api.visitor.dto.VisitResponse;
 import com.pms.api.visitor.entity.FamilyVisitDetails;
@@ -128,6 +132,27 @@ public class VisitService {
                 canViewHealthDetails(user));
     }
 
+    @Transactional
+    public FamilyVisitResponse recordFamilyVisit(RecordFamilyVisitRequest request, String username) {
+        if (request == null) {
+            throw new IllegalArgumentException("Family or friend visit details are required.");
+        }
+        VisitResponse response = recordVisit(new VisitRequest(VisitType.FAMILY, request.visitorFullName(), request.inmateId(),
+                request.visitDate(), request.startTime(), request.endTime(), request.itemsBrought(),
+                null, null, null, null, null, null), username);
+        return FamilyVisitResponse.from(response);
+    }
+
+    @Transactional
+    public VisitResponse recordLegalVisit(RecordLegalVisitRequest request, String username) {
+        if (request == null) {
+            throw new IllegalArgumentException("Legal visit details are required.");
+        }
+        return recordVisit(new VisitRequest(VisitType.LEGAL, null, request.inmateId(), request.visitDate(),
+                request.startTime(), request.endTime(), null, null, null, null, null,
+                request.legalCaseNumber(), request.legalRepresentative()), username);
+    }
+
     @Transactional(readOnly = true)
     public Page<VisitResponse> searchVisits(UUID visitId, String visitorName, String visitType,
                                             UUID inmateId, String inmateName,
@@ -180,6 +205,36 @@ public class VisitService {
                                                             OffsetDateTime visitDateFrom,
                                                             OffsetDateTime visitDateTo, int page, int size,
                                                             String sort, String username) {
+        VisitType requestedType = isBlank(visitType) ? null
+                : VisitType.valueOf(visitType.trim().toUpperCase(Locale.ROOT));
+        return getInmateVisitHistory(inmateId, visitorName, requestedType, null, visitDateFrom,
+                visitDateTo, page, size, sort, username);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<VisitHistoryResponse> getInmateVisitHistoryByType(UUID inmateId, VisitType visitType,
+                                                                  String visitorName,
+                                                                  OffsetDateTime visitDateFrom,
+                                                                  OffsetDateTime visitDateTo, int page, int size,
+                                                                  String sort, String username) {
+        return getInmateVisitHistory(inmateId, visitorName, null, visitType, visitDateFrom,
+                visitDateTo, page, size, sort, username);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<FamilyVisitHistoryResponse> getInmateFamilyVisitHistory(UUID inmateId, String visitorName,
+                                                                        OffsetDateTime visitDateFrom,
+                                                                        OffsetDateTime visitDateTo, int page,
+                                                                        int size, String sort, String username) {
+        return getInmateVisitHistory(inmateId, visitorName, null, VisitType.FAMILY, visitDateFrom,
+                visitDateTo, page, size, sort, username).map(FamilyVisitHistoryResponse::from);
+    }
+
+    private Page<VisitHistoryResponse> getInmateVisitHistory(UUID inmateId, String visitorName,
+                                                            VisitType requestedType, VisitType fixedType,
+                                                            OffsetDateTime visitDateFrom,
+                                                            OffsetDateTime visitDateTo, int page, int size,
+                                                            String sort, String username) {
         Inmate inmate = inmateRepository.findByPublicUuid(inmateId).orElseThrow(InmateNotFoundException::new);
         User user = userRepository.findByUsername(username).orElseThrow(UserNotFoundException::new);
         prisonAccess.requirePrison(inmate.getCurrentPrison()==null?null:inmate.getCurrentPrison().getPublicUuid());
@@ -191,8 +246,9 @@ public class VisitService {
         if (!isBlank(visitorName)) {
             specification = specification.and(visitorNameContains(visitorName));
         }
-        if (!isBlank(visitType)) {
-            specification = specification.and(equalEnum("visitType", VisitType.valueOf(visitType.trim().toUpperCase(Locale.ROOT))));
+        VisitType effectiveType = fixedType == null ? requestedType : fixedType;
+        if (effectiveType != null) {
+            specification = specification.and(equalEnum("visitType", effectiveType));
         }
         if (visitDateFrom != null) {
             specification = specification.and(greaterThanOrEqualTo("startDateTime", visitDateFrom));
@@ -203,7 +259,8 @@ public class VisitService {
 
         Pageable pageable = PageRequest.of(page, size, parseSort(sort, "startDateTime", Sort.Direction.DESC));
         return visitRepository.findAll(specification, pageable)
-                .map(visit -> VisitHistoryResponse.from(visit, canViewFamilyDetails(user)));
+                .map(visit -> VisitHistoryResponse.from(visit, canViewFamilyDetails(user),
+                        canViewLegalDetails(user)));
     }
 
     private static Specification<Visit> equalLong(String fieldName, Long value) {
