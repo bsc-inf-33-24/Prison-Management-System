@@ -73,7 +73,7 @@ public class AuthService {
             User user = userRepository.findByUsername(authentication.getName()).orElseThrow(() -> new BadCredentialsException("Invalid username or password."));
             user.resetLoginFailures();
             String refreshToken = issueRefreshToken(user);
-            return new LoginResult(new AuthResponse(jwtService.generateToken(user), "Bearer"), refreshToken);
+            return new LoginResult(new AuthResponse(jwtService.generateToken(user), "Bearer", refreshToken));
         } catch (org.springframework.security.core.AuthenticationException exception) {
             if (knownUser != null && knownUser.isActive()) knownUser.recordFailedLogin(maximumLoginAttempts, Instant.now().plus(lockoutDuration));
             throw new BadCredentialsException("Invalid username or password.");
@@ -184,7 +184,7 @@ public class AuthService {
     public static String hash(String value) { try { return toHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); } catch (NoSuchAlgorithmException e) { throw new IllegalStateException(e); } }
     private static String toHex(byte[] bytes) { StringBuilder out = new StringBuilder(64); for (byte b : bytes) out.append(String.format("%02x", b)); return out.toString(); }
 
-    public record LoginResult(AuthResponse response, String refreshToken) { }
+    public record LoginResult(AuthResponse response) { }
     public record RefreshResult(AuthResponse response, String refreshToken) { }
     public static class AccountLockedException extends RuntimeException { }
     public static class InvalidCurrentPasswordException extends RuntimeException { }
