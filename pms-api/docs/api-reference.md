@@ -685,9 +685,9 @@ Optional filters:
 - `visitDateTo`
 - `page` (default `0`), `size` (default `20`, max `100`), `sort` (same sort aliases as visit search; default `startDateTime,desc`)
 
-This route first resolves the inmate UUID; an unknown inmate returns `404`.
+This route first resolves the inmate UUID; an unknown inmate returns `404`. Authorized Records Officers can view family visitor details and legal case/representative details here as well as in visit search. Other roles only receive the details they are authorized to view.
 
-`VisitResponse` includes `visitType`, the shared visit timing and recording/audit fields, and only the type-specific details allowed for the caller. A health visit returned to a non-medical role does not include complaint, diagnosis, medication, or recommendation values.
+`VisitHistoryResponse` includes `visitType`, shared visit timing and recording fields, and authorized type-specific details: family visits may include `visitorName` and `visitor`; legal visits may include `legalCaseNumber` and `legalRepresentative`. Unauthorized type-specific values are null.
 
 Representative family `VisitResponse` shape:
 

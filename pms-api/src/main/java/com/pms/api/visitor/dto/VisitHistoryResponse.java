@@ -15,10 +15,14 @@ public record VisitHistoryResponse(
         Integer durationMinutes,
         String visitorName,
         VisitResponse.VisitorSummary visitor,
+        String legalCaseNumber,
+        String legalRepresentative,
         String recordingOfficer
 ) {
-    public static VisitHistoryResponse from(Visit visit, boolean canViewFamilyDetails) {
+    public static VisitHistoryResponse from(Visit visit, boolean canViewFamilyDetails,
+                                            boolean canViewLegalDetails) {
         var familyDetails = canViewFamilyDetails ? visit.getFamilyDetails() : null;
+        var legalDetails = canViewLegalDetails ? visit.getLegalDetails() : null;
         return new VisitHistoryResponse(
                 visit.getPublicUuid(),
                 visit.getVisitType(),
@@ -28,6 +32,8 @@ public record VisitHistoryResponse(
                 visit.getDurationMinutes(),
                 familyDetails != null ? familyDetails.getVisitorFullName() : null,
                 familyDetails != null ? new VisitResponse.VisitorSummary(familyDetails.getVisitorFullName()) : null,
+                legalDetails != null ? legalDetails.getLegalCaseNumber() : null,
+                legalDetails != null ? legalDetails.getLegalRepresentative() : null,
                 visit.getLoggedBy() != null ? visit.getLoggedBy().getFullName() : null
         );
     }
