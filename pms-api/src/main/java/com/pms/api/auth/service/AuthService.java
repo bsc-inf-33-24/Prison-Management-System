@@ -105,12 +105,6 @@ public class AuthService {
         return UserResponse.from(user);
     }
 
-    public UserResponse me(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalStateException("Authenticated user no longer exists."));
-        return UserResponse.from(user);
-    }
-
     @Transactional
     public void revokeAllRefreshTokensForUser(User user) {
         revokeAllRefreshTokensForUser(user, Instant.now());
