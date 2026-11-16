@@ -1,9 +1,19 @@
 package com.pms.api.visitor.controller;
 
+import com.pms.api.health.dto.MedicalHistoryResponse;
+import com.pms.api.health.dto.MedicalVisitResponse;
+import com.pms.api.health.dto.RecordMedicalVisitRequest;
+import com.pms.api.health.service.MedicalVisitService;
+import com.pms.api.visitor.dto.RecordFamilyVisitRequest;
+import com.pms.api.visitor.dto.RecordLegalVisitRequest;
+import com.pms.api.visitor.dto.FamilyVisitHistoryResponse;
+import com.pms.api.visitor.dto.FamilyVisitResponse;
 import com.pms.api.visitor.dto.VisitHistoryResponse;
 import com.pms.api.visitor.dto.VisitRequest;
 import com.pms.api.visitor.dto.VisitResponse;
+import com.pms.api.visitor.entity.VisitType;
 import com.pms.api.visitor.service.VisitService;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -27,15 +37,62 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "09. Visits Management")
+@Tag(name = "09. Visits Management", description = "Manage family, legal, and medical visits.")
 public class VisitController {
 
     private final VisitService visitService;
+    private final MedicalVisitService medicalVisitService;
 
-    public VisitController(VisitService visitService) {
+    public VisitController(VisitService visitService, MedicalVisitService medicalVisitService) {
         this.visitService = visitService;
+        this.medicalVisitService = medicalVisitService;
     }
 
+    @Operation(summary = "Record a family or friend visit")
+    @PostMapping("/visits/family-friends")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
+    public FamilyVisitResponse recordFamilyFriendsVisit(@Valid @RequestBody RecordFamilyVisitRequest request,
+                                                        @AuthenticationPrincipal UserDetails currentUser) {
+        return visitService.recordFamilyVisit(request, currentUser.getUsername());
+    }
+
+    @Operation(summary = "Record a legal visit")
+    @PostMapping("/visits/legal")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
+    public VisitResponse recordLegalVisit(@Valid @RequestBody RecordLegalVisitRequest request,
+                                          @AuthenticationPrincipal UserDetails currentUser) {
+        return visitService.recordLegalVisit(request, currentUser.getUsername());
+    }
+
+    @Operation(summary = "Record a medical visit")
+    @PostMapping("/visits/medical")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('MEDICAL_OFFICER', 'SUPER_ADMIN')")
+    public MedicalVisitResponse recordMedicalVisit(@Valid @RequestBody RecordMedicalVisitRequest request,
+                                                    @AuthenticationPrincipal UserDetails currentUser) {
+        return medicalVisitService.recordVisit(request, currentUser.getUsername());
+    }
+
+    @Hidden
+    @PostMapping("/medical-visits")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('MEDICAL_OFFICER', 'SUPER_ADMIN')")
+    public MedicalVisitResponse recordLegacyMedicalVisit(@Valid @RequestBody RecordMedicalVisitRequest request,
+                                                          @AuthenticationPrincipal UserDetails currentUser) {
+        return medicalVisitService.recordVisit(request, currentUser.getUsername());
+    }
+
+    @GetMapping("/medical-visits")
+    @PreAuthorize("hasAnyRole('MEDICAL_OFFICER', 'SUPER_ADMIN')")
+    @Operation(summary = "Search an inmate's medical history by inmate ID and optional name")
+    public MedicalHistoryResponse getMedicalHistory(@RequestParam UUID inmateId,
+                                                     @RequestParam(required = false) String name) {
+        return medicalVisitService.getHistory(inmateId, name);
+    }
+
+    @Hidden
     @Operation(summary = "Record a visit", description = "Record a family, legal, or health visit. Health details are restricted to Medical Officers.")
     @PostMapping("/visits")
     @ResponseStatus(HttpStatus.CREATED)
@@ -80,6 +137,37 @@ public class VisitController {
             @AuthenticationPrincipal UserDetails currentUser) {
         return visitService.getInmateVisitHistory(inmateId, visitorName, visitType, visitDateFrom, visitDateTo,
                 page, size, sort, currentUser.getUsername());
+    }
+
+    @Operation(summary = "Get an inmate's family and friend visits")
+    @GetMapping("/inmates/{inmateId}/visits/family-friends")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
+    public Page<FamilyVisitHistoryResponse> getInmateFamilyFriendVisits(
+            @PathVariable UUID inmateId,
+            @RequestParam(required = false) String visitorName,
+            @RequestParam(required = false) OffsetDateTime visitDateFrom,
+            @RequestParam(required = false) OffsetDateTime visitDateTo,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sort,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        return visitService.getInmateFamilyVisitHistory(inmateId, visitorName,
+                visitDateFrom, visitDateTo, page, size, sort, currentUser.getUsername());
+    }
+
+    @Operation(summary = "Get an inmate's legal visits")
+    @GetMapping("/inmates/{inmateId}/visits/legal")
+    @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
+    public Page<VisitHistoryResponse> getInmateLegalVisits(
+            @PathVariable UUID inmateId,
+            @RequestParam(required = false) OffsetDateTime visitDateFrom,
+            @RequestParam(required = false) OffsetDateTime visitDateTo,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sort,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        return visitService.getInmateVisitHistoryByType(inmateId, VisitType.LEGAL, null,
+                visitDateFrom, visitDateTo, page, size, sort, currentUser.getUsername());
     }
 
 }

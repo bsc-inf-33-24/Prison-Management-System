@@ -3,11 +3,11 @@ package com.pms.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.pms.api.health.dto.RecordMedicalVisitRequest;
-import com.pms.api.health.service.MedicalVisitService;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.notification.entity.Notification;
@@ -20,6 +20,7 @@ import com.pms.api.user.dto.UpdateUserDetailsRequest;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
 import com.pms.api.user.service.UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
@@ -29,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
@@ -52,10 +54,10 @@ class NotificationApiIntegrationTest {
     private UserService userService;
 
     @Autowired
-    private MedicalVisitService medicalVisitService;
+    private InmateRepository inmateRepository;
 
     @Autowired
-    private InmateRepository inmateRepository;
+    private ObjectMapper objectMapper;
 
     @Autowired
     private JwtService jwtService;
@@ -165,15 +167,26 @@ class NotificationApiIntegrationTest {
     }
 
     @Test
-    void recordingAHealthVisitNotifiesMedicalOfficersAndSuperAdmins() {
+    void recordingAHealthVisitNotifiesMedicalOfficersAndSuperAdmins() throws Exception {
         User medicalOfficer = saveUser("Medical Officer");
-        Inmate inmate = inmateRepository.saveAndFlush(new Inmate(
+        Prison prison = prisonRepository.saveAndFlush(new Prison(
+                "HV-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8),
+                "Health Visit Test Prison", null));
+        medicalOfficer.assignPrison(prison);
+        medicalOfficer = userRepository.saveAndFlush(medicalOfficer);
+        Inmate inmate = new Inmate(
                 "Health", "Test", LocalDate.of(1990, 1, 1), "Other",
-                LocalDate.now(), null, LocalDate.now(), LocalDate.now().plusDays(30)));
+                LocalDate.now(), null, LocalDate.now(), LocalDate.now().plusDays(30));
+        inmate.assignPrison(prison);
+        inmate = inmateRepository.saveAndFlush(inmate);
 
-        medicalVisitService.recordVisit(new RecordMedicalVisitRequest(
-                inmate.getPublicUuid(), LocalDate.now(), "Confidential complaint",
-                "Confidential diagnosis", null, null), medicalOfficer.getUsername());
+        mockMvc.perform(post("/api/v1/visits/medical")
+                        .header("Authorization", bearer(jwtService.generateToken(medicalOfficer)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RecordMedicalVisitRequest(
+                                inmate.getPublicUuid(), LocalDate.now(), "Confidential complaint",
+                                "Confidential diagnosis", null, null))))
+                .andExpect(status().isCreated());
 
         assertThat(notificationRepository.findByRecipientUserIdOrderByCreatedAtDesc(medicalOfficer.getId()))
                 .extracting(Notification::getType)

@@ -1,6 +1,7 @@
 package com.pms.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -90,7 +91,7 @@ class VisitorApiFunctionalIntegrationTest {
         visitRequest.put("startTime", "14:30");
         visitRequest.put("endTime", "15:30");
 
-        mockMvc.perform(post("/api/v1/visits")
+        mockMvc.perform(post("/api/v1/visits/family-friends")
                         .header("Authorization", bearer(visitorOfficerToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(visitRequest)))
@@ -100,7 +101,9 @@ class VisitorApiFunctionalIntegrationTest {
                 .andExpect(jsonPath("$.visitDate").value("2026-10-10"))
                 .andExpect(jsonPath("$.startDateTime").value("2026-10-10T14:30:00+02:00"))
                 .andExpect(jsonPath("$.endDateTime").value("2026-10-10T15:30:00+02:00"))
-                .andExpect(jsonPath("$.durationMinutes").value(60));
+                .andExpect(jsonPath("$.durationMinutes").value(60))
+                .andExpect(jsonPath("$.legalCaseNumber").doesNotExist())
+                .andExpect(jsonPath("$.legalRepresentative").doesNotExist());
 
         mockMvc.perform(get("/api/v1/inmates/{inmateId}/visits", inmateId.toString())
                         .header("Authorization", bearer(recordsOfficerToken)))
@@ -129,13 +132,12 @@ class VisitorApiFunctionalIntegrationTest {
         UUID inmateId = inmateRepository.saveAndFlush(inmate).getPublicUuid();
 
         ObjectNode familyRequest = objectMapper.createObjectNode();
-        familyRequest.put("visitType", "FAMILY");
         familyRequest.put("visitorFullName", "Tadala Banda");
         familyRequest.put("inmateId", inmateId.toString());
         familyRequest.put("visitDate", "2026-10-10");
         familyRequest.put("startTime", "09:00");
         familyRequest.put("endTime", "09:30");
-        mockMvc.perform(post("/api/v1/visits")
+        mockMvc.perform(post("/api/v1/visits/family-friends")
                         .header("Authorization", bearer(recordsOfficerToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(familyRequest)))
@@ -143,14 +145,13 @@ class VisitorApiFunctionalIntegrationTest {
                 .andExpect(jsonPath("$.visitType").value("FAMILY"));
 
         ObjectNode legalRequest = objectMapper.createObjectNode();
-        legalRequest.put("visitType", "LEGAL");
         legalRequest.put("legalCaseNumber", "CASE-2026-42");
         legalRequest.put("legalRepresentative", "Grace Chirwa");
         legalRequest.put("inmateId", inmateId.toString());
         legalRequest.put("visitDate", "2026-10-10");
         legalRequest.put("startTime", "10:00");
         legalRequest.put("endTime", "10:45");
-        mockMvc.perform(post("/api/v1/visits")
+        mockMvc.perform(post("/api/v1/visits/legal")
                         .header("Authorization", bearer(recordsOfficerToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(legalRequest)))
@@ -177,6 +178,52 @@ class VisitorApiFunctionalIntegrationTest {
         assertNotNull(legalVisit);
         assertEquals("CASE-2026-42", legalVisit.path("legalCaseNumber").asText());
         assertEquals("Grace Chirwa", legalVisit.path("legalRepresentative").asText());
+
+        String familyHistory = mockMvc.perform(get(
+                        "/api/v1/inmates/{inmateId}/visits/family-friends", inmateId.toString())
+                        .header("Authorization", bearer(recordsOfficerToken)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode familyVisits = objectMapper.readTree(familyHistory).path("content");
+        assertEquals(1, familyVisits.size());
+        assertEquals("FAMILY", familyVisits.get(0).path("visitType").asText());
+        assertEquals("Tadala Banda", familyVisits.get(0).path("visitorName").asText());
+        assertFalse(familyVisits.get(0).has("legalCaseNumber"));
+        assertFalse(familyVisits.get(0).has("legalRepresentative"));
+
+        String filteredSearchHistory = mockMvc.perform(get("/api/v1/visits")
+                        .param("inmateId", inmateId.toString())
+                        .param("visitType", "FAMILY")
+                        .header("Authorization", bearer(recordsOfficerToken)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode filteredSearchVisits = objectMapper.readTree(filteredSearchHistory).path("content");
+        assertEquals(1, filteredSearchVisits.size());
+        assertEquals("FAMILY", filteredSearchVisits.get(0).path("visitType").asText());
+        assertFalse(filteredSearchVisits.get(0).has("legalCaseNumber"));
+        assertFalse(filteredSearchVisits.get(0).has("legalRepresentative"));
+
+        String filteredInmateHistory = mockMvc.perform(get(
+                        "/api/v1/inmates/{inmateId}/visits", inmateId.toString())
+                        .param("visitType", "FAMILY")
+                        .header("Authorization", bearer(recordsOfficerToken)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode filteredInmateVisits = objectMapper.readTree(filteredInmateHistory).path("content");
+        assertEquals(1, filteredInmateVisits.size());
+        assertEquals("FAMILY", filteredInmateVisits.get(0).path("visitType").asText());
+        assertFalse(filteredInmateVisits.get(0).has("legalCaseNumber"));
+        assertFalse(filteredInmateVisits.get(0).has("legalRepresentative"));
+
+        String legalHistory = mockMvc.perform(get(
+                        "/api/v1/inmates/{inmateId}/visits/legal", inmateId.toString())
+                        .header("Authorization", bearer(recordsOfficerToken)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode legalVisits = objectMapper.readTree(legalHistory).path("content");
+        assertEquals(1, legalVisits.size());
+        assertEquals("LEGAL", legalVisits.get(0).path("visitType").asText());
+        assertEquals("CASE-2026-42", legalVisits.get(0).path("legalCaseNumber").asText());
     }
 
     private String bearer(String token) {

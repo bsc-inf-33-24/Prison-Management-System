@@ -173,6 +173,35 @@ PUT /api/v1/sentences/{sentenceUuid}
 GET /api/v1/inmates/{inmateUuid}/sentences
 ```
 
+### Sentence extensions
+
+An authorized Records Officer, Prison Officer, Super Admin, or Commissioner can submit an extension request for an active fixed-term sentence. The proposed end date must be later than the current end date and the request must include a reason:
+
+```text
+POST /api/v1/sentences/{sentenceId}/extensions
+```
+
+```json
+{
+  "proposedEndDate": "2028-12-31",
+  "reason": "Extension approved by the court under order ..."
+}
+```
+
+The request is recorded as pending; the sentence end date remains unchanged. A different authorized staff member reviews it:
+
+```text
+POST /api/v1/sentence-extensions/{requestId}/decision
+```
+
+```json
+{
+  "decision": "APPROVED"
+}
+```
+
+Use `"REJECTED"` for a rejection. Approval updates the sentence end date; rejection does not. A requester cannot review their own request, and only one pending extension may exist per sentence. The history endpoint `GET /api/v1/sentences/{sentenceId}/extensions` returns the original/proposed dates, reason, requester, reviewer, decision, and timestamps. Local staff can act only for inmates in their assigned prison; Super Admins and Commissioners have system-wide access.
+
 ## 5. Incidents and incident history
 
 An incident may involve one or more existing inmates:
@@ -257,28 +286,27 @@ Attendance requires the enrollment to be active and the session date cannot be b
 
 ## 7. Visitors and visits
 
-A visitor is a separate person record:
+A visit is recorded through one of three endpoints based on its purpose:
 
 ```text
-POST /api/v1/visitors
+POST /api/v1/visits/family-friends
+POST /api/v1/visits/legal
+POST /api/v1/visits/medical
 ```
 
-A visit links an existing visitor, inmate, and authenticated user:
-
-```text
-POST /api/v1/visits
-```
+Family or friend visit example:
 
 ```json
 {
-  "visitorId": "visitor-public-uuid",
+  "visitorFullName": "Amina Phiri",
   "inmateId": "inmate-public-uuid",
-  "visitDateTime": "2026-10-22T10:00:00Z",
-  "durationMinutes": 60
+  "visitDate": "2026-10-22",
+  "startTime": "10:00",
+  "endTime": "11:00"
 }
 ```
 
-The visitor does not become part of the inmate record. The visit is a separate relationship that can be searched by visitor, inmate, date, or user who logged it.
+Legal visits require a legal case number; medical visits require a complaint and diagnosis. Each visit is linked to the inmate and authenticated recording staff member and can be found through visit search and inmate visit history.
 
 ## Recommended operational sequence
 
