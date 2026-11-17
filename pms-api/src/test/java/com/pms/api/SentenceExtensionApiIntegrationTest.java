@@ -172,7 +172,7 @@ class SentenceExtensionApiIntegrationTest {
     private InmateSentence createSentence() {
         Inmate inmate = new Inmate("Taylor", "Example", LocalDate.of(1990, 1, 1), "Other",
                 LocalDate.of(2020, 1, 1), InmateType.SENTENCED, "Test inmate", "Not recorded",
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null);
         inmate.assignPrison(prison);
         inmate = inmates.saveAndFlush(inmate);
         return sentences.saveAndFlush(new InmateSentence(inmate, "Test offence", SentenceType.FIXED_TERM,

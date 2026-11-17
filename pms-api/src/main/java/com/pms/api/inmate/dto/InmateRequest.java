@@ -29,8 +29,8 @@ public record InmateRequest(
         @NotBlank @Size(max = 100) String nextOfKinRelationship,
         @NotBlank @Size(max = 40) String nextOfKinPhone,
         @Email @Size(max = 254) String nextOfKinEmail,
-        @Size(max = 40) String contactPhone,
-        @Email @Size(max = 254) String contactEmail,
+        @Schema(description = "Optional place of origin for the inmate.")
+        @Size(max = 255) String homeOfOrigin,
         @NotNull UUID cellId
 ) {
     @AssertTrue(message = "REMAND inmates require an expected court date; SENTENCED inmates must not have one.")

@@ -58,8 +58,13 @@ Only a Super Admin can enroll an inmate. Records Officers can read inmate record
   "dateOfBirth": "1990-04-12",
   "gender": "Male",
   "admissionDate": "2026-10-16",
-  "sentenceStartDate": "2026-10-16",
-  "sentenceEndDate": "2027-10-15",
+  "inmateType": "SENTENCED",
+  "bio": "Inmate enrollment record",
+  "medicalHistory": "Not recorded",
+  "nextOfKinName": "Alex Banda",
+  "nextOfKinRelationship": "Sibling",
+  "nextOfKinPhone": "+265000000000",
+  "homeOfOrigin": "Blantyre",
   "cellId": "a2bd2d14-15ba-44fc-92c1-3d6553d8e8f4"
 }
 ```
@@ -68,9 +73,11 @@ The service creates the inmate in the `inmates` table and assigns a public UUID.
 
 The API entity maps to the lowercase `inmates` table created by migration `V11__inmates.sql`. The older `Inmate` table from `V2__inmate_and_custody_tables_creation.sql` is a legacy schema table and is not used by the current inmate API.
 
+`homeOfOrigin` is optional and records the inmate's place of origin. Existing inmate records may have no value for this field.
+
 Important rules:
 
-- Sentence start and end dates are required. The inclusive duration and its unit are calculated and returned by the API.
+- `inmateType`, `bio`, `medicalHistory`, and next-of-kin name, relationship, and phone are required. A remand inmate must have an expected court date; a sentenced inmate must omit it.
 - The newly created inmate UUID is used in all subsequent workflows.
 
 Useful follow-up endpoint:

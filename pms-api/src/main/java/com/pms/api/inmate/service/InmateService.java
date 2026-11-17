@@ -76,8 +76,7 @@ public class InmateService {
                 request.nextOfKinRelationship().trim(),
                 request.nextOfKinPhone().trim(),
                 request.nextOfKinEmail(),
-                request.contactPhone(),
-                request.contactEmail()
+                request.homeOfOrigin()
         );
         UUID prisonId = prisonAccess.effectivePrison(null);
         Prison prison = prisonRepository.findByPublicUuid(prisonId).orElseThrow(PrisonNotFoundException::new);
