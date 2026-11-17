@@ -71,6 +71,17 @@ class ApiVersioningAndSwaggerTest {
         assertThat(document.at("/paths/~1api~1v1~1users/get").isObject()).isTrue();
         assertThat(document.at("/components/schemas/UserResponse/properties/prisonId").isObject()).isTrue();
         assertThat(document.at("/components/schemas/UserResponse/properties/prisonName").isObject()).isTrue();
+        JsonNode inmateRequestSchema = document.at("/components/schemas/InmateRequest");
+        assertThat(inmateRequestSchema.at("/properties/homeOfOrigin/description").asText())
+                .contains("place of origin");
+        assertThat(inmateRequestSchema.at("/properties/homeOfOrigin").isObject()).isTrue();
+        assertThat(inmateRequestSchema.at("/properties/contactPhone").isMissingNode()).isTrue();
+        assertThat(inmateRequestSchema.at("/properties/contactEmail").isMissingNode()).isTrue();
+        JsonNode inmateResponseSchema = document.at("/components/schemas/InmateResponse");
+        assertThat(inmateResponseSchema.at("/properties/homeOfOrigin/description").asText())
+                .contains("place of origin");
+        assertThat(inmateResponseSchema.at("/properties/contactPhone").isMissingNode()).isTrue();
+        assertThat(inmateResponseSchema.at("/properties/contactEmail").isMissingNode()).isTrue();
         JsonNode createUserSchema = document.at("/components/schemas/CreateUserRequest");
         assertThat(createUserSchema.at("/properties/email").isObject()).isTrue();
         assertThat(createUserSchema.path("required").toString()).contains("fullName", "username", "password", "role")

@@ -127,7 +127,7 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 |---|---|---:|---|---|
 | `POST` | `/api/v1/inmates` | Yes | `Super Admin`, `Prison Officer` | Enroll an inmate and allocate a cell |
 | `GET` | `/api/v1/inmates` | Yes | `Records Officer`, `Super Admin` | List inmates |
-| `GET` | `/api/v1/inmates/{inmateId}` | Yes | `Records Officer`, `Super Admin` | View an inmate |
+| `GET` | `/api/v1/inmates/{inmateId}` | Yes | `Records Officer`, `Prison Officer`, `Commissioner`, `Super Admin` | View an inmate |
 | `PATCH` | `/api/v1/inmates/{inmateId}` | Yes | `Super Admin` | Update an inmate record |
 
 ### 4.4 Cell allocation and inventory
@@ -477,9 +477,13 @@ Request body:
   "dateOfBirth": "1990-04-15",
   "gender": "Male",
   "admissionDate": "2025-01-10",
-  "offence": "Theft",
-  "sentenceStartDate": "2025-01-10",
-  "sentenceEndDate": "2026-01-09",
+  "inmateType": "SENTENCED",
+  "bio": "Inmate enrollment record",
+  "medicalHistory": "Not recorded",
+  "nextOfKinName": "Alex Banda",
+  "nextOfKinRelationship": "Sibling",
+  "nextOfKinPhone": "+265000000000",
+  "homeOfOrigin": "Blantyre",
   "cellId": "4a3d7b2a-6c97-4b33-962a-0d1db78b86ce"
 }
 ```
@@ -487,14 +491,14 @@ Request body:
 Validation:
 
 - `firstName` and `lastName` are required, max 100 characters; `gender` is required, max 20 characters. Values are trimmed before persistence.
-- `dateOfBirth` must be in the past
-- `admissionDate` is required
-- `offence` is optional and, when supplied, must be 1–500 characters
-- `sentenceStartDate` and `sentenceEndDate` required
-- `sentenceEndDate` must be on or after `sentenceStartDate`
+- `dateOfBirth` must be in the past and `admissionDate` is required
+- `inmateType`, `bio`, `medicalHistory`, `nextOfKinName`, `nextOfKinRelationship`, and `nextOfKinPhone` are required
+- `expectedCourtDate` is required for `REMAND` inmates and must be omitted for `SENTENCED` inmates
+- `nextOfKinEmail` is optional and must be a valid email address when supplied
+- `homeOfOrigin` is optional, represents the inmate's place of origin, and may contain up to 255 characters
 - `cellId` required; if the assigned cell is full, the API returns `409 Conflict`
 
-Success `201 Created` returns `InmateResponse`: public UUID `id`, names, birth/admission dates, gender, offence (nullable), calculated sentence duration and unit, sentence dates, public UUID `cellId`, and `createdAt`/`updatedAt` instants. The server creates the allocation as part of enrollment; no separate allocation call is needed.
+Success `201 Created` returns `InmateResponse`, including the public UUID `id`, inmate profile, `homeOfOrigin`, prison and cell identifiers, and `createdAt`/`updatedAt` instants. The server creates the allocation as part of enrollment; no separate allocation call is needed.
 
 Representative response:
 
@@ -506,11 +510,16 @@ Representative response:
   "dateOfBirth": "1990-04-15",
   "gender": "Male",
   "admissionDate": "2025-01-10",
-  "offence": "Theft",
-  "sentenceDurationValue": 1,
-  "sentenceDurationUnit": "YEARS",
-  "sentenceStartDate": "2025-01-10",
-  "sentenceEndDate": "2026-01-09",
+  "inmateType": "SENTENCED",
+  "bio": "Inmate enrollment record",
+  "expectedCourtDate": null,
+  "nextOfKinName": "Alex Banda",
+  "nextOfKinRelationship": "Sibling",
+  "nextOfKinPhone": "+265000000000",
+  "nextOfKinEmail": null,
+  "homeOfOrigin": "Blantyre",
+  "prisonId": "e2a72f18-9a58-4e31-bd86-8118403423e2",
+  "prisonName": "Central Prison",
   "cellId": "4a3d7b2a-6c97-4b33-962a-0d1db78b86ce",
   "createdAt": "2026-10-29T10:00:00Z",
   "updatedAt": "2026-10-29T10:00:00Z"
@@ -532,7 +541,7 @@ Success `200 OK` returns `PageResponse<InmateResponse>`.
 
 #### `GET /api/v1/inmates/{inmateId}`
 
-Purpose: fetch a single inmate by public UUID.
+Purpose: fetch a single inmate by public UUID. Prison Officers and Records Officers can view inmates assigned to their prison; Super Admins and Commissioners can view inmates across prisons.
 
 #### `PATCH /api/v1/inmates/{inmateId}`
 

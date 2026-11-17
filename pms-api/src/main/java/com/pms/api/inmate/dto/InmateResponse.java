@@ -2,6 +2,7 @@ package com.pms.api.inmate.dto;
 
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.entity.InmateType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -20,8 +21,8 @@ public record InmateResponse(
         String nextOfKinRelationship,
         String nextOfKinPhone,
         String nextOfKinEmail,
-        String contactPhone,
-        String contactEmail,
+        @Schema(description = "Inmate's place of origin.")
+        String homeOfOrigin,
         UUID prisonId,
         String prisonName,
         UUID cellId,
@@ -38,7 +39,7 @@ public record InmateResponse(
                 inmate.getDateOfBirth(), inmate.getGender(), inmate.getAdmissionDate(), inmate.getInmateType(),
                 inmate.getBio(), inmate.getExpectedCourtDate(),
                 inmate.getNextOfKinName(), inmate.getNextOfKinRelationship(), inmate.getNextOfKinPhone(),
-                inmate.getNextOfKinEmail(), inmate.getContactPhone(), inmate.getContactEmail(),
+                inmate.getNextOfKinEmail(), inmate.getHomeOfOrigin(),
                 inmate.getCurrentPrison() == null ? null : inmate.getCurrentPrison().getPublicUuid(),
                 inmate.getCurrentPrison() == null ? null : inmate.getCurrentPrison().getName(), cellId,
                 inmate.getCreatedAt(), inmate.getUpdatedAt());

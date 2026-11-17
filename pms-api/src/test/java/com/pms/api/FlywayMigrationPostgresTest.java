@@ -83,6 +83,54 @@ class FlywayMigrationPostgresTest {
         }
     }
 
+    @Test
+    void replacesInmateContactColumnsWithoutLosingExistingRecords() throws Exception {
+        Flyway beforeV51 = flyway().target("50").load();
+        beforeV51.migrate();
+
+        try (Connection connection = postgres.createConnection("");
+             Statement statement = connection.createStatement()) {
+            statement.executeUpdate("INSERT INTO inmates (public_uuid, first_name, last_name, date_of_birth, "
+                    + "gender, admission_date, inmate_type, bio, medical_history, next_of_kin_name, "
+                    + "contact_phone, contact_email) VALUES "
+                    + "('15700000-0000-4000-8000-000000000001', 'Legacy', 'Inmate', DATE '1980-02-03', "
+                    + "'Other', DATE '2024-01-02', 'SENTENCED', 'Preserve this bio', 'Preserve this history', "
+                    + "'Next of kin', '+15550000000', 'legacy@example.test')");
+        }
+
+        Flyway current = flyway().load();
+        current.migrate();
+        current.validate();
+
+        try (Connection connection = postgres.createConnection("")) {
+            assertColumns(connection, "inmates", Set.of("home_of_origin"));
+            assertColumnAbsent(connection, "inmates", "contact_phone");
+            assertColumnAbsent(connection, "inmates", "contact_email");
+            assertColumnType(connection, "inmates", "home_of_origin", java.sql.Types.VARCHAR);
+            assertColumnNullable(connection, "inmates", "home_of_origin");
+            assertThat(count(connection, "inmates")).isEqualTo(1);
+
+            try (Statement statement = connection.createStatement();
+                 ResultSet result = statement.executeQuery("SELECT first_name, last_name, date_of_birth, "
+                         + "gender, admission_date, inmate_type, bio, medical_history, next_of_kin_name, "
+                         + "home_of_origin FROM inmates WHERE public_uuid = "
+                         + "'15700000-0000-4000-8000-000000000001'")) {
+                assertThat(result.next()).isTrue();
+                assertThat(result.getString("first_name")).isEqualTo("Legacy");
+                assertThat(result.getString("last_name")).isEqualTo("Inmate");
+                assertThat(result.getDate("date_of_birth").toLocalDate()).isEqualTo(java.time.LocalDate.of(1980, 2, 3));
+                assertThat(result.getString("gender")).isEqualTo("Other");
+                assertThat(result.getDate("admission_date").toLocalDate()).isEqualTo(java.time.LocalDate.of(2024, 1, 2));
+                assertThat(result.getString("inmate_type")).isEqualTo("SENTENCED");
+                assertThat(result.getString("bio")).isEqualTo("Preserve this bio");
+                assertThat(result.getString("medical_history")).isEqualTo("Preserve this history");
+                assertThat(result.getString("next_of_kin_name")).isEqualTo("Next of kin");
+                assertThat(result.getString("home_of_origin")).isNull();
+                assertThat(result.next()).isFalse();
+            }
+        }
+    }
+
     private FluentConfiguration flyway() {
         return Flyway.configure()
                 .dataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
@@ -133,6 +181,13 @@ class FlywayMigrationPostgresTest {
         try (ResultSet result = connection.getMetaData().getColumns(null, "public", table, column)) {
             assertThat(result.next()).isTrue();
             assertThat(result.getInt("DATA_TYPE")).isEqualTo(expectedType);
+        }
+    }
+
+    private void assertColumnNullable(Connection connection, String table, String column) throws Exception {
+        try (ResultSet result = connection.getMetaData().getColumns(null, "public", table, column)) {
+            assertThat(result.next()).isTrue();
+            assertThat(result.getString("IS_NULLABLE")).isEqualTo("YES");
         }
     }
 

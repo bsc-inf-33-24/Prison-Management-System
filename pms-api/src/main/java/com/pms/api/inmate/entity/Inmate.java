@@ -59,10 +59,8 @@ public class Inmate extends BaseEntity {
     private String nextOfKinPhone;
     @Column(name = "next_of_kin_email", length = 254)
     private String nextOfKinEmail;
-    @Column(name = "contact_phone", length = 40)
-    private String contactPhone;
-    @Column(name = "contact_email", length = 254)
-    private String contactEmail;
+    @Column(name = "home_of_origin", length = 255)
+    private String homeOfOrigin;
 
     @Column(name = "admission_date", nullable = false)
     private LocalDate admissionDate;
@@ -80,7 +78,7 @@ public class Inmate extends BaseEntity {
     public Inmate(String firstName, String lastName, LocalDate dateOfBirth, String gender,
                   LocalDate admissionDate, InmateType inmateType, String bio, String medicalHistory,
                   LocalDate expectedCourtDate, String nextOfKinName, String nextOfKinRelationship,
-                  String nextOfKinPhone, String nextOfKinEmail, String contactPhone, String contactEmail) {
+                  String nextOfKinPhone, String nextOfKinEmail, String homeOfOrigin) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.dateOfBirth = dateOfBirth;
@@ -94,8 +92,7 @@ public class Inmate extends BaseEntity {
         this.nextOfKinRelationship = nextOfKinRelationship;
         this.nextOfKinPhone = nextOfKinPhone;
         this.nextOfKinEmail = nextOfKinEmail;
-        this.contactPhone = contactPhone;
-        this.contactEmail = contactEmail;
+        this.homeOfOrigin = homeOfOrigin;
     }
 
     /**
@@ -108,7 +105,7 @@ public class Inmate extends BaseEntity {
                   LocalDate admissionDate, String legacyOffence, LocalDate legacySentenceStartDate,
                   LocalDate legacySentenceEndDate) {
         this(firstName, lastName, dateOfBirth, gender, admissionDate, InmateType.SENTENCED,
-                "Not provided", "Not recorded", null, null, null, null, null, null, null);
+                "Not provided", "Not recorded", null, null, null, null, null, null);
     }
 
     public Long getId() {
@@ -149,8 +146,7 @@ public class Inmate extends BaseEntity {
     public String getNextOfKinRelationship() { return nextOfKinRelationship; }
     public String getNextOfKinPhone() { return nextOfKinPhone; }
     public String getNextOfKinEmail() { return nextOfKinEmail; }
-    public String getContactPhone() { return contactPhone; }
-    public String getContactEmail() { return contactEmail; }
+    public String getHomeOfOrigin() { return homeOfOrigin; }
 
     public void assignPrison(Prison prison) { this.currentPrison = prison; }
 

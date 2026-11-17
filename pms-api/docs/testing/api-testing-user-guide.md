@@ -133,8 +133,13 @@ GET /api/v1/users?status=active&role=Records%20Officer&search=records&page=0&siz
   "dateOfBirth": "1990-04-15",
   "gender": "Male",
   "admissionDate": "2025-01-10",
-  "sentenceStartDate": "2025-01-10",
-  "sentenceEndDate": "2026-01-09",
+  "inmateType": "SENTENCED",
+  "bio": "Inmate enrollment record",
+  "medicalHistory": "Not recorded",
+  "nextOfKinName": "Alex Banda",
+  "nextOfKinRelationship": "Sibling",
+  "nextOfKinPhone": "+265000000000",
+  "homeOfOrigin": "Blantyre",
   "cellId": "a2bd2d14-15ba-44fc-92c1-3d6553d8e8f4"
 }
 ```
