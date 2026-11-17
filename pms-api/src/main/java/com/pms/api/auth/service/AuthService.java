@@ -96,7 +96,7 @@ public class AuthService {
         }
 
         String rotatedToken = issueRefreshToken(user, refreshToken);
-        return new RefreshResult(new AuthResponse(jwtService.generateToken(user), "Bearer"), rotatedToken);
+        return new RefreshResult(new AuthResponse(jwtService.generateToken(user), "Bearer", rotatedToken), rotatedToken);
     }
 
     public UserResponse me(String username) {
