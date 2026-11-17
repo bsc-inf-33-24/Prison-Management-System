@@ -59,7 +59,7 @@ public class AuthController {
     })
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request, jakarta.servlet.http.HttpServletResponse response) {
         AuthService.LoginResult result = authService.login(request);
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.refreshToken(), Duration.ofDays(7)).toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.response().refreshToken(), Duration.ofDays(7)).toString());
         return ResponseEntity.ok(result.response());
     }
 
