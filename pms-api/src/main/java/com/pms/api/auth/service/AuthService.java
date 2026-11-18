@@ -99,6 +99,7 @@ public class AuthService {
         return new RefreshResult(new AuthResponse(jwtService.generateToken(user), "Bearer", rotatedToken), rotatedToken);
     }
 
+    @Transactional(readOnly = true)
     public UserResponse me(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalStateException("Authenticated user no longer exists."));
