@@ -77,8 +77,7 @@ public class UserController {
     }
 
     @GetMapping
-     @PreAuthorize("hasRole('SUPER_ADMIN')")
-
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'COMMISSIONER')")
     @Operation(summary = "List users")
     public PageResponse<UserResponse> findAll(
             @RequestParam(required = false) String status,
