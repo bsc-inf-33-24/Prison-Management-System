@@ -8,6 +8,8 @@ import com.pms.api.inmate.dto.InmateRequest;
 import com.pms.api.inmate.dto.InmateResponse;
 import com.pms.api.inmate.dto.UpdateInmateDetailsRequest;
 import com.pms.api.inmate.entity.Inmate;
+import com.pms.api.inmate.entity.CustodyStay;
+import com.pms.api.inmate.repository.CustodyStayRepository;
 import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.common.pagination.PageResponse;
 import com.pms.api.common.pagination.PageableValidator;
@@ -37,13 +39,14 @@ public class InmateService {
     private final PrisonRepository prisonRepository;
     private final PrisonAccessService prisonAccess;
     private final InmatePhotoService inmatePhotoService;
+    private final CustodyStayRepository custodyStays;
 
     public InmateService(InmateRepository inmateRepository,
                          CellService cellService,
                          PaginationProperties paginationProperties,
                          NotificationService notificationService,
                          PrisonRepository prisonRepository, PrisonAccessService prisonAccess,
-                         InmatePhotoService inmatePhotoService) {
+                         InmatePhotoService inmatePhotoService, CustodyStayRepository custodyStays) {
         this.inmateRepository = inmateRepository;
         this.cellService = cellService;
         this.paginationProperties = paginationProperties;
@@ -51,6 +54,7 @@ public class InmateService {
         this.prisonRepository = prisonRepository;
         this.prisonAccess = prisonAccess;
         this.inmatePhotoService = inmatePhotoService;
+        this.custodyStays = custodyStays;
     }
 
     @Audited
@@ -83,6 +87,7 @@ public class InmateService {
         if (!prison.isActive()) throw new PrisonInactiveException();
         inmate.assignPrison(prison);
         Inmate saved = saveInmate(inmate);
+        custodyStays.saveAndFlush(new CustodyStay(saved, prison, request.admissionDate()));
         CellAllocationResponse allocation = cellService.allocate(
                 saved.getPublicUuid(), new AllocateCellRequest(request.cellId()));
         if (photo != null && !photo.isEmpty()) {

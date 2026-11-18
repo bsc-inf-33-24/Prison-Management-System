@@ -72,7 +72,7 @@ class InmateHomeOfOriginApiIntegrationTest {
         cellId = cell.getPublicUuid();
 
         User prisonOfficer = new User("Home Origin Test Officer", "h" + suffix.substring(0, 14),
-                "unused-password-hash", "Prison Officer", Set.of());
+                "unused-password-hash", "Records Officer", Set.of());
         prisonOfficer.assignPrison(prison);
         token = jwtService.generateToken(userRepository.saveAndFlush(prisonOfficer));
     }
@@ -142,7 +142,7 @@ class InmateHomeOfOriginApiIntegrationTest {
                 Prison otherPrison = prisonRepository.saveAndFlush(new Prison(
                                 "OTHER-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12),
                                 "Other Test Prison", null));
-                expectDetailStatus(tokenFor("Prison Officer", otherPrison), inmateId, 403);
+                expectDetailStatus(tokenFor("Records Officer", otherPrison), inmateId, 403);
         }
 
         private void expectDetailStatus(String userToken, String inmateId, int expectedStatus) throws Exception {

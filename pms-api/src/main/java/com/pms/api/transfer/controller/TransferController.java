@@ -30,11 +30,11 @@ public class TransferController {
     private final TransferService service;
     public TransferController(TransferService service) { this.service=service; }
 
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','PRISON_OFFICER')")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
     public TransferResponse create(@Valid @RequestBody CreateTransferRequest request) { return service.create(request); }
     @GetMapping
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','PRISON_OFFICER','SUPER_ADMIN','COMMISSIONER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','SUPER_ADMIN','COMMISSIONER')")
     public PageResponse<TransferResponse> list(@RequestParam(required=false) TransferStatus status,
             @RequestParam(required=false) UUID prisonId,@RequestParam(required=false) Integer page,
             @RequestParam(required=false) Integer size,@RequestParam(required=false) List<String> sort) {

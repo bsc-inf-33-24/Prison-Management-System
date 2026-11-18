@@ -75,8 +75,8 @@ class RosterApiIntegrationTest {
                 "Other Roster Test Prison", null));
 
         dutyOfficer = saveUser("Duty Officer", prison);
-        assignedOfficer = saveUser("Prison Officer", prison);
-        otherOfficer = saveUser("Prison Officer", otherPrison);
+        assignedOfficer = saveUser("Records Officer", prison);
+        otherOfficer = saveUser("Records Officer", otherPrison);
         superAdmin = saveUser("Super Admin", null);
 
         dutyOfficerToken = jwtService.generateToken(dutyOfficer);

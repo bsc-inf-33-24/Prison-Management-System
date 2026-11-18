@@ -4,6 +4,9 @@ import com.pms.api.inmate.dto.InmateRequest;
 import com.pms.api.inmate.dto.UpdateInmateDetailsRequest;
 import com.pms.api.inmate.dto.InmateResponse;
 import com.pms.api.inmate.service.InmateService;
+import com.pms.api.inmate.service.ReadmissionService;
+import com.pms.api.inmate.dto.CustodyStayResponse;
+import com.pms.api.inmate.dto.ReadmissionRequest;
 import com.pms.api.common.pagination.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -40,16 +43,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class InmateController {
 
     private final InmateService inmateService;
+    private final ReadmissionService readmissionService;
 
-    public InmateController(InmateService inmateService) {
+    public InmateController(InmateService inmateService, ReadmissionService readmissionService) {
         this.inmateService = inmateService;
+        this.readmissionService = readmissionService;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('PRISON_OFFICER')")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "Enroll an inmate",
-            description = "Creates the inmate at the authenticated Prison Officer's assigned prison and allocates the inmate to a cell in that prison in one transaction.")
+            description = "Creates the inmate at the authenticated Records Officer's assigned prison and allocates the inmate to a cell in that prison in one transaction.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Inmate created and allocated to the selected cell."),
             @ApiResponse(responseCode = "409", description = "The selected cell is full."),
@@ -61,7 +66,7 @@ public class InmateController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('PRISON_OFFICER')")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "Enroll an inmate with a photo",
             description = "Accepts the enrollment JSON and an optional JPEG or PNG photo in one multipart request.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(
@@ -75,7 +80,7 @@ public class InmateController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
     @Operation(summary = "List inmate records")
     public PageResponse<InmateResponse> list(@RequestParam(required = false) String search,
                                              @RequestParam(required = false) String gender,
@@ -86,18 +91,34 @@ public class InmateController {
     }
 
     @GetMapping("/{inmateId}")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
     @Operation(summary = "Get an inmate record")
     public InmateResponse get(@PathVariable UUID inmateId) {
         return inmateService.get(inmateId);
     }
 
     @PatchMapping("/{inmateId}")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER')")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "Update an inmate record",
             description = "Updates inmate details.")
     public InmateResponse update(@PathVariable UUID inmateId,
                                  @Valid @RequestBody UpdateInmateDetailsRequest request) {
         return inmateService.update(inmateId, request);
+    }
+
+    @PostMapping("/{prisonerId}/readmissions")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @Operation(summary = "Readmit an existing inmate")
+    public CustodyStayResponse readmit(@PathVariable UUID prisonerId,
+                                       @Valid @RequestBody ReadmissionRequest request) {
+        return readmissionService.readmit(prisonerId, request);
+    }
+
+    @PostMapping("/{prisonerId}/discharge")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @Operation(summary = "Discharge an inmate")
+    public CustodyStayResponse discharge(@PathVariable UUID prisonerId) {
+        return readmissionService.discharge(prisonerId);
     }
 }

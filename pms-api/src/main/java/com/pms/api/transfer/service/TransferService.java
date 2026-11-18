@@ -8,6 +8,8 @@ import com.pms.api.common.pagination.PageableValidator;
 import com.pms.api.common.pagination.PaginationProperties;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
+import com.pms.api.inmate.entity.CustodyStay;
+import com.pms.api.inmate.repository.CustodyStayRepository;
 import com.pms.api.prison.entity.Prison;
 import com.pms.api.prison.repository.PrisonRepository;
 import com.pms.api.transfer.dto.ApproveTransferRequest;
@@ -22,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -39,9 +42,17 @@ public class TransferService {
     private final CellService cells;
     private final PaginationProperties pagination;
     private final PrisonAccessService prisonAccess;
+    private final CustodyStayRepository custodyStays;
+    @Autowired
     public TransferService(InmateTransferRepository transfers,InmateRepository inmates,PrisonRepository prisons,
-                           CellService cells,PaginationProperties pagination,PrisonAccessService prisonAccess) {
-        this.transfers=transfers; this.inmates=inmates; this.prisons=prisons; this.cells=cells; this.pagination=pagination; this.prisonAccess=prisonAccess;
+                           CellService cells,PaginationProperties pagination,PrisonAccessService prisonAccess,
+                           CustodyStayRepository custodyStays) {
+        this.transfers=transfers; this.inmates=inmates; this.prisons=prisons; this.cells=cells; this.pagination=pagination; this.prisonAccess=prisonAccess; this.custodyStays=custodyStays;
+    }
+
+    public TransferService(InmateTransferRepository transfers, InmateRepository inmates, PrisonRepository prisons,
+                           CellService cells, PaginationProperties pagination, PrisonAccessService prisonAccess) {
+        this(transfers, inmates, prisons, cells, pagination, prisonAccess, null);
     }
 
     @Audited @Transactional
@@ -85,6 +96,12 @@ public class TransferService {
         }
         Inmate inmate = transfer.getInmate();
         inmate.assignPrison(transfer.getDestinationPrison());
+        if (custodyStays != null) {
+            CustodyStay activeStay = custodyStays.findFirstByInmate_IdAndEndedAtIsNullOrderByIdDesc(inmate.getId())
+                    .orElseThrow(InmateHasNoCellException::new);
+            activeStay.transferTo(transfer.getDestinationPrison());
+            custodyStays.saveAndFlush(activeStay);
+        }
         cells.allocate(inmate.getPublicUuid(), new AllocateCellRequest(request.cellId()));
         return TransferResponse.from(transfer);
     }

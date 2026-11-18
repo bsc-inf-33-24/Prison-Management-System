@@ -12,6 +12,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pms.api.cell.entity.Cell;
 import com.pms.api.cell.repository.CellRepository;
+import com.pms.api.prison.entity.Block;
+import com.pms.api.prison.entity.Prison;
+import com.pms.api.prison.repository.BlockRepository;
+import com.pms.api.prison.repository.PrisonRepository;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
@@ -23,6 +27,8 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,6 +62,12 @@ class InmateApiSecurityIntegrationTest {
     private CellRepository cellRepository;
 
     @Autowired
+    private PrisonRepository prisonRepository;
+
+    @Autowired
+    private BlockRepository blockRepository;
+
+    @Autowired
     private JwtService jwtService;
 
     @Autowired
@@ -68,22 +80,34 @@ class InmateApiSecurityIntegrationTest {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
+    private Prison testPrison;
+    private Block testBlock;
+
+    @BeforeEach
+    void setUp() {
+        testPrison = prisonRepository.saveAndFlush(new Prison(
+                "S" + UUID.randomUUID().toString().replace("-", "").substring(0, 10),
+                "Inmate Security Test Prison", null));
+        testBlock = blockRepository.saveAndFlush(new Block(testPrison,
+                "B" + UUID.randomUUID().toString().replace("-", "").substring(0, 10)));
+    }
+
     @Test
     void appliesRoleMatrixAndChecksRoleBeforeLookingUpInmateIds() throws Exception {
         String recordsOfficerToken = tokenForRole("Records Officer");
-        expectStatus(recordsOfficerToken, "POST", INMATES_PATH, validRequest(), 403);
+        expectStatus(recordsOfficerToken, "POST", INMATES_PATH, validRequest(), 201);
         expectStatus(recordsOfficerToken, "GET", INMATES_PATH, null, 200);
-        expectStatus(recordsOfficerToken, "GET", UNKNOWN_INMATE_PATH, null, 404);
-        expectStatus(recordsOfficerToken, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 403);
+        expectStatus(recordsOfficerToken, "GET", UNKNOWN_INMATE_PATH, null, 403);
+        expectStatus(recordsOfficerToken, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 404);
 
         String superAdminToken = tokenForRole("Super Admin");
-        expectStatus(superAdminToken, "POST", INMATES_PATH, validRequest(), 201);
+        expectStatus(superAdminToken, "POST", INMATES_PATH, validRequest(), 403);
         expectStatus(superAdminToken, "GET", INMATES_PATH, null, 200);
         expectStatus(superAdminToken, "GET", UNKNOWN_INMATE_PATH, null, 404);
-        expectStatus(superAdminToken, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 404);
+        expectStatus(superAdminToken, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 403);
 
         for (String role : User.ALLOWED_ROLES) {
-            if (role.equals("Records Officer") || role.equals("Super Admin") || role.equals("Prison Officer")) {
+            if (role.equals("Records Officer") || role.equals("Super Admin")) {
                 continue;
             }
             String token = tokenForRole(role);
@@ -93,11 +117,6 @@ class InmateApiSecurityIntegrationTest {
             expectStatus(token, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 403);
         }
 
-        String prisonOfficerToken = tokenForRole("Prison Officer");
-        expectStatus(prisonOfficerToken, "POST", INMATES_PATH, validRequest(), 201);
-        expectStatus(prisonOfficerToken, "GET", INMATES_PATH, null, 200);
-        expectStatus(prisonOfficerToken, "GET", UNKNOWN_INMATE_PATH, null, 404);
-        expectStatus(prisonOfficerToken, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 404);
     }
 
     @Test
@@ -140,7 +159,7 @@ class InmateApiSecurityIntegrationTest {
             .filter(handler -> handler.getMethod().getName().equals("enroll"))
             .findFirst()
             .orElseThrow();
-        assertTrue(enrollHandler.getMethodAnnotation(PreAuthorize.class).value().contains("PRISON_OFFICER"));
+        assertTrue(enrollHandler.getMethodAnnotation(PreAuthorize.class).value().contains("RECORDS_OFFICER"));
     }
 
     private void expectEveryEndpointStatus(String token, int expectedStatus) throws Exception {
@@ -184,7 +203,11 @@ class InmateApiSecurityIntegrationTest {
 
     private User createUser(String role) {
         String username = "s" + UUID.randomUUID().toString().replace("-", "").substring(0, 15);
-        return userRepository.saveAndFlush(new User("Security Test", username, "unused-password-hash", role, Set.of()));
+        User user = new User("Security Test", username, "unused-password-hash", role, Set.of());
+        if (!role.equals("Super Admin") && !role.equals("Commissioner")) {
+            user.assignPrison(testPrison);
+        }
+        return userRepository.saveAndFlush(user);
     }
 
     private String validRequest() {
@@ -194,10 +217,14 @@ class InmateApiSecurityIntegrationTest {
         request.put("dateOfBirth", "1990-01-01");
         request.put("gender", "Other");
         request.put("admissionDate", "2025-01-01");
-        request.put("sentenceStartDate", "2025-01-01");
-        request.put("sentenceEndDate", "2025-01-01");
-        Cell cell = cellRepository.saveAndFlush(new Cell(
-                "SEC-" + UUID.randomUUID().toString().replace("-", ""), 1, 100));
+        request.put("inmateType", "SENTENCED");
+        request.put("bio", "Security test record");
+        request.put("medicalHistory", "None recorded");
+        request.put("nextOfKinName", "Test Contact");
+        request.put("nextOfKinRelationship", "Relative");
+        request.put("nextOfKinPhone", "000000000");
+        Cell cell = cellRepository.saveAndFlush(new Cell(testBlock,
+                ThreadLocalRandom.current().nextInt(1, 1_000_000), 100));
         request.put("cellId", cell.getPublicUuid().toString());
         try {
             return objectMapper.writeValueAsString(request);

@@ -32,7 +32,7 @@ public class IncidentController {
     // The reporter is derived from the authenticated user; an optional outcome is recorded at creation.
     @PostMapping("/incidents")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'DISCIPLINARY_OFFICER', 'PRISON_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'DISCIPLINARY_OFFICER')")
     @Operation(summary = "Log an inmate incident",
             description = "An optional nonblank outcome (up to 255 characters) creates the incident as resolved; without one, it is created as open.")
     public IncidentResponse logIncident(@Valid @RequestBody LogIncidentRequest request,
@@ -42,7 +42,7 @@ public class IncidentController {
 
     // Disciplinary Officers and Super Admins can view an inmate's history.
     @GetMapping("/inmates/{inmateId}/incidents")
-    @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'PRISON_OFFICER')")
+    @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'RECORDS_OFFICER')")
     @Operation(summary = "Get an inmate's incident history")
     public List<IncidentHistoryItemResponse> getHistory(@PathVariable UUID inmateId) {
         return incidentService.getHistory(inmateId);

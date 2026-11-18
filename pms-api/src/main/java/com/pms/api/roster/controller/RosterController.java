@@ -116,7 +116,7 @@ public class RosterController {
     }
 
     @GetMapping("/me/shifts")
-    @PreAuthorize("hasRole('PRISON_OFFICER')")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "View the authenticated officer's published shifts")
     public List<RosterShiftResponse> myShifts(
             @RequestParam LocalDate from,

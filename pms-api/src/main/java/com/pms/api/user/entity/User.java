@@ -44,7 +44,6 @@ public class User {
             "Instructor",
             "Medical Officer",
             "Duty Officer",
-            "Prison Officer",
             "Program Facilitator"
     );
 
