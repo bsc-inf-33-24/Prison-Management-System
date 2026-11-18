@@ -335,6 +335,52 @@ class UserEmailAuthenticationIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void commissionerCanListUsersButCannotManageAccounts() throws Exception {
+        User commissioner = userRepository.saveAndFlush(new User(
+                "Test Commissioner", uniqueUsername(), "unused-password-hash", "Commissioner", Set.of()));
+        User target = userRepository.saveAndFlush(new User(
+                "Test Target Officer", uniqueUsername(), "unused-password-hash", "Records Officer", Set.of()));
+        String commissionerToken = jwtService.generateToken(commissioner);
+
+        mockMvc.perform(get("/api/v1/users")
+                        .header("Authorization", "Bearer " + commissionerToken)
+                        .param("status", "ACTIVE")
+                        .param("role", "Records Officer")
+                        .param("search", "Test Target")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/users")
+                        .header("Authorization", "Bearer " + commissionerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/users/{userId}", target.getPublicUuid())
+                        .header("Authorization", "Bearer " + commissionerToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/v1/users/{userId}", target.getPublicUuid())
+                        .header("Authorization", "Bearer " + commissionerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/v1/users/{userId}/deactivate", target.getPublicUuid())
+                        .header("Authorization", "Bearer " + commissionerToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/v1/users/{userId}/reactivate", target.getPublicUuid())
+                        .header("Authorization", "Bearer " + commissionerToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/users")
+                        .header("Authorization", "Bearer " + adminToken()))
+                .andExpect(status().isOk());
+    }
+
     private JsonNode createUser(String username, String email, boolean includeEmail) throws Exception {
         MvcResult result = createUserRequest(username, email, includeEmail)
                 .andExpect(status().isCreated()).andReturn();
