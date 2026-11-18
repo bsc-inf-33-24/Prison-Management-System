@@ -23,7 +23,7 @@ public class SentenceController {
 
     @PostMapping("/sentences")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER')")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     public SentenceResponse create(@Valid @RequestBody CreateSentenceRequest request) { return service.create(request); }
 
     @GetMapping("/inmates/{inmateId}/sentences")
@@ -31,7 +31,7 @@ public class SentenceController {
     public List<SentenceResponse> list(@PathVariable UUID inmateId) { return service.list(inmateId); }
 
     @PatchMapping("/sentences/{sentenceId}/status")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER')")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     public SentenceResponse updateStatus(@PathVariable UUID sentenceId,
             @Valid @RequestBody UpdateSentenceStatusRequest request) {
         return service.updateStatus(sentenceId, request.status());
@@ -39,7 +39,7 @@ public class SentenceController {
 
     @PostMapping("/sentences/{sentenceId}/remissions")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER')")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     public RemissionResponse addRemission(@PathVariable UUID sentenceId,
             @Valid @RequestBody CreateRemissionRequest request,
             @AuthenticationPrincipal UserDetails user) {
@@ -52,14 +52,14 @@ public class SentenceController {
 
     @PostMapping("/sentences/{sentenceId}/extensions")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER', 'SUPER_ADMIN', 'COMMISSIONER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN', 'COMMISSIONER')")
     public SentenceExtensionResponse requestExtension(@PathVariable UUID sentenceId,
             @Valid @RequestBody CreateSentenceExtensionRequest request) {
         return service.requestExtension(sentenceId, request);
     }
 
     @GetMapping("/sentences/{sentenceId}/extensions")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER', 'SUPER_ADMIN', 'COMMISSIONER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN', 'COMMISSIONER')")
     public List<SentenceExtensionResponse> listExtensions(@PathVariable UUID sentenceId) {
         return service.listExtensions(sentenceId);
     }

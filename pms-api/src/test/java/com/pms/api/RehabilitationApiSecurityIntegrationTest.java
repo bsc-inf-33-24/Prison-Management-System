@@ -45,7 +45,7 @@ class RehabilitationApiSecurityIntegrationTest {
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/v1/programs")
-                        .header("Authorization", "Bearer " + tokenForRole("Prison Officer"))
+                        .header("Authorization", "Bearer " + tokenForRole("Duty Officer"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(programRequest))
                 .andExpect(status().isForbidden());
@@ -81,7 +81,7 @@ class RehabilitationApiSecurityIntegrationTest {
 
     @Test
     void superAdminCanListTransfersAndExistingRolesRetainAccess() throws Exception {
-        for (String role : Set.of("Super Admin", "Records Officer", "Prison Officer")) {
+        for (String role : Set.of("Super Admin", "Records Officer")) {
             mockMvc.perform(get("/api/v1/transfers")
                             .header("Authorization", "Bearer " + tokenForRole(role)))
                     .andExpect(status().isOk());

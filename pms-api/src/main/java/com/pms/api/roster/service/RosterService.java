@@ -36,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RosterService {
 
-    private static final String ELIGIBLE_OFFICER_ROLE = "Prison Officer";
+    private static final String ELIGIBLE_OFFICER_ROLE = "Records Officer";
     private static final Duration MAX_SHIFT_DURATION = Duration.ofHours(24);
 
     private final RosterRepository rosterRepository;

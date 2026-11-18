@@ -21,7 +21,7 @@ public class InmatePhotoController {
     public InmatePhotoController(InmatePhotoService photos) { this.photos = photos; }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'PRISON_OFFICER')")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
     public ResponseEntity<byte[]> getPhoto(@PathVariable UUID inmateId) {
         InmatePhotoService.PhotoContent photo = photos.get(inmateId);
         MediaType mediaType = MediaType.parseMediaType(photo.contentType());

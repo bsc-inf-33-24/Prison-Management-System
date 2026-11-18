@@ -31,6 +31,7 @@ import com.pms.api.auth.service.PasswordPolicy;
 import com.pms.api.auth.service.UnavailableRecoveryTokenDelivery;
 import com.pms.api.sentence.service.SentenceService;
 import com.pms.api.inmate.service.InmatePhotoService;
+import com.pms.api.inmate.service.ReadmissionService;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -50,6 +51,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InmateService.InmateNotFoundException.class)
     public ResponseEntity<ApiError> handleInmateNotFound() {
         return problem(HttpStatus.NOT_FOUND, "Inmate not found.");
+    }
+
+    @ExceptionHandler(ReadmissionService.ActiveCustodyException.class)
+    public ResponseEntity<ApiError> handleActiveReadmission() {
+        return problem(HttpStatus.CONFLICT, "The inmate already has an active custody stay.");
+    }
+
+    @ExceptionHandler(ReadmissionService.NoActiveCustodyException.class)
+    public ResponseEntity<ApiError> handleNoActiveCustody() {
+        return problem(HttpStatus.CONFLICT, "The inmate has no active custody stay to discharge.");
     }
 
     @ExceptionHandler(SentenceService.SentenceNotFoundException.class)
@@ -297,7 +308,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(RosterService.InvalidOfficerAssignmentException.class)
     public ResponseEntity<ApiError> handleInvalidRosterOfficer() {
         return problem(HttpStatus.BAD_REQUEST,
-                "The assigned officer must be active, have the Prison Officer role, and belong to the roster's prison.");
+                "The assigned officer must be active, have the Records Officer role, and belong to the roster's prison.");
     }
 
     @ExceptionHandler(RosterService.InvalidShiftTimeException.class)

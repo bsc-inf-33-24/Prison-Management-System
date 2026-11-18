@@ -67,11 +67,11 @@ class SentenceExtensionApiIntegrationTest {
         prison = prisons.saveAndFlush(new Prison("E" + shortId(), "Extension Test Prison", null));
         Prison otherPrison = prisons.saveAndFlush(new Prison("E" + shortId(), "Other Test Prison", null));
         requesterToken = tokenFor("Records Officer", "Requesting Officer", prison);
-        reviewerToken = tokenFor("Prison Officer", "Reviewing Officer", prison);
+        reviewerToken = tokenFor("Records Officer", "Reviewing Officer", prison);
         commissioner = users.saveAndFlush(new User("Commissioner Reviewer", "e" + shortId(),
                 "unused-password-hash", "Commissioner", Set.of()));
         commissionerToken = jwtService.generateToken(commissioner);
-        otherPrisonReviewerToken = tokenFor("Prison Officer", "Other Prison Officer", otherPrison);
+        otherPrisonReviewerToken = tokenFor("Records Officer", "Other Records Officer", otherPrison);
     }
 
     @Test
