@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public record TransferResponse(UUID id, UUID inmateId, String inmateName,
         UUID sourcePrisonId, String sourcePrisonName, UUID destinationPrisonId, String destinationPrisonName,
-        String reason, TransferStatus status, Instant requestedAt, String requestedBy,
+        String reason, TransferStatus status, UUID receivedCellId, Instant requestedAt, String requestedBy,
         Instant decidedAt, String decidedBy, String decisionNote,
         Instant dispatchedAt, String dispatchedBy, Instant receivedAt, String receivedBy,
         Instant cancelledAt, String cancelledBy) {
@@ -16,7 +16,7 @@ public record TransferResponse(UUID id, UUID inmateId, String inmateName,
                 t.getInmate().getFirstName()+" "+t.getInmate().getLastName(),
                 t.getSourcePrison().getPublicUuid(),t.getSourcePrison().getName(),
                 t.getDestinationPrison().getPublicUuid(),t.getDestinationPrison().getName(),
-                t.getReason(),t.getStatus(),t.getRequestedAt(),t.getRequestedBy(),t.getDecidedAt(),
+                t.getReason(),t.getStatus(),t.getReceivedCellId(),t.getRequestedAt(),t.getRequestedBy(),t.getDecidedAt(),
                 t.getDecidedBy(),t.getDecisionNote(),t.getDispatchedAt(),t.getDispatchedBy(),
                 t.getReceivedAt(),t.getReceivedBy(),t.getCancelledAt(),t.getCancelledBy());
     }

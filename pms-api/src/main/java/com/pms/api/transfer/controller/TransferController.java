@@ -3,6 +3,7 @@ package com.pms.api.transfer.controller;
 import com.pms.api.common.pagination.PageResponse;
 import com.pms.api.transfer.dto.ApproveTransferRequest;
 import com.pms.api.transfer.dto.CreateTransferRequest;
+import com.pms.api.transfer.dto.ConfirmTransferReceiptRequest;
 import com.pms.api.transfer.dto.TransferDecisionRequest;
 import com.pms.api.transfer.dto.TransferResponse;
 import com.pms.api.transfer.entity.TransferStatus;
@@ -45,6 +46,12 @@ public class TransferController {
     @Operation(summary = "Approve and complete an inmate transfer")
     public TransferResponse approve(@PathVariable UUID id,@Valid @RequestBody ApproveTransferRequest request) {
         return service.approve(id,request);
+    }
+    @PostMapping("/{id}/confirm-receipt")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @Operation(summary = "Confirm an arriving inmate and assign a destination cell")
+    public TransferResponse confirmReceipt(@PathVariable UUID id, @Valid @RequestBody ConfirmTransferReceiptRequest request) {
+        return service.confirmReceipt(id, request);
     }
     @PostMapping("/{id}/reject") @PreAuthorize("hasRole('COMMISSIONER')") public TransferResponse reject(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.reject(id,request); }
     @PostMapping("/{id}/cancel") @PreAuthorize("hasRole('COMMISSIONER')") public TransferResponse cancel(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.cancel(id,request); }
