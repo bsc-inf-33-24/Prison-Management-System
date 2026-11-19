@@ -1,6 +1,7 @@
 package com.pms.api.transfer.service;
 
 import com.pms.api.cell.service.CellService;
+import com.pms.api.cell.dto.AllocateCellRequest;
 import com.pms.api.common.audit.Audited;
 import com.pms.api.common.pagination.PageResponse;
 import com.pms.api.common.pagination.PageableValidator;
@@ -13,6 +14,7 @@ import com.pms.api.prison.entity.Prison;
 import com.pms.api.prison.repository.PrisonRepository;
 import com.pms.api.transfer.dto.ApproveTransferRequest;
 import com.pms.api.transfer.dto.CreateTransferRequest;
+import com.pms.api.transfer.dto.ConfirmTransferReceiptRequest;
 import com.pms.api.transfer.dto.TransferDecisionRequest;
 import com.pms.api.transfer.dto.TransferResponse;
 import com.pms.api.transfer.entity.InmateTransfer;
@@ -90,17 +92,25 @@ public class TransferService {
         InmateTransfer transfer=getLocked(id);
         String actor = actor();
         transfer.approve(actor, clean(request.note()));
-        if (cells.releaseCurrentAllocation(transfer.getInmate().getId()) == 0) {
-            throw new InmateHasNoCellException();
-        }
+        return TransferResponse.from(transfer);
+    }
+
+    @Audited
+    @Transactional
+    public TransferResponse confirmReceipt(UUID id, ConfirmTransferReceiptRequest request) {
+        prisonAccess.requireTransfer(id, true);
+        InmateTransfer transfer = getLocked(id);
+        if (cells.releaseCurrentAllocation(transfer.getInmate().getId()) == 0) throw new InmateHasNoCellException();
         Inmate inmate = transfer.getInmate();
         inmate.assignPrison(transfer.getDestinationPrison());
+        cells.allocate(inmate.getPublicUuid(), new AllocateCellRequest(request.cellId()));
         if (custodyStays != null) {
             CustodyStay activeStay = custodyStays.findFirstByInmate_IdAndEndedAtIsNullOrderByIdDesc(inmate.getId())
                     .orElseThrow(InmateHasNoCellException::new);
             activeStay.transferTo(transfer.getDestinationPrison());
             custodyStays.saveAndFlush(activeStay);
         }
+        transfer.receive(actor(), request.cellId());
         return TransferResponse.from(transfer);
     }
 

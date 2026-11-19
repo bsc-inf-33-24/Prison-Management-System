@@ -1,5 +1,5 @@
 package com.pms.api.transfer.entity;
-
+import jakarta.persistence.ManyToOne;
 import com.pms.api.common.entity.BaseEntity;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.prison.entity.Prison;
@@ -12,9 +12,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity @Table(name = "inmate_transfers")
 public class InmateTransfer extends BaseEntity {
@@ -22,6 +22,7 @@ public class InmateTransfer extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "inmate_id", nullable = false) private Inmate inmate;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "source_prison_id", nullable = false) private Prison sourcePrison;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "destination_prison_id", nullable = false) private Prison destinationPrison;
+    @Column(name = "received_cell_uuid") private UUID receivedCellId;
     @Column(name = "reason", nullable = false, length = 2000) private String reason;
     @Enumerated(EnumType.STRING) @Column(name = "status", nullable = false, length = 20) private TransferStatus status=TransferStatus.PENDING;
     @Column(name = "requested_at", nullable = false, updatable = false) private Instant requestedAt=Instant.now();
@@ -41,15 +42,18 @@ public class InmateTransfer extends BaseEntity {
     }
     public void approve(String actor, String note) {
         require(TransferStatus.PENDING);
-        Instant completedAt = Instant.now();
-        status = TransferStatus.RECEIVED;
-        decidedAt = completedAt;
+        status = TransferStatus.APPROVED;
+        decidedAt = Instant.now();
         decidedBy = actor;
         decisionNote = note;
-        dispatchedAt = completedAt;
-        dispatchedBy = actor;
-        receivedAt = completedAt;
+    }
+
+    public void receive(String actor, UUID cellId) {
+        if (status != TransferStatus.APPROVED && status != TransferStatus.IN_TRANSIT) throw new InvalidTransferStateException();
+        status = TransferStatus.RECEIVED;
+        receivedAt = Instant.now();
         receivedBy = actor;
+        receivedCellId = cellId;
     }
 
     public void reject(String actor, String note) {
@@ -69,6 +73,7 @@ public class InmateTransfer extends BaseEntity {
     public Inmate getInmate() { return inmate; }
     public Prison getSourcePrison() { return sourcePrison; }
     public Prison getDestinationPrison() { return destinationPrison; }
+    public UUID getReceivedCellId() { return receivedCellId; }
     public String getReason() { return reason; }
     public TransferStatus getStatus() { return status; }
     public Instant getRequestedAt() { return requestedAt; }
