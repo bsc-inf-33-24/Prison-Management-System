@@ -18,7 +18,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.UUID;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -72,8 +73,9 @@ public class AuthService {
                     new UsernamePasswordAuthenticationToken(canonicalUsername, request.getPassword()));
             User user = userRepository.findByUsername(authentication.getName()).orElseThrow(() -> new BadCredentialsException("Invalid username or password."));
             user.resetLoginFailures();
-            String refreshToken = issueRefreshToken(user);
-            return new LoginResult(new AuthResponse(jwtService.generateToken(user), "Bearer", refreshToken));
+            JwtService.RefreshTokenDetails refreshToken = issueRefreshToken(user);
+            AuthResponse response = new AuthResponse(jwtService.generateToken(user), "Bearer", refreshToken.token(), refreshToken.expiresAt());
+            return new LoginResult(response);
         } catch (org.springframework.security.core.AuthenticationException exception) {
             if (knownUser != null && knownUser.isActive()) knownUser.recordFailedLogin(maximumLoginAttempts, Instant.now().plus(lockoutDuration));
             throw new BadCredentialsException("Invalid username or password.");
@@ -85,18 +87,37 @@ public class AuthService {
         if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
             throw new InvalidRefreshTokenException();
         }
+
+        final Claims claims;
+        try {
+            claims = jwtService.claims(rawRefreshToken.trim());
+        } catch (JwtException exception) {
+            throw new InvalidRefreshTokenException();
+        }
+
+        if (!"refresh".equals(claims.get("typ", String.class))
+                || claims.getId() == null
+                || claims.getExpiration() == null
+                || claims.getExpiration().toInstant().isBefore(Instant.now())) {
+            throw new InvalidRefreshTokenException();
+        }
+
         String tokenHash = hash(rawRefreshToken.trim());
         RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(InvalidRefreshTokenException::new);
         User user = refreshToken.getUser();
         Instant now = Instant.now();
-        if (!refreshToken.isActive(now)) {
+        if (!refreshToken.isActive(now)
+                || !user.getUsername().equals(claims.getSubject())
+                || !user.getPublicUuid().toString().equals(claims.get("uid", String.class))
+                || user.getAuthenticationVersion() != ((Number) claims.get("ver")).longValue()) {
             revokeAllRefreshTokensForUser(user, now);
             throw new InvalidRefreshTokenException();
         }
 
-        String rotatedToken = issueRefreshToken(user, refreshToken);
-        return new RefreshResult(new AuthResponse(jwtService.generateToken(user), "Bearer", rotatedToken), rotatedToken);
+        JwtService.RefreshTokenDetails rotatedToken = issueRefreshToken(user, refreshToken);
+        AuthResponse response = new AuthResponse(jwtService.generateToken(user), "Bearer", rotatedToken.token(), rotatedToken.expiresAt());
+        return new RefreshResult(response, rotatedToken.token());
     }
 
     @Transactional(readOnly = true)
@@ -161,24 +182,22 @@ public class AuthService {
         });
     }
 
-    private String issueRefreshToken(User user) {
-        String rawToken = UUID.randomUUID() + ":" + UUID.randomUUID();
-        String tokenHash = hash(rawToken);
-        refreshTokenRepository.save(new RefreshToken(user, tokenHash, Instant.now().plus(refreshTokenTtl)));
-        return rawToken;
+    private JwtService.RefreshTokenDetails issueRefreshToken(User user) {
+        JwtService.RefreshTokenDetails details = jwtService.generateRefreshToken(user);
+        refreshTokenRepository.save(new RefreshToken(user, hash(details.token()), details.expiresAt()));
+        return details;
     }
 
-    private String issueRefreshToken(User user, RefreshToken replacedToken) {
-        String rawToken = UUID.randomUUID() + ":" + UUID.randomUUID();
-        String tokenHash = hash(rawToken);
+    private JwtService.RefreshTokenDetails issueRefreshToken(User user, RefreshToken replacedToken) {
         Instant now = Instant.now();
-        RefreshToken nextToken = new RefreshToken(user, tokenHash, now.plus(refreshTokenTtl));
+        JwtService.RefreshTokenDetails details = jwtService.generateRefreshToken(user, now.plus(refreshTokenTtl));
+        RefreshToken nextToken = new RefreshToken(user, hash(details.token()), details.expiresAt());
         refreshTokenRepository.save(nextToken);
 
         replacedToken.revoke(now);
         replacedToken.setReplacedByToken(nextToken);
         refreshTokenRepository.save(replacedToken);
-        return rawToken;
+        return details;
     }
 
     private static String randomRecoveryCode() { return String.format(Locale.ROOT, "%06d", RANDOM.nextInt(RESET_CODE_BOUND)); }
