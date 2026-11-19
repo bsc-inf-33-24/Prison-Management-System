@@ -18,6 +18,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.Duration;
+import java.time.Instant;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,7 +61,8 @@ public class AuthController {
     })
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request, jakarta.servlet.http.HttpServletResponse response) {
         AuthService.LoginResult result = authService.login(request);
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.response().refreshToken(), Duration.ofDays(7)).toString());
+        Duration refreshCookieLifetime = Duration.between(Instant.now(), result.response().refreshTokenExpiresAt());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.refreshToken(), refreshCookieLifetime).toString());
         return ResponseEntity.ok(result.response());
     }
 
