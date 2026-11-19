@@ -263,7 +263,8 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler({TransferService.ActiveTransferExistsException.class, TransferService.InmatePrisonNotAssignedException.class,
             TransferService.InactivePrisonException.class, TransferService.SamePrisonException.class,
-            TransferService.InmateHasNoCellException.class, InmateTransfer.InvalidTransferStateException.class})
+            TransferService.InmateHasNoCellException.class, TransferService.MissingTransferPrisonsException.class,
+            TransferService.InvalidTransferStatusException.class, InmateTransfer.InvalidTransferStateException.class})
     public ResponseEntity<ApiError> handleTransferConflict() {
         return problem(HttpStatus.CONFLICT, "The transfer request conflicts with the inmate's current custody or transfer state.");
     }

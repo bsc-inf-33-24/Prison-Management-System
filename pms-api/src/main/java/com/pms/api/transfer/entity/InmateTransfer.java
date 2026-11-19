@@ -21,7 +21,7 @@ public class InmateTransfer extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "inmate_id", nullable = false) private Inmate inmate;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "source_prison_id", nullable = false) private Prison sourcePrison;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "destination_prison_id", nullable = false) private Prison destinationPrison;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "destination_prison_id") private Prison destinationPrison;
     @Column(name = "received_cell_uuid") private UUID receivedCellId;
     @Column(name = "reason", nullable = false, length = 2000) private String reason;
     @Enumerated(EnumType.STRING) @Column(name = "status", nullable = false, length = 20) private TransferStatus status=TransferStatus.PENDING;
@@ -50,10 +50,17 @@ public class InmateTransfer extends BaseEntity {
 
     public void receive(String actor, UUID cellId) {
         if (status != TransferStatus.APPROVED && status != TransferStatus.IN_TRANSIT) throw new InvalidTransferStateException();
-        status = TransferStatus.RECEIVED;
+        status = TransferStatus.CONFIRMED;
         receivedAt = Instant.now();
         receivedBy = actor;
         receivedCellId = cellId;
+    }
+
+    public void confirm(String actor) {
+        require(TransferStatus.APPROVED);
+        status = TransferStatus.CONFIRMED;
+        receivedAt = Instant.now();
+        receivedBy = actor;
     }
 
     public void reject(String actor, String note) {
