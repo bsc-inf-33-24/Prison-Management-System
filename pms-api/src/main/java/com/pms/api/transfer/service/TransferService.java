@@ -1,6 +1,5 @@
 package com.pms.api.transfer.service;
 
-import com.pms.api.cell.dto.AllocateCellRequest;
 import com.pms.api.cell.service.CellService;
 import com.pms.api.common.audit.Audited;
 import com.pms.api.common.pagination.PageResponse;
@@ -102,7 +101,6 @@ public class TransferService {
             activeStay.transferTo(transfer.getDestinationPrison());
             custodyStays.saveAndFlush(activeStay);
         }
-        cells.allocate(inmate.getPublicUuid(), new AllocateCellRequest(request.cellId()));
         return TransferResponse.from(transfer);
     }
 
