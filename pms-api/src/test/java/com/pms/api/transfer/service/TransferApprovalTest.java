@@ -4,12 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.pms.api.cell.dto.AllocateCellRequest;
 import com.pms.api.cell.service.CellService;
 import com.pms.api.common.pagination.PaginationProperties;
 import com.pms.api.inmate.entity.Inmate;
@@ -46,7 +44,7 @@ class TransferApprovalTest {
     }
 
     @Test
-    void approvalCompletesTransferAndMovesInmateIntoSelectedDestinationCell() {
+    void approvalCompletesTransferWithoutAssigningDestinationCell() {
         String actor = "receiving-officer";
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(actor, "", List.of()));
@@ -58,11 +56,10 @@ class TransferApprovalTest {
         inmate.assignPrison(source);
         InmateTransfer transfer = new InmateTransfer(inmate, source, destination, "Test transfer", "source-officer");
         UUID transferId = UUID.randomUUID();
-        UUID destinationCellId = UUID.randomUUID();
         when(transfers.findByPublicUuidForUpdate(transferId)).thenReturn(java.util.Optional.of(transfer));
         when(cells.releaseCurrentAllocation(any())).thenReturn(1);
 
-        var response = service.approve(transferId, new ApproveTransferRequest(destinationCellId, "Approved"));
+        var response = service.approve(transferId, new ApproveTransferRequest("Approved"));
 
         assertEquals(TransferStatus.RECEIVED, response.status());
         assertSame(destination, inmate.getCurrentPrison());
@@ -74,6 +71,6 @@ class TransferApprovalTest {
         assertNotNull(transfer.getReceivedAt());
         verify(prisonAccess).requireTransfer(transferId, true);
         verify(cells).releaseCurrentAllocation(inmate.getId());
-        verify(cells).allocate(eq(inmate.getPublicUuid()), eq(new AllocateCellRequest(destinationCellId)));
+        org.mockito.Mockito.verify(cells, org.mockito.Mockito.never()).allocate(any(), any());
     }
 }

@@ -40,7 +40,7 @@ public class IncidentController {
         return incidentService.logIncident(request, currentUser.getUsername());
     }
 
-    // Disciplinary Officers and Super Admins can view an inmate's history.
+    // Only Disciplinary Officers and Records Officers can view an inmate's history.
     @GetMapping("/inmates/{inmateId}/incidents")
     @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'RECORDS_OFFICER')")
     @Operation(summary = "Get an inmate's incident history")
