@@ -68,17 +68,6 @@ public class ApiExceptionHandler {
         return problem(HttpStatus.NOT_FOUND, "Sentence not found.");
     }
 
-    @ExceptionHandler(SentenceService.SentenceExtensionNotFoundException.class)
-    public ResponseEntity<ApiError> handleSentenceExtensionNotFound() {
-        return problem(HttpStatus.NOT_FOUND, "Sentence extension request not found.");
-    }
-
-    @ExceptionHandler(SentenceService.SentenceExtensionConflictException.class)
-    public ResponseEntity<ApiError> handleSentenceExtensionConflict() {
-        return problem(HttpStatus.CONFLICT,
-                "The sentence extension request conflicts with its current status or sentence.");
-    }
-
     @ExceptionHandler(SentenceService.InmateNotFoundException.class)
     public ResponseEntity<ApiError> handleSentenceInmateNotFound() {
         return problem(HttpStatus.NOT_FOUND, "Inmate not found.");
@@ -107,6 +96,12 @@ public class ApiExceptionHandler {
     @ExceptionHandler(UserService.EmailAlreadyExistsException.class)
     public ResponseEntity<ApiError> handleEmailConflict() {
         return problem(HttpStatus.CONFLICT, "Email already exists.");
+    }
+
+    @ExceptionHandler({UserService.AccountEmailUnavailableException.class,
+            com.pms.api.user.service.NewAccountEmailService.AccountEmailDeliveryException.class})
+    public ResponseEntity<ApiError> handleAccountEmailUnavailable() {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Account email delivery is temporarily unavailable.");
     }
 
     @ExceptionHandler(UserService.UserIdentityAlreadyExistsException.class)

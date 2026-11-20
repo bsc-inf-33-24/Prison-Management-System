@@ -1,5 +1,6 @@
 package com.pms.api.user.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -7,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Locale;
 import java.util.UUID;
 
+@JsonIgnoreProperties(ignoreUnknown = false)
 public record CreateUserRequest(
     @Schema(description = "User's full name", requiredMode = Schema.RequiredMode.REQUIRED, example = "Records Officer")
         @NotBlank(message = "Full name is required.")
@@ -17,17 +19,12 @@ public record CreateUserRequest(
         @Size(max = 16, message = "Username must not exceed 16 characters.")
         String username,
 
-        @Schema(description = "Optional contact email. Omit or set to null when the user has no email. When supplied, it must be valid; surrounding spaces are trimmed and the address is lowercased.",
-                nullable = true, maxLength = 254, example = "records.officer@example.test")
+        @Schema(description = "Required email address. The system sends a generated temporary password to this address; surrounding spaces are trimmed and the address is lowercased.",
+                requiredMode = Schema.RequiredMode.REQUIRED, maxLength = 254, example = "records.officer@example.test")
+        @NotBlank(message = "Email is required for account setup.")
         @Email(message = "Email must be a valid email address.")
         @Size(min = 1, max = 254, message = "Email must not exceed 254 characters and must not be blank.")
         String email,
-
-        @Schema(description = "Password must be 8 to 16 characters and contain at least one digit and one punctuation mark.",
-                requiredMode = Schema.RequiredMode.REQUIRED, minLength = 8, maxLength = 16, example = "Records123!")
-        @NotBlank(message = "Password is required.")
-        @Size(min = 8, max = 16, message = "Password must be between 8 and 16 characters.")
-        String password,
 
         @Schema(description = "User role", requiredMode = Schema.RequiredMode.REQUIRED,
             allowableValues = {"Super Admin", "Commissioner", "Records Officer", "Disciplinary Officer", "Case Officer", "Visitor Officer", "Instructor", "Medical Officer", "Duty Officer", "Program Facilitator"},

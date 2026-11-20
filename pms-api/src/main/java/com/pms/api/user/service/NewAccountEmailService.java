@@ -18,25 +18,31 @@ public class NewAccountEmailService {
     private final String from;
 
     public NewAccountEmailService(JavaMailSender mailSender,
+                                  @Value("${spring.mail.host:}") String host,
                                   @Value("${app.recovery.email.from:}") String from) {
+        if (host.isBlank() || from.isBlank())
+            throw new IllegalStateException("Enabled account email requires SMTP host and sender configuration.");
         this.mailSender = mailSender;
         this.from = from;
     }
 
-    public void sendPasswordChangeInstruction(User user) {
-        if (user.getEmail() == null || user.getEmail().isBlank()) return;
+    public void sendTemporaryPassword(User user, String temporaryPassword) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(from);
         message.setTo(user.getEmail());
-        message.setSubject("Your prison management system account");
+        message.setSubject("Your prison management system account password");
         message.setText("Hello " + user.getFullName() + ",\n\n"
-                + "An account has been created for you. Sign in with the credentials provided by your administrator, "
-                + "then change your password immediately. If you need a password reset, use the Forgot Password option.\n\n"
-                + "For your security, never share your password or send it by email.");
+                + "An account has been created for you. Sign in with username " + user.getUsername()
+                + " and this temporary password:\n\n" + temporaryPassword + "\n\n"
+                + "For security, change this password after signing in using the Change Password option.\n\n"
+                + "For your security, do not share this email or password.");
         try {
             mailSender.send(message);
         } catch (MailException exception) {
             LOGGER.warn("New account email delivery failed ({})", exception.getClass().getName());
+            throw new AccountEmailDeliveryException();
         }
     }
+
+    public static class AccountEmailDeliveryException extends RuntimeException { }
 }

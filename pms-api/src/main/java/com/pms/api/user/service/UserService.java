@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import java.security.SecureRandom;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -32,6 +33,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 @Service
 public class UserService implements UserDetailsService {
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -60,23 +62,24 @@ public class UserService implements UserDetailsService {
     @Audited
     @Transactional
     public UserResponse create(CreateUserRequest request) {
+        if (newAccountEmailService == null) throw new AccountEmailUnavailableException();
         String username = request.username().trim();
-        passwordPolicy.validate(request.password());
         validateRole(request.role());
         Prison prison = resolvePrisonForRole(request.role(), request.prisonId());
         if (userRepository.existsByUsername(username)) {
             throw new UsernameAlreadyExistsException();
         }
         String email = request.email();
-        if (email != null && userRepository.existsByEmailIgnoreCase(email)) {
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new EmailAlreadyExistsException();
         }
 
+        String temporaryPassword = temporaryPassword();
         User user = new User(
                 request.fullName().trim(),
                 username,
                 email,
-                passwordEncoder.encode(request.password()),
+                passwordEncoder.encode(temporaryPassword),
                 request.role().trim(),
                 Set.of()
         );
@@ -94,7 +97,7 @@ public class UserService implements UserDetailsService {
                 "Your user account has been created.",
                 saved.getPublicUuid(),
                 Set.of("Super Admin"));
-        if (newAccountEmailService != null) newAccountEmailService.sendPasswordChangeInstruction(saved);
+        newAccountEmailService.sendTemporaryPassword(saved, temporaryPassword);
         return UserResponse.from(saved);
     }
 
@@ -263,6 +266,25 @@ public class UserService implements UserDetailsService {
         user.resetLoginFailures();
     }
 
+    private static String temporaryPassword() {
+        String alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+        char[] password = new char[10];
+        boolean hasDigit = false;
+        boolean hasPunctuation = false;
+        for (int i = 0; i < password.length; i++) {
+            password[i] = alphabet.charAt(RANDOM.nextInt(alphabet.length()));
+            hasDigit |= Character.isDigit(password[i]);
+            hasPunctuation |= !Character.isLetterOrDigit(password[i]);
+        }
+        if (!hasDigit) password[0] = '7';
+        if (!hasPunctuation) password[1] = '!';
+        for (int i = password.length - 1; i > 0; i--) {
+            int j = RANDOM.nextInt(i + 1);
+            char c = password[i]; password[i] = password[j]; password[j] = c;
+        }
+        return new String(password);
+    }
+
     @Override
     @Transactional(readOnly = true, noRollbackFor = UsernameNotFoundException.class)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -295,6 +317,7 @@ public class UserService implements UserDetailsService {
     }
 
     public static class UserNotFoundException extends RuntimeException { }
+    public static class AccountEmailUnavailableException extends RuntimeException { }
     public static class UsernameAlreadyExistsException extends RuntimeException { }
     public static class EmailAlreadyExistsException extends RuntimeException { }
     public static class UserIdentityAlreadyExistsException extends RuntimeException { }

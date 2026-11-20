@@ -43,10 +43,4 @@ public class InmateSentence extends BaseEntity {
     public LocalDate getEndDate() { return endDate; }
     public SentenceStatus getStatus() { return status; }
     public void changeStatus(SentenceStatus status) { this.status = status; }
-    public void extendEndDate(LocalDate endDate) {
-        if (sentenceType != SentenceType.FIXED_TERM || endDate == null || !endDate.isAfter(this.endDate)) {
-            throw new IllegalArgumentException("A fixed-term sentence can only be extended to a later end date.");
-        }
-        this.endDate = endDate;
-    }
 }

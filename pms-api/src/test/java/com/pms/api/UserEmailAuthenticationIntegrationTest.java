@@ -18,6 +18,7 @@ import com.pms.api.auth.service.RecoveryTokenDelivery;
 import com.pms.api.security.jwt.JwtService;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
+import com.pms.api.user.service.NewAccountEmailService;
 import jakarta.servlet.http.Cookie;
 import java.util.Optional;
 import java.util.Set;
@@ -63,17 +64,19 @@ class UserEmailAuthenticationIntegrationTest {
     @MockitoBean
     private RecoveryTokenDelivery recoveryDelivery;
 
+    @MockitoBean
+    private NewAccountEmailService accountEmailService;
+
     @BeforeEach
     void resetRecoveryDeliveryMock() {
         reset(recoveryDelivery);
+        reset(accountEmailService);
     }
 
     @Test
-    void acceptsOptionalEmailAndAuthenticatesWithUsernameOrNormalizedEmail() throws Exception {
+    void requiresEmailAndAuthenticatesWithUsernameOrNormalizedEmailAfterPasswordSetup() throws Exception {
         String noEmailUsername = uniqueUsername();
-        JsonNode noEmailResponse = createUser(noEmailUsername, null, false);
-        assertTrue(noEmailResponse.path("email").isNull());
-        login(noEmailUsername, "Records123!").andExpect(status().isOk());
+        createUserRequest(noEmailUsername, null, false).andExpect(status().isBadRequest());
 
         String username = uniqueUsername();
         JsonNode response = createUser(username, "  Records." + UUID.randomUUID() + "@Example.Test  ", true);
@@ -167,7 +170,7 @@ class UserEmailAuthenticationIntegrationTest {
         createUserRequest(uniqueUsername(), "   ", true).andExpect(status().isBadRequest());
         createUserRequest(uniqueUsername(), "a".repeat(245) + "@example.test", true)
                 .andExpect(status().isBadRequest());
-        createUser(uniqueUsername(), null, true);
+        createUserRequest(uniqueUsername(), null, true).andExpect(status().isBadRequest());
     }
 
     @Test
@@ -175,7 +178,6 @@ class UserEmailAuthenticationIntegrationTest {
         ObjectNode request = objectMapper.createObjectNode();
         request.put("fullName", "Test Records Officer");
         request.put("username", uniqueUsername());
-        request.put("password", "Records123");
         request.put("role", "Records Officer");
 
         mockMvc.perform(post("/api/v1/users")
@@ -184,7 +186,7 @@ class UserEmailAuthenticationIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest());
 
-        request.put("password", "Records123!");
+        request.put("email", "required." + UUID.randomUUID() + "@example.test");
         request.put("fullName", "");
         mockMvc.perform(post("/api/v1/users")
                 .header("Authorization", "Bearer " + adminToken())
@@ -386,14 +388,27 @@ class UserEmailAuthenticationIntegrationTest {
     private JsonNode createUser(String username, String email, boolean includeEmail) throws Exception {
         MvcResult result = createUserRequest(username, email, includeEmail)
                 .andExpect(status().isCreated()).andReturn();
-        return objectMapper.readTree(result.getResponse().getContentAsString());
+        JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
+        ArgumentCaptor<String> temporaryPassword = ArgumentCaptor.forClass(String.class);
+        verify(accountEmailService).sendTemporaryPassword(org.mockito.ArgumentMatchers.any(User.class), temporaryPassword.capture());
+        String loginBody = login(username, temporaryPassword.getValue()).andExpect(status().isOk()).andReturn()
+                .getResponse().getContentAsString();
+        String accessToken = objectMapper.readTree(loginBody).path("accessToken").asText();
+        ObjectNode changePassword = objectMapper.createObjectNode();
+        changePassword.put("currentPassword", temporaryPassword.getValue());
+        changePassword.put("newPassword", "Records123!");
+        mockMvc.perform(post("/api/v1/auth/password/change")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(changePassword)))
+                .andExpect(status().isNoContent());
+        return response;
     }
 
     private ResultActions createUserRequest(String username, String email, boolean includeEmail) throws Exception {
         ObjectNode request = objectMapper.createObjectNode();
         request.put("fullName", "Test Records Officer");
         request.put("username", username);
-        request.put("password", "Records123!");
         request.put("role", "Records Officer");
         if (includeEmail) {
             if (email == null) {

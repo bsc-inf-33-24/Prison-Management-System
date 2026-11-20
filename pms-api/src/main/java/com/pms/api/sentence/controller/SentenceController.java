@@ -9,65 +9,34 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/sentences")
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "09. Sentences and remission", description = "Manage inmate sentences and their remission records.")
 public class SentenceController {
     private final SentenceService service;
     public SentenceController(SentenceService service) { this.service = service; }
 
-    @PostMapping("/sentences")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
     public SentenceResponse create(@Valid @RequestBody CreateSentenceRequest request) { return service.create(request); }
 
-    @GetMapping("/inmates/{inmateId}/sentences")
+    @GetMapping("/{sentenceId}")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
-    public List<SentenceResponse> list(@PathVariable UUID inmateId) { return service.list(inmateId); }
+    public SentenceResponse get(@PathVariable UUID sentenceId) { return service.get(sentenceId); }
 
-    @PatchMapping("/sentences/{sentenceId}/status")
+    @PatchMapping("/{sentenceId}")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
-    public SentenceResponse updateStatus(@PathVariable UUID sentenceId,
-            @Valid @RequestBody UpdateSentenceStatusRequest request) {
-        return service.updateStatus(sentenceId, request.status());
+    public SentenceResponse update(@PathVariable UUID sentenceId,
+            @Valid @RequestBody PatchSentenceRequest request) {
+        return service.update(sentenceId, request);
     }
 
-    @PostMapping("/sentences/{sentenceId}/remissions")
-    @ResponseStatus(HttpStatus.CREATED)
+    @GetMapping
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
-    public RemissionResponse addRemission(@PathVariable UUID sentenceId,
-            @Valid @RequestBody CreateRemissionRequest request,
-            @AuthenticationPrincipal UserDetails user) {
-        return service.addRemission(sentenceId, request, user.getUsername());
-    }
+    public List<SentenceResponse> list(@RequestParam UUID inmateId) { return service.list(inmateId); }
 
-    @GetMapping("/sentences/{sentenceId}/remissions")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
-    public List<RemissionResponse> listRemissions(@PathVariable UUID sentenceId) { return service.listRemissions(sentenceId); }
-
-    @PostMapping("/sentences/{sentenceId}/extensions")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN', 'COMMISSIONER')")
-    public SentenceExtensionResponse requestExtension(@PathVariable UUID sentenceId,
-            @Valid @RequestBody CreateSentenceExtensionRequest request) {
-        return service.requestExtension(sentenceId, request);
-    }
-
-    @GetMapping("/sentences/{sentenceId}/extensions")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN', 'COMMISSIONER')")
-    public List<SentenceExtensionResponse> listExtensions(@PathVariable UUID sentenceId) {
-        return service.listExtensions(sentenceId);
-    }
-
-    @PostMapping("/sentence-extensions/{requestId}/decision")
-    @PreAuthorize("hasRole('COMMISSIONER')")
-    public SentenceExtensionResponse decideExtension(@PathVariable UUID requestId,
-            @Valid @RequestBody DecideSentenceExtensionRequest request) {
-        return service.decideExtension(requestId, request);
-    }
 }

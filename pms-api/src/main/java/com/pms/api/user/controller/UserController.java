@@ -48,14 +48,13 @@ public class UserController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a user", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            description = "Email is optional. Remove the email property or set it to null for a user without an email.",
+            description = "Email is required. The system emails a generated temporary password; the request never accepts a password.",
             content = @Content(schema = @Schema(implementation = CreateUserRequest.class),
                 examples = @ExampleObject(name = "Create user", value = """
                     {
                       "fullName": "Records Officer",
                       "username": "records01",
                       "email": "records.officer@example.test",
-                      "password": "Records123!",
                       "role": "Records Officer",
                       "prisonId": "9b91b52d-d631-4bea-a1df-f8b66473dc0a"
                     }
@@ -63,7 +62,7 @@ public class UserController {
         @ApiResponses({
             @ApiResponse(responseCode = "201", description = "User created.",
                 content = @Content(schema = @Schema(implementation = UserResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Required fields, role, or password policy is invalid.",
+            @ApiResponse(responseCode = "400", description = "Required fields, email, or role is invalid.",
                 content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "401", description = "Authentication is required.",
                 content = @Content(schema = @Schema(implementation = ApiError.class))),

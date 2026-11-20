@@ -7,6 +7,7 @@ import com.pms.api.common.audit.Audited;
 import com.pms.api.inmate.dto.InmateRequest;
 import com.pms.api.inmate.dto.InmateResponse;
 import com.pms.api.inmate.dto.UpdateInmateDetailsRequest;
+import com.pms.api.inmate.dto.PatchRemandRequest;
 import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.entity.CustodyStay;
 import com.pms.api.inmate.repository.CustodyStayRepository;
@@ -144,6 +145,15 @@ public class InmateService {
                 gender,
                 request.admissionDate() == null ? inmate.getAdmissionDate() : request.admissionDate()
         );
+        return InmateResponse.from(saveInmate(inmate));
+    }
+
+    @Audited
+    @Transactional
+    public InmateResponse updateRemand(UUID inmateId, PatchRemandRequest request) {
+        Inmate inmate = findInmate(inmateId);
+        prisonAccess.requirePrison(inmate.getCurrentPrison() == null ? null : inmate.getCurrentPrison().getPublicUuid());
+        inmate.updateExpectedCourtDate(request.expectedCourtDate());
         return InmateResponse.from(saveInmate(inmate));
     }
 

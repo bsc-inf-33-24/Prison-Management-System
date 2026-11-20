@@ -20,6 +20,7 @@ import com.pms.api.user.dto.UpdateUserDetailsRequest;
 import com.pms.api.user.entity.User;
 import com.pms.api.user.repository.UserRepository;
 import com.pms.api.user.service.UserService;
+import com.pms.api.user.service.NewAccountEmailService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.util.Set;
@@ -32,6 +33,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -52,6 +54,9 @@ class NotificationApiIntegrationTest {
 
     @Autowired
     private UserService userService;
+
+    @MockitoBean
+    private NewAccountEmailService newAccountEmailService;
 
     @Autowired
     private InmateRepository inmateRepository;
@@ -117,7 +122,7 @@ class NotificationApiIntegrationTest {
                 "Notification Test Prison",
                 null));
         userService.create(new CreateUserRequest(
-                "New Records Officer", username, null, "GoodPass1!", "Records Officer", prison.getPublicUuid()));
+                "New Records Officer", username, "new." + username + "@example.test", "Records Officer", prison.getPublicUuid()));
         User createdUser = userRepository.findByUsername(username).orElseThrow();
 
         assertThat(notificationRepository.findByRecipientUserIdOrderByCreatedAtDesc(createdUser.getId()))
