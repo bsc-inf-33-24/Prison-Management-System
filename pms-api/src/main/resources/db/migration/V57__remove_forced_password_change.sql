@@ -1,2 +1,2 @@
 ALTER TABLE users
-    DROP COLUMN must_change_password;
+    DROP COLUMN IF EXISTS must_change_password;
