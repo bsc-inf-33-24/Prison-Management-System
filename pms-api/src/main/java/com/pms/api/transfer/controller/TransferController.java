@@ -1,10 +1,8 @@
 package com.pms.api.transfer.controller;
 
 import com.pms.api.common.pagination.PageResponse;
-import com.pms.api.transfer.dto.ApproveTransferRequest;
+import com.pms.api.transfer.dto.ChangeTransferStatusRequest;
 import com.pms.api.transfer.dto.CreateTransferRequest;
-import com.pms.api.transfer.dto.ConfirmTransferReceiptRequest;
-import com.pms.api.transfer.dto.TransferDecisionRequest;
 import com.pms.api.transfer.dto.TransferResponse;
 import com.pms.api.transfer.entity.TransferStatus;
 import com.pms.api.transfer.service.TransferService;
@@ -31,7 +29,7 @@ public class TransferController {
     private final TransferService service;
     public TransferController(TransferService service) { this.service=service; }
 
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','COMMISSIONER','DISCIPLINARY_OFFICER','CASE_OFFICER','VISITOR_OFFICER','INSTRUCTOR','MEDICAL_OFFICER','DUTY_OFFICER','PROGRAM_FACILITATOR')")
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
     public TransferResponse create(@Valid @RequestBody CreateTransferRequest request) { return service.create(request); }
     @GetMapping
@@ -41,18 +39,10 @@ public class TransferController {
             @RequestParam(required=false) Integer size,@RequestParam(required=false) List<String> sort) {
         return service.list(status,prisonId,page,size,sort);
     }
-    @PostMapping("/{id}/approve")
-    @PreAuthorize("hasRole('COMMISSIONER')")
-    @Operation(summary = "Approve and complete an inmate transfer")
-    public TransferResponse approve(@PathVariable UUID id,@Valid @RequestBody ApproveTransferRequest request) {
-        return service.approve(id,request);
+    @PostMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','COMMISSIONER')")
+    @Operation(summary = "Change a transfer status according to role and prison assignment")
+    public TransferResponse changeStatus(@PathVariable UUID id,@Valid @RequestBody ChangeTransferStatusRequest request) {
+        return service.changeStatus(id,request);
     }
-    @PostMapping("/{id}/confirm-receipt")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
-    @Operation(summary = "Confirm an arriving inmate and assign a destination cell")
-    public TransferResponse confirmReceipt(@PathVariable UUID id, @Valid @RequestBody ConfirmTransferReceiptRequest request) {
-        return service.confirmReceipt(id, request);
-    }
-    @PostMapping("/{id}/reject") @PreAuthorize("hasRole('COMMISSIONER')") public TransferResponse reject(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.reject(id,request); }
-    @PostMapping("/{id}/cancel") @PreAuthorize("hasRole('COMMISSIONER')") public TransferResponse cancel(@PathVariable UUID id,@RequestBody(required=false) TransferDecisionRequest request) { return service.cancel(id,request); }
 }

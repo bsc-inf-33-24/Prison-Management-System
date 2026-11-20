@@ -1,5 +1,6 @@
-
 package com.pms.api.auth.dto;
 
-public record AuthResponse(String accessToken, String tokenType, String refreshToken) { }
+import java.time.Instant;
+
+public record AuthResponse(String accessToken, String tokenType, String refreshToken, Instant refreshTokenExpiresAt) { }
 

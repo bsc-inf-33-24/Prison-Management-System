@@ -12,15 +12,15 @@ import com.pms.api.inmate.entity.CustodyStay;
 import com.pms.api.inmate.repository.CustodyStayRepository;
 import com.pms.api.prison.entity.Prison;
 import com.pms.api.prison.repository.PrisonRepository;
+import com.pms.api.transfer.dto.ChangeTransferStatusRequest;
 import com.pms.api.transfer.dto.ApproveTransferRequest;
 import com.pms.api.transfer.dto.CreateTransferRequest;
-import com.pms.api.transfer.dto.ConfirmTransferReceiptRequest;
-import com.pms.api.transfer.dto.TransferDecisionRequest;
 import com.pms.api.transfer.dto.TransferResponse;
 import com.pms.api.transfer.entity.InmateTransfer;
 import com.pms.api.transfer.entity.TransferStatus;
 import com.pms.api.transfer.repository.InmateTransferRepository;
 import com.pms.api.security.PrisonAccessService;
+import com.pms.api.user.entity.User;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -60,11 +60,17 @@ public class TransferService {
     public TransferResponse create(CreateTransferRequest request) {
         Inmate inmate=inmates.findByPublicUuid(request.inmateId()).orElseThrow(InmateNotFoundException::new);
         prisonAccess.requireInmate(request.inmateId());
-        Prison source=inmate.getCurrentPrison();
+        User creator=prisonAccess.currentUser();
+        boolean commissioner="Commissioner".equals(creator.getRole());
+        if (!commissioner && (request.sourcePrisonId()==null || request.destinationPrisonId()==null))
+            throw new MissingTransferPrisonsException();
+        Prison source=request.sourcePrisonId()==null?inmate.getCurrentPrison():prisons.findByPublicUuid(request.sourcePrisonId()).orElseThrow(PrisonNotFoundException::new);
         if (source==null) throw new InmatePrisonNotAssignedException();
-        Prison destination=prisons.findByPublicUuid(request.destinationPrisonId()).orElseThrow(PrisonNotFoundException::new);
-        if (!source.isActive() || !destination.isActive()) throw new InactivePrisonException();
-        if (source.getId().equals(destination.getId())) throw new SamePrisonException();
+        Prison destination=request.destinationPrisonId()==null?null:prisons.findByPublicUuid(request.destinationPrisonId()).orElseThrow(PrisonNotFoundException::new);
+        if (!commissioner) prisonAccess.requirePrison(source.getPublicUuid());
+        if (inmate.getCurrentPrison()==null || !inmate.getCurrentPrison().getId().equals(source.getId())) throw new InmatePrisonNotAssignedException();
+        if (!source.isActive() || (destination!=null && !destination.isActive())) throw new InactivePrisonException();
+        if (destination!=null && source.getId().equals(destination.getId())) throw new SamePrisonException();
         if (transfers.existsByInmate_IdAndStatusIn(inmate.getId(),ACTIVE)) throw new ActiveTransferExistsException();
         try {
             InmateTransfer transfer=transfers.saveAndFlush(new InmateTransfer(inmate,source,destination,request.reason().trim(),actor()));
@@ -87,47 +93,36 @@ public class TransferService {
 
     @Audited
     @Transactional
+    public TransferResponse changeStatus(UUID id, ChangeTransferStatusRequest request) {
+        InmateTransfer transfer=getLocked(id);
+        User user=prisonAccess.currentUser();
+        if ("Commissioner".equals(user.getRole())) {
+            if (request.status()==TransferStatus.APPROVED) transfer.approve(actor(), null);
+            else if (request.status()==TransferStatus.REJECTED) transfer.reject(actor(), null);
+            else throw new InvalidTransferStatusException();
+        } else if ("Records Officer".equals(user.getRole()) && request.status()==TransferStatus.CONFIRMED) {
+            if (transfer.getDestinationPrison()==null) throw new MissingTransferPrisonsException();
+            prisonAccess.requireTransfer(id, true);
+            Inmate inmate=transfer.getInmate();
+            transfer.confirm(actor());
+            inmate.assignPrison(transfer.getDestinationPrison());
+            if (custodyStays!=null) {
+                CustodyStay stay=custodyStays.findFirstByInmate_IdAndEndedAtIsNullOrderByIdDesc(inmate.getId()).orElseThrow(InmateHasNoCellException::new);
+                stay.transferTo(transfer.getDestinationPrison());
+                custodyStays.saveAndFlush(stay);
+            }
+        } else if (request.status()==TransferStatus.CANCELLED && "Records Officer".equals(user.getRole())) {
+            prisonAccess.requireTransfer(id, false);
+            transfer.cancel(actor(), null);
+        } else throw new InvalidTransferStatusException();
+        return TransferResponse.from(transfer);
+    }
+
+    /** Kept for source compatibility with existing internal callers; HTTP mutations use changeStatus. */
+    @Deprecated
     public TransferResponse approve(UUID id, ApproveTransferRequest request) {
-        prisonAccess.requireTransfer(id, true);
         InmateTransfer transfer=getLocked(id);
-        String actor = actor();
-        transfer.approve(actor, clean(request.note()));
-        return TransferResponse.from(transfer);
-    }
-
-    @Audited
-    @Transactional
-    public TransferResponse confirmReceipt(UUID id, ConfirmTransferReceiptRequest request) {
-        prisonAccess.requireTransfer(id, true);
-        InmateTransfer transfer = getLocked(id);
-        if (cells.releaseCurrentAllocation(transfer.getInmate().getId()) == 0) throw new InmateHasNoCellException();
-        Inmate inmate = transfer.getInmate();
-        inmate.assignPrison(transfer.getDestinationPrison());
-        cells.allocate(inmate.getPublicUuid(), new AllocateCellRequest(request.cellId()));
-        if (custodyStays != null) {
-            CustodyStay activeStay = custodyStays.findFirstByInmate_IdAndEndedAtIsNullOrderByIdDesc(inmate.getId())
-                    .orElseThrow(InmateHasNoCellException::new);
-            activeStay.transferTo(transfer.getDestinationPrison());
-            custodyStays.saveAndFlush(activeStay);
-        }
-        transfer.receive(actor(), request.cellId());
-        return TransferResponse.from(transfer);
-    }
-
-    @Audited
-    @Transactional
-    public TransferResponse reject(UUID id, TransferDecisionRequest request) {
-        prisonAccess.requireTransfer(id, true);
-        InmateTransfer transfer = getLocked(id);
-        transfer.reject(actor(), request == null ? null : clean(request.note()));
-        return TransferResponse.from(transfer);
-    }
-
-    @Audited @Transactional
-    public TransferResponse cancel(UUID id,TransferDecisionRequest request) {
-        prisonAccess.requireTransfer(id,false);
-        InmateTransfer transfer=getLocked(id);
-        transfer.cancel(actor(),request==null?null:clean(request.note()));
+        transfer.approve(actor(), clean(request==null?null:request.note()));
         return TransferResponse.from(transfer);
     }
 
@@ -142,4 +137,6 @@ public class TransferService {
     public static class ActiveTransferExistsException extends RuntimeException { }
     public static class TransferNotFoundException extends RuntimeException { }
     public static class InmateHasNoCellException extends RuntimeException { }
+    public static class MissingTransferPrisonsException extends RuntimeException { }
+    public static class InvalidTransferStatusException extends RuntimeException { }
 }
