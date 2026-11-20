@@ -30,15 +30,13 @@ FROM prisons p CROSS JOIN (VALUES
  ('Maula Case Officer','maula.case','Case Officer'),
  ('Maula Disciplinary Officer','maula.discipline','Disciplinary Officer'),
  ('Maula Program Facilitator','maula.program','Program Facilitator'),
- ('Maula Prison Officer','maula.officer','Prison Officer'),
  ('Chichiri Records Officer','chichiri.records','Records Officer'),
  ('Chichiri Medical Officer','chichiri.medical','Medical Officer'),
  ('Chichiri Duty Officer','chichiri.duty','Duty Officer'),
  ('Chichiri Visitor Officer','chichiri.visitor','Visitor Officer'),
  ('Chichiri Case Officer','chichiri.case','Case Officer'),
  ('Chichiri Disciplinary Officer','chichiri.discipline','Disciplinary Officer'),
- ('Chichiri Program Facilitator','chichiri.program','Program Facilitator'),
- ('Chichiri Prison Officer','chichiri.officer','Prison Officer')
+ ('Chichiri Program Facilitator','chichiri.program','Program Facilitator')
 ) u(full_name,username,role)
 WHERE p.code=CASE WHEN u.username LIKE 'maula.%' THEN 'MAULA' ELSE 'CHICHIRI' END
 ON CONFLICT (username) DO NOTHING;

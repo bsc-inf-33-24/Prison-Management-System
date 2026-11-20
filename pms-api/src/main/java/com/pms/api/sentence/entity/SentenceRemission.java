@@ -36,4 +36,9 @@ public class SentenceRemission extends BaseEntity {
     public LocalDate getEffectiveDate() { return effectiveDate; }
     public String getReason() { return reason; }
     public User getApprovedBy() { return approvedBy; }
+    public void update(BigDecimal remissionPercentage, LocalDate effectiveDate, String reason) {
+        this.remissionPercentage = remissionPercentage;
+        this.effectiveDate = effectiveDate;
+        this.reason = reason;
+    }
 }
