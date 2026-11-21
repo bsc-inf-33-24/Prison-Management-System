@@ -63,7 +63,7 @@ public class RehabilitationController {
     @PostMapping("/programs")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('PROGRAM_FACILITATOR')")
-    @Operation(summary = "Create a rehabilitation program")
+    @Operation(summary = "Create a rehabilitation program", description = "Creates a program owned by the authenticated Program Facilitator. Requires PROGRAM_FACILITATOR.")
     public ProgramResponse createProgram(@Valid @RequestBody CreateProgramRequest request,
                                          @AuthenticationPrincipal UserDetails currentUser) {
         return programService.create(request, currentUser.getUsername());
@@ -72,7 +72,7 @@ public class RehabilitationController {
     @GetMapping("/programs")
     @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR','RECORDS_OFFICER','INSTRUCTOR')")
     @Operation(summary = "List and search rehabilitation programs",
-            description = "Each program includes the inmates currently enrolled in it.")
+            description = "Each program includes the inmates currently enrolled in it. Optional filters are program name, instructor, status, and schedule. Results are paged with page size 20 by default. Requires PROGRAM_FACILITATOR, RECORDS_OFFICER, or INSTRUCTOR; visibility follows the caller's assignments.")
     public Page<ProgramResponse> listPrograms(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String instructor,
@@ -86,14 +86,14 @@ public class RehabilitationController {
 
     @GetMapping("/programs/{programId}")
     @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'RECORDS_OFFICER', 'INSTRUCTOR')")
-    @Operation(summary = "Get a rehabilitation program")
+    @Operation(summary = "Get a rehabilitation program", description = "Returns program details, including enrolled inmates, for the program UUID. Requires PROGRAM_FACILITATOR, RECORDS_OFFICER, or INSTRUCTOR; visibility follows the caller's assignments.")
     public ProgramDetailResponse getProgram(@PathVariable UUID programId, @AuthenticationPrincipal UserDetails currentUser) {
         return programService.getDetails(programId, currentUser.getUsername());
     }
 
     @PatchMapping("/programs/{programId}")
     @PreAuthorize("hasRole('PROGRAM_FACILITATOR')")
-    @Operation(summary = "Update rehabilitation program details")
+    @Operation(summary = "Update rehabilitation program details", description = "Updates the supplied fields for a program the caller can manage. Requires PROGRAM_FACILITATOR.")
     public ProgramResponse updateProgram(@PathVariable UUID programId,
                                          @Valid @RequestBody UpdateProgramRequest request,
                                          @AuthenticationPrincipal UserDetails currentUser) {
@@ -103,7 +103,7 @@ public class RehabilitationController {
     @PostMapping("/programs/enrollments")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('PROGRAM_FACILITATOR')")
-    @Operation(summary = "Enroll an inmate in a rehabilitation program")
+    @Operation(summary = "Enroll an inmate in a rehabilitation program", description = "Creates an enrollment using the inmate and program UUIDs in the request. Requires PROGRAM_FACILITATOR.")
     public EnrollmentResponse createEnrollment(@Valid @RequestBody CreateEnrollmentRequest request,
                                                 @AuthenticationPrincipal UserDetails currentUser) {
         return enrollmentService.create(request, currentUser.getUsername());
@@ -111,7 +111,7 @@ public class RehabilitationController {
 
     @GetMapping("/programs/enrollments")
     @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'RECORDS_OFFICER', 'INSTRUCTOR')")
-    @Operation(summary = "List and search rehabilitation program enrollments")
+    @Operation(summary = "List rehabilitation program enrollments", description = "Returns paged enrollment records, optionally filtered by inmate UUID or name, program UUID or name, and enrollment status. Page size is limited to 100. Requires PROGRAM_FACILITATOR, RECORDS_OFFICER, or INSTRUCTOR.")
     public Page<EnrollmentResponse> listEnrollments(
             @RequestParam(required = false) UUID inmateId,
             @RequestParam(required = false) String inmateName,
@@ -130,7 +130,7 @@ public class RehabilitationController {
     @PostMapping("/programs/attendance")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('INSTRUCTOR', 'PROGRAM_FACILITATOR')")
-    @Operation(summary = "Record attendance for a rehabilitation program session")
+    @Operation(summary = "Record attendance for a program session", description = "Records one inmate's attendance for a session using the request fields. Requires INSTRUCTOR or PROGRAM_FACILITATOR.")
     public AttendanceResponse createAttendance(@Valid @RequestBody RecordAttendanceRequest request,
                                          @AuthenticationPrincipal UserDetails currentUser) {
         return attendanceService.create(request, currentUser.getUsername());
@@ -139,7 +139,7 @@ public class RehabilitationController {
     @PostMapping("/programs/attendance/bulk")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'INSTRUCTOR')")
-    @Operation(summary = "Record attendance for multiple inmates in one session")
+    @Operation(summary = "Record attendance for multiple inmates", description = "Records attendance entries for multiple inmates in one session. Requires PROGRAM_FACILITATOR or INSTRUCTOR.")
     public List<AttendanceResponse> createBulkAttendance(
             @Valid @RequestBody BulkRecordAttendanceRequest request,
             @AuthenticationPrincipal UserDetails currentUser) {
@@ -150,7 +150,8 @@ public class RehabilitationController {
     @PreAuthorize("hasAnyRole('PROGRAM_FACILITATOR', 'RECORDS_OFFICER', 'INSTRUCTOR')")
     @Operation(summary = "List and search inmate program attendance records",
             description = "Combine optional filters to find attendance by inmate, program name, status, or session date range. "
-                    + "Date bounds are inclusive and use YYYY-MM-DD. Results default to newest session first; page size is limited to 100.")
+                    + "Date bounds are inclusive and use YYYY-MM-DD. Results default to newest session first; page size is limited to 100. "
+                    + "Requires PROGRAM_FACILITATOR, RECORDS_OFFICER, or INSTRUCTOR.")
     public Page<AttendanceResponse> listAttendance(
             @Parameter(description = "Inmate public UUID.")
             @RequestParam(required = false) UUID inmateId,

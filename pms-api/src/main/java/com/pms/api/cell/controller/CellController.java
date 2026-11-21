@@ -35,7 +35,8 @@ public class CellController {
 
     @PutMapping("/inmates/{inmateId}/cell-allocation")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
-    @Operation(summary = "Move an inmate to a different cell")
+    @Operation(summary = "Move an inmate to a different cell",
+            description = "Moves the inmate identified by inmateId into the destination cell UUID in the request. Requires RECORDS_OFFICER. The move is rejected if the inmate or cell is unavailable or the destination has no capacity.")
     public CellMoveResponse move(@PathVariable UUID inmateId,
                                 @Valid @RequestBody AllocateCellRequest request) {
         return cellService.move(inmateId, request);
@@ -43,7 +44,8 @@ public class CellController {
 
     @GetMapping("/cells")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
-    @Operation(summary = "List cells")
+    @Operation(summary = "List cells",
+            description = "Returns paged cell records. Optional filters include block name, prison UUID, and block UUID; page, size, and sort control pagination. Requires RECORDS_OFFICER, COMMISSIONER, or SUPER_ADMIN.")
     public PageResponse<CellResponse> listCells(@RequestParam(required = false) String blockName,
                                                 @RequestParam(required = false) UUID prisonId,
                                                 @RequestParam(required = false) UUID blockId,
@@ -55,7 +57,8 @@ public class CellController {
 
     @GetMapping("/cells/{cellId}")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
-    @Operation(summary = "Get a cell")
+    @Operation(summary = "Get a cell",
+            description = "Returns cell details, including allocation information, for the cell public UUID. Requires RECORDS_OFFICER, COMMISSIONER, or SUPER_ADMIN.")
     public CellDetailResponse getCell(@PathVariable UUID cellId) {
         return cellService.getCell(cellId);
     }

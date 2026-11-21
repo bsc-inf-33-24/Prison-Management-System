@@ -23,6 +23,8 @@ public class RemissionController {
 
     @GetMapping("/sentences/{sentenceId}/remissions")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @io.swagger.v3.oas.annotations.Operation(summary = "List sentence remission records",
+            description = "Returns remission entries recorded for the sentence UUID. Requires the RECORDS_OFFICER role.")
     public List<RemissionResponse> list(@PathVariable UUID sentenceId) {
         return service.listRemissions(sentenceId);
     }

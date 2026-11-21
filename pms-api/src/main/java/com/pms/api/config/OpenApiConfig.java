@@ -18,7 +18,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("Prison Management System API")
                         .version("v1")
-                        .description("Canonical documentation for the Prison Management System business API. All business endpoints are published under the /api/v1 prefix.")
+                        .description("Canonical documentation for the Prison Management System business API. All business endpoints are published under the /api/v1 prefix. Endpoints marked with bearerAuth require an Authorization header using a JWT: Bearer <token>. Role restrictions are listed in each operation description. Application-generated errors use the ApiError object with status, error, and message fields unless an operation documents otherwise. Page-based endpoints document their filters and pagination parameters.")
                         .contact(new Contact().name("Prison Management System Team"))
                         .license(new License().name("Internal Use Only")))
                 .components(new Components()

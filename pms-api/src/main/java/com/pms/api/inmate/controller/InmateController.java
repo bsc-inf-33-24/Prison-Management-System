@@ -55,7 +55,7 @@ public class InmateController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "Enroll an inmate",
-            description = "Creates the inmate at the authenticated Records Officer's assigned prison and allocates the inmate to a cell in that prison in one transaction.")
+            description = "Creates the inmate at the authenticated Records Officer's assigned prison and allocates the inmate to a cell in that prison in one transaction. Requires RECORDS_OFFICER.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Inmate created and allocated to the selected cell."),
             @ApiResponse(responseCode = "409", description = "The selected cell is full."),
@@ -69,7 +69,7 @@ public class InmateController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "Enroll an inmate with a photo",
-            description = "Accepts the enrollment JSON and an optional JPEG or PNG photo in one multipart request.",
+            description = "Accepts the enrollment JSON and an optional JPEG or PNG photo in one multipart request. Requires RECORDS_OFFICER.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(
                     mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
                     schema = @Schema(implementation = com.pms.api.inmate.dto.InmatePhotoEnrollmentRequest.class),
@@ -82,7 +82,7 @@ public class InmateController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
-    @Operation(summary = "List inmate records")
+    @Operation(summary = "List inmate records", description = "Returns paged inmate records. Search text and gender are optional filters; page, size, and sort control pagination. Requires RECORDS_OFFICER, COMMISSIONER, or SUPER_ADMIN.")
     public PageResponse<InmateResponse> list(@RequestParam(required = false) String search,
                                              @RequestParam(required = false) String gender,
                                              @RequestParam(required = false) Integer page,
@@ -93,7 +93,7 @@ public class InmateController {
 
     @GetMapping("/{inmateId}")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
-    @Operation(summary = "Get an inmate record")
+    @Operation(summary = "Get an inmate record", description = "Returns the inmate record identified by its public UUID. Requires RECORDS_OFFICER, COMMISSIONER, or SUPER_ADMIN.")
     public InmateResponse get(@PathVariable UUID inmateId) {
         return inmateService.get(inmateId);
     }
@@ -101,7 +101,7 @@ public class InmateController {
     @PatchMapping("/{inmateId}")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @Operation(summary = "Update an inmate record",
-            description = "Updates inmate details.")
+            description = "Updates the supplied inmate details for the inmate public UUID. Requires RECORDS_OFFICER.")
     public InmateResponse update(@PathVariable UUID inmateId,
                                  @Valid @RequestBody UpdateInmateDetailsRequest request) {
         return inmateService.update(inmateId, request);
@@ -109,7 +109,7 @@ public class InmateController {
 
     @PatchMapping("/{inmateId}/remand")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
-    @Operation(summary = "Update remand details", description = "Updates the expected court date for a remand inmate.")
+    @Operation(summary = "Update remand details", description = "Updates the expected court date for the remand inmate public UUID. Requires RECORDS_OFFICER.")
     public InmateResponse updateRemand(@PathVariable UUID inmateId,
                                        @Valid @RequestBody PatchRemandRequest request) {
         return inmateService.updateRemand(inmateId, request);
@@ -118,7 +118,7 @@ public class InmateController {
     @PostMapping("/{prisonerId}/readmissions")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
-    @Operation(summary = "Readmit an existing inmate")
+    @Operation(summary = "Readmit an existing inmate", description = "Opens a new custody stay for a previously discharged inmate using the supplied readmission details. Requires RECORDS_OFFICER.")
     public CustodyStayResponse readmit(@PathVariable UUID prisonerId,
                                        @Valid @RequestBody ReadmissionRequest request) {
         return readmissionService.readmit(prisonerId, request);
@@ -126,7 +126,7 @@ public class InmateController {
 
     @PostMapping("/{prisonerId}/discharge")
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
-    @Operation(summary = "Discharge an inmate")
+    @Operation(summary = "Discharge an inmate", description = "Closes the inmate's active custody stay. The path value is the inmate public UUID. Requires RECORDS_OFFICER.")
     public CustodyStayResponse discharge(@PathVariable UUID prisonerId) {
         return readmissionService.discharge(prisonerId);
     }

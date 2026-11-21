@@ -66,7 +66,7 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    @Operation(summary = "Refresh access token", description = "Validates a refresh token from the secure cookie and issues a new access token while rotating the refresh token.")
+    @Operation(summary = "Refresh access token", description = "Reads the refresh token from the HttpOnly refresh_token cookie, or from X-Refresh-Token when the cookie is absent. Issues a new access token, rotates the refresh token, and resets the cookie.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "A new access token was issued.",
                     content = @Content(schema = @Schema(implementation = AuthResponse.class))),
@@ -108,13 +108,13 @@ public class AuthController {
     }
 
     @PostMapping("/password/forgot")
-    @Operation(summary = "Initiate password recovery", description = "Accepts the account's registered email address and emails a six-digit reset code when a configured recovery delivery integration is available. The response is the same for registered and unregistered addresses.")
+    @Operation(summary = "Initiate password recovery", description = "Accepts the account's registered email address and emails a six-digit reset code when recovery email is configured. Returns the same response for registered and unregistered addresses to prevent account discovery.")
     public ResponseEntity<PasswordRecoveryResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         return ResponseEntity.accepted().body(authService.forgotPassword(request));
     }
 
     @PostMapping("/password/reset")
-    @Operation(summary = "Reset password", description = "Consumes a single-use, short-lived six-digit recovery code.")
+    @Operation(summary = "Reset password", description = "Consumes the single-use, short-lived six-digit recovery code and sets the new password. No authentication token is required.")
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ResponseEntity.noContent().build();

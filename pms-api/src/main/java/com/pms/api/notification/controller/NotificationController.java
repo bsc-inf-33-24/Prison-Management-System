@@ -30,7 +30,7 @@ public class NotificationController {
     }
 
     @GetMapping
-    @Operation(summary = "List notifications for the authenticated user")
+    @Operation(summary = "List notifications for the authenticated user", description = "Returns the caller's notifications, optionally limited to unread items. Page defaults to 0 and size to 20.")
     public PageResponse<NotificationResponse> list(
             @AuthenticationPrincipal UserDetails currentUser,
             @RequestParam(defaultValue = "false") boolean unreadOnly,
@@ -40,13 +40,13 @@ public class NotificationController {
     }
 
     @GetMapping("/unread-count")
-    @Operation(summary = "Get the authenticated user's unread notification count")
+    @Operation(summary = "Get the authenticated user's unread notification count", description = "Returns the number of unread notifications belonging to the caller.")
     public UnreadCountResponse unreadCount(@AuthenticationPrincipal UserDetails currentUser) {
         return new UnreadCountResponse(notificationService.unreadCount(currentUser.getUsername()));
     }
 
     @PatchMapping("/{notificationId}/read")
-    @Operation(summary = "Mark one of the authenticated user's notifications as read")
+    @Operation(summary = "Mark a notification as read", description = "Marks the notification identified by notificationId as read if it belongs to the caller.")
     public NotificationResponse markRead(@AuthenticationPrincipal UserDetails currentUser,
                                          @PathVariable Long notificationId) {
         return notificationService.markRead(currentUser.getUsername(), notificationId);
@@ -54,7 +54,7 @@ public class NotificationController {
 
     @PatchMapping("/read-all")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Mark all of the authenticated user's notifications as read")
+    @Operation(summary = "Mark all notifications as read", description = "Marks all notifications belonging to the caller as read. Returns no response body.")
     public void markAllRead(@AuthenticationPrincipal UserDetails currentUser) {
         notificationService.markAllRead(currentUser.getUsername());
     }
