@@ -47,7 +47,7 @@ public class UserController {
     @PostMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create a user", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+    @Operation(summary = "Create a user", description = "Creates a staff account and emails a generated temporary password to its required email address. Requires SUPER_ADMIN.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Email is required. The system emails a generated temporary password; the request never accepts a password.",
             content = @Content(schema = @Schema(implementation = CreateUserRequest.class),
                 examples = @ExampleObject(name = "Create user", value = """
@@ -77,7 +77,7 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'COMMISSIONER')")
-    @Operation(summary = "List users")
+    @Operation(summary = "List users", description = "Returns users matching optional status, role, search text, and prison UUID filters. Results are paged and sorted. Requires SUPER_ADMIN or COMMISSIONER.")
     public PageResponse<UserResponse> findAll(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String role,
@@ -91,14 +91,14 @@ public class UserController {
 
     @GetMapping("/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(summary = "Get a user")
+    @Operation(summary = "Get a user", description = "Returns the user identified by public UUID. Requires SUPER_ADMIN.")
     public UserResponse findById(@PathVariable UUID userId) {
         return userService.findById(userId);
     }
 
     @PatchMapping("/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(summary = "Update a user's details")
+    @Operation(summary = "Update a user's details", description = "Updates the supplied user details, including optional email or prison assignment. Requires SUPER_ADMIN.")
     public UserResponse updateDetails(@PathVariable UUID userId,
                                       @Valid @RequestBody UpdateUserDetailsRequest request) {
         return userService.updateDetails(userId, request);
@@ -106,14 +106,14 @@ public class UserController {
 
     @PatchMapping("/{userId}/deactivate")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(summary = "Deactivate a user")
+    @Operation(summary = "Deactivate a user", description = "Deactivates the user identified by public UUID and prevents further sign-in. Requires SUPER_ADMIN.")
     public UserResponse deactivate(@PathVariable UUID userId) {
         return userService.deactivate(userId);
     }
 
     @PatchMapping("/{userId}/reactivate")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(summary = "Reactivate a user")
+    @Operation(summary = "Reactivate a user", description = "Reactivates the user identified by public UUID, allowing sign-in subject to normal authentication rules. Requires SUPER_ADMIN.")
     public UserResponse reactivate(@PathVariable UUID userId) {
         return userService.reactivate(userId);
     }

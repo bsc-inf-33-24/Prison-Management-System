@@ -31,8 +31,12 @@ public class TransferController {
 
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER','COMMISSIONER','DISCIPLINARY_OFFICER','CASE_OFFICER','VISITOR_OFFICER','INSTRUCTOR','MEDICAL_OFFICER','DUTY_OFFICER','PROGRAM_FACILITATOR')")
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Request an inmate transfer",
+            description = "Creates a pending transfer request for an inmate. Requires one of: RECORDS_OFFICER, COMMISSIONER, DISCIPLINARY_OFFICER, CASE_OFFICER, VISITOR_OFFICER, INSTRUCTOR, MEDICAL_OFFICER, DUTY_OFFICER, or PROGRAM_FACILITATOR. The authenticated user's prison assignment is used for access checks.")
     public TransferResponse create(@Valid @RequestBody CreateTransferRequest request) { return service.create(request); }
     @GetMapping
+    @Operation(summary = "List inmate transfers",
+            description = "Returns transfers visible to Records Officers and Commissioners. Optional filters are transfer status and prison UUID; results can be paged and sorted.")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER','COMMISSIONER')")
     public PageResponse<TransferResponse> list(@RequestParam(required=false) TransferStatus status,
             @RequestParam(required=false) UUID prisonId,@RequestParam(required=false) Integer page,
@@ -41,7 +45,8 @@ public class TransferController {
     }
     @PostMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER','COMMISSIONER')")
-    @Operation(summary = "Change a transfer status according to role and prison assignment")
+    @Operation(summary = "Change a transfer status",
+            description = "Advances or rejects a transfer according to the requested status transition, the caller's role, and prison assignment. Requires RECORDS_OFFICER or COMMISSIONER.")
     public TransferResponse changeStatus(@PathVariable UUID id,@Valid @RequestBody ChangeTransferStatusRequest request) {
         return service.changeStatus(id,request);
     }

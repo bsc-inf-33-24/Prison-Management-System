@@ -34,7 +34,7 @@ public class IncidentController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'DISCIPLINARY_OFFICER')")
     @Operation(summary = "Log an inmate incident",
-            description = "An optional nonblank outcome (up to 255 characters) creates the incident as resolved; without one, it is created as open.")
+            description = "Creates an incident for the inmate in the request. The reporting user is taken from the authenticated account. An optional nonblank outcome (up to 255 characters) creates the incident as resolved; without one, it is created as open. Requires RECORDS_OFFICER or DISCIPLINARY_OFFICER.")
     public IncidentResponse logIncident(@Valid @RequestBody LogIncidentRequest request,
                                          @AuthenticationPrincipal UserDetails currentUser) {
         return incidentService.logIncident(request, currentUser.getUsername());
@@ -43,7 +43,8 @@ public class IncidentController {
     // Only Disciplinary Officers and Records Officers can view an inmate's history.
     @GetMapping("/inmates/{inmateId}/incidents")
     @PreAuthorize("hasAnyRole('DISCIPLINARY_OFFICER', 'RECORDS_OFFICER')")
-    @Operation(summary = "Get an inmate's incident history")
+    @Operation(summary = "Get an inmate's incident history",
+            description = "Returns incident history for the inmate public UUID. Requires DISCIPLINARY_OFFICER or RECORDS_OFFICER.")
     public List<IncidentHistoryItemResponse> getHistory(@PathVariable UUID inmateId) {
         return incidentService.getHistory(inmateId);
     }
