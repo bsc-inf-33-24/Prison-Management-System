@@ -38,16 +38,16 @@ public class PrisonController {
     @Operation(summary = "Create a prison with its initial blocks and cells", description = "Creates a prison and its supplied initial facility structure in one request. Requires SUPER_ADMIN.")
     public PrisonDetailResponse create(@Valid @RequestBody CreatePrisonRequest request) { return service.create(request); }
 
-    @GetMapping @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN', 'COMMISSIONER')")
-    @Operation(summary = "List prisons", description = "Searches prisons by name or code, optionally filters by active status, and returns a paged result. Requires RECORDS_OFFICER, SUPER_ADMIN, or COMMISSIONER.")
+    @GetMapping @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN', 'COMMISSIONER', 'TRANSFER_OFFICER')")
+    @Operation(summary = "List prisons", description = "Searches prisons by name or code, optionally filters by active status, and returns a paged result. TRANSFER_OFFICER can list all prisons.")
     public PageResponse<PrisonListResponse> list(@RequestParam(required=false) String search,
             @RequestParam(required=false) Boolean active, @RequestParam(required=false) Integer page,
             @RequestParam(required=false) Integer size, @RequestParam(required=false) List<String> sort) {
         return service.list(search,active,page,size,sort);
     }
 
-    @GetMapping("/{prisonId}") @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN', 'COMMISSIONER')")
-    @Operation(summary = "Get prison details", description = "Returns a prison and its facility structure by public UUID. Requires RECORDS_OFFICER, SUPER_ADMIN, or COMMISSIONER.")
+    @GetMapping("/{prisonId}") @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'SUPER_ADMIN', 'COMMISSIONER', 'TRANSFER_OFFICER')")
+    @Operation(summary = "Get prison details", description = "Returns a prison and its facility structure by public UUID. TRANSFER_OFFICER can view any prison.")
     public PrisonDetailResponse get(@PathVariable UUID prisonId) { return service.get(prisonId); }
 
     @PatchMapping("/{prisonId}") @PreAuthorize("hasRole('SUPER_ADMIN')")

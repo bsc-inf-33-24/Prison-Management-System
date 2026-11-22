@@ -139,7 +139,8 @@ public class UserService implements UserDetailsService {
 
     private Prison resolvePrisonForRole(String role, java.util.UUID prisonId) {
         String normalizedRole = role.trim();
-        if ("Super Admin".equals(normalizedRole) || "Commissioner".equals(normalizedRole)) {
+        if ("Super Admin".equals(normalizedRole) || "Commissioner".equals(normalizedRole)
+                || "Transfer Officer".equals(normalizedRole)) {
             if (prisonId != null) throw new PrisonAssignmentNotAllowedException();
             return null;
         }
@@ -209,7 +210,8 @@ public class UserService implements UserDetailsService {
             validateRole(role);
         }
         String effectiveRole=role==null?user.getRole():role;
-        if ("Super Admin".equals(effectiveRole) || "Commissioner".equals(effectiveRole)) {
+        if ("Super Admin".equals(effectiveRole) || "Commissioner".equals(effectiveRole)
+                || "Transfer Officer".equals(effectiveRole)) {
             if (request.prisonId()!=null) throw new PrisonAssignmentNotAllowedException();
             user.assignPrison(null);
         } else if (request.prisonId()!=null) {

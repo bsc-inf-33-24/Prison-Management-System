@@ -81,8 +81,8 @@ public class InmateController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
-    @Operation(summary = "List inmate records", description = "Returns paged inmate records. Search text and gender are optional filters; page, size, and sort control pagination. Requires RECORDS_OFFICER, COMMISSIONER, or SUPER_ADMIN.")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN', 'TRANSFER_OFFICER')")
+    @Operation(summary = "List inmate records", description = "Returns paged inmate records. Search text and gender are optional filters; page, size, and sort control pagination. Transfer Officers can view records across all prisons.")
     public PageResponse<InmateResponse> list(@RequestParam(required = false) String search,
                                              @RequestParam(required = false) String gender,
                                              @RequestParam(required = false) Integer page,
@@ -92,8 +92,8 @@ public class InmateController {
     }
 
     @GetMapping("/{inmateId}")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
-    @Operation(summary = "Get an inmate record", description = "Returns the inmate record identified by its public UUID. Requires RECORDS_OFFICER, COMMISSIONER, or SUPER_ADMIN.")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN', 'TRANSFER_OFFICER')")
+    @Operation(summary = "Get an inmate record", description = "Returns the inmate record identified by its public UUID. Transfer Officers can view records across all prisons.")
     public InmateResponse get(@PathVariable UUID inmateId) {
         return inmateService.get(inmateId);
     }

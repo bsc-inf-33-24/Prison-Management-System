@@ -117,7 +117,8 @@ public class ApiExceptionHandler {
     @ExceptionHandler({UserService.PrisonAssignmentRequiredException.class,
             UserService.PrisonAssignmentNotAllowedException.class})
     public ResponseEntity<ApiError> handleInvalidUserPrisonAssignment() {
-        return problem(HttpStatus.BAD_REQUEST, "A prison is required for staff accounts; Super Admin accounts are system-wide.");
+        return problem(HttpStatus.BAD_REQUEST,
+                "A prison is required for prison-scoped staff accounts; Super Admin, Commissioner, and Transfer Officer accounts are system-wide.");
     }
 
     @ExceptionHandler({UserService.PrisonNotFoundException.class})

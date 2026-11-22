@@ -61,8 +61,9 @@ public class TransferService {
         Inmate inmate=inmates.findByPublicUuid(request.inmateId()).orElseThrow(InmateNotFoundException::new);
         prisonAccess.requireInmate(request.inmateId());
         User creator=prisonAccess.currentUser();
+        boolean systemWideTransferOfficer="Transfer Officer".equals(creator.getRole());
         boolean commissioner="Commissioner".equals(creator.getRole());
-        if (!commissioner && (request.sourcePrisonId()==null || request.destinationPrisonId()==null))
+        if (!commissioner && !systemWideTransferOfficer && request.sourcePrisonId()==null)
             throw new MissingTransferPrisonsException();
         Prison source=request.sourcePrisonId()==null?inmate.getCurrentPrison():prisons.findByPublicUuid(request.sourcePrisonId()).orElseThrow(PrisonNotFoundException::new);
         if (source==null) throw new InmatePrisonNotAssignedException();
@@ -96,8 +97,18 @@ public class TransferService {
     public TransferResponse changeStatus(UUID id, ChangeTransferStatusRequest request) {
         InmateTransfer transfer=getLocked(id);
         User user=prisonAccess.currentUser();
-        if ("Commissioner".equals(user.getRole())) {
-            if (request.status()==TransferStatus.APPROVED) transfer.approve(actor(), null);
+        if (request.destinationPrisonId()!=null && request.status()!=TransferStatus.APPROVED)
+            throw new InvalidTransferStatusException();
+        if ("Commissioner".equals(user.getRole()) || "Transfer Officer".equals(user.getRole())) {
+            if (request.status()==TransferStatus.APPROVED) {
+                Prison destination=request.destinationPrisonId()==null
+                        ?transfer.getDestinationPrison()
+                        :prisons.findByPublicUuid(request.destinationPrisonId()).orElseThrow(PrisonNotFoundException::new);
+                if (destination==null) throw new MissingTransferPrisonsException();
+                if (!destination.isActive()) throw new InactivePrisonException();
+                if (destination.getId().equals(transfer.getSourcePrison().getId())) throw new SamePrisonException();
+                transfer.approve(actor(), null, destination);
+            }
             else if (request.status()==TransferStatus.REJECTED) transfer.reject(actor(), null);
             else throw new InvalidTransferStatusException();
         } else if ("Records Officer".equals(user.getRole()) && request.status()==TransferStatus.CONFIRMED) {
