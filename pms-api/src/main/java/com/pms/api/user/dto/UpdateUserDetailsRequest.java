@@ -25,7 +25,7 @@ public record UpdateUserDetailsRequest(
 
         Set<String> permissions,
 
-        @Schema(description = "Assign the staff account to another prison. Super Admin and Commissioner accounts remain system-wide.", nullable = true)
+        @Schema(description = "Assign the staff account to another prison. Super Admin, Commissioner, and Transfer Officer accounts remain system-wide.", nullable = true)
         UUID prisonId
 ) {
     public UpdateUserDetailsRequest(String fullName, String username, String email, String role, Set<String> permissions) {

@@ -27,12 +27,12 @@ public record CreateUserRequest(
         String email,
 
         @Schema(description = "User role", requiredMode = Schema.RequiredMode.REQUIRED,
-            allowableValues = {"Super Admin", "Commissioner", "Records Officer", "Disciplinary Officer", "Case Officer", "Visitor Officer", "Instructor", "Medical Officer", "Duty Officer", "Program Facilitator"},
+            allowableValues = {"Super Admin", "Commissioner", "Transfer Officer", "Records Officer", "Disciplinary Officer", "Case Officer", "Visitor Officer", "Instructor", "Medical Officer", "Duty Officer", "Program Facilitator"},
                 example = "Records Officer")
         @NotBlank(message = "Role is required.")
         String role,
 
-        @Schema(description = "Prison this staff account belongs to. Required for all roles except Super Admin and Commissioner.", nullable = true)
+        @Schema(description = "Prison this staff account belongs to. Required for prison-scoped roles; Super Admin, Commissioner, and Transfer Officer accounts are system-wide.", nullable = true)
         UUID prisonId
 ) {
     public CreateUserRequest {

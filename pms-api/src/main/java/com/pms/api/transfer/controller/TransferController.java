@@ -29,24 +29,24 @@ public class TransferController {
     private final TransferService service;
     public TransferController(TransferService service) { this.service=service; }
 
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','COMMISSIONER','DISCIPLINARY_OFFICER','CASE_OFFICER','VISITOR_OFFICER','INSTRUCTOR','MEDICAL_OFFICER','DUTY_OFFICER','PROGRAM_FACILITATOR')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','COMMISSIONER','TRANSFER_OFFICER','DISCIPLINARY_OFFICER','CASE_OFFICER','VISITOR_OFFICER','INSTRUCTOR','MEDICAL_OFFICER','DUTY_OFFICER','PROGRAM_FACILITATOR')")
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Request an inmate transfer",
-            description = "Creates a pending transfer request for an inmate. Requires one of: RECORDS_OFFICER, COMMISSIONER, DISCIPLINARY_OFFICER, CASE_OFFICER, VISITOR_OFFICER, INSTRUCTOR, MEDICAL_OFFICER, DUTY_OFFICER, or PROGRAM_FACILITATOR. The authenticated user's prison assignment is used for access checks.")
+            description = "Creates a pending transfer request for an inmate. The destination prison is optional and may be supplied during approval. TRANSFER_OFFICER can request transfers system-wide; other prison-scoped roles are restricted to their assigned prison.")
     public TransferResponse create(@Valid @RequestBody CreateTransferRequest request) { return service.create(request); }
     @GetMapping
     @Operation(summary = "List inmate transfers",
-            description = "Returns transfers visible to Records Officers and Commissioners. Optional filters are transfer status and prison UUID; results can be paged and sorted.")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','COMMISSIONER')")
+            description = "Returns transfers visible to Records Officers, Commissioners, and Transfer Officers. Transfer Officers can view transfers across all prisons. Optional filters are transfer status and prison UUID; results can be paged and sorted.")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','COMMISSIONER','TRANSFER_OFFICER')")
     public PageResponse<TransferResponse> list(@RequestParam(required=false) TransferStatus status,
             @RequestParam(required=false) UUID prisonId,@RequestParam(required=false) Integer page,
             @RequestParam(required=false) Integer size,@RequestParam(required=false) List<String> sort) {
         return service.list(status,prisonId,page,size,sort);
     }
     @PostMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','COMMISSIONER')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER','COMMISSIONER','TRANSFER_OFFICER')")
     @Operation(summary = "Change a transfer status",
-            description = "Advances or rejects a transfer according to the requested status transition, the caller's role, and prison assignment. Requires RECORDS_OFFICER or COMMISSIONER.")
+            description = "Approves or rejects transfers as a Commissioner or Transfer Officer. Approval may include destinationPrisonId when the request has no destination; it is optional when one is already recorded. Records Officers may confirm receipt or cancel transfers at their assigned prison.")
     public TransferResponse changeStatus(@PathVariable UUID id,@Valid @RequestBody ChangeTransferStatusRequest request) {
         return service.changeStatus(id,request);
     }

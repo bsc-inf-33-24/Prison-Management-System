@@ -27,6 +27,8 @@ Every other endpoint requires a valid JWT bearer token. The token is issued by `
 The `users` table only accepts the following role names:
 
 - `Super Admin`
+- `Commissioner`
+- `Transfer Officer`
 - `Records Officer`
 - `Disciplinary Officer`
 - `Case Officer`
@@ -126,8 +128,8 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
 | `POST` | `/api/v1/inmates` | Yes | `Super Admin`, `Prison Officer` | Enroll an inmate and allocate a cell |
-| `GET` | `/api/v1/inmates` | Yes | `Records Officer`, `Super Admin` | List inmates |
-| `GET` | `/api/v1/inmates/{inmateId}` | Yes | `Records Officer`, `Prison Officer`, `Commissioner`, `Super Admin` | View an inmate |
+| `GET` | `/api/v1/inmates` | Yes | `Records Officer`, `Commissioner`, `Super Admin`, `Transfer Officer` | List inmates |
+| `GET` | `/api/v1/inmates/{inmateId}` | Yes | `Records Officer`, `Commissioner`, `Super Admin`, `Transfer Officer` | View an inmate |
 | `PATCH` | `/api/v1/inmates/{inmateId}` | Yes | `Super Admin` | Update an inmate record |
 
 ### 4.4 Cell allocation and inventory
@@ -176,11 +178,11 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 
 | Method | Path | Auth | Roles | Purpose |
 |---|---|---:|---|---|
-| `POST` | `/api/v1/transfers` | Yes | `Records Officer`, `Super Admin`, `Prison Officer` | Submit an inmate transfer |
-| `GET` | `/api/v1/transfers` | Yes | `Records Officer`, `Super Admin` | List transfers |
-| `POST` | `/api/v1/transfers/{transferId}/approve` | Yes | `Records Officer`, `Super Admin` | Approve a transfer |
-| `POST` | `/api/v1/transfers/{transferId}/reject` | Yes | `Records Officer`, `Super Admin` | Reject a transfer |
-| `POST` | `/api/v1/transfers/{transferId}/cancel` | Yes | `Records Officer`, `Super Admin` | Cancel a transfer |
+| `POST` | `/api/v1/transfers` | Yes | `Records Officer`, `Commissioner`, `Transfer Officer`, other assigned officers | Submit an inmate transfer |
+| `GET` | `/api/v1/transfers` | Yes | `Records Officer`, `Commissioner`, `Transfer Officer` | List transfers |
+| `POST` | `/api/v1/transfers/{id}/status` | Yes | `Records Officer`, `Commissioner`, `Transfer Officer` | Approve/reject, confirm, or cancel a transfer |
+
+Transfer requests may omit `destinationPrisonId`. A Commissioner or Transfer Officer must supply it when approving a request that does not already have a destination; it may be omitted when the request already names one. The Transfer Officer role is system-wide and may read prison and inmate records and oversee transfers across prisons. A Transfer Officer account must not be assigned to a specific prison.
 
 ### 4.10 Monitoring
 

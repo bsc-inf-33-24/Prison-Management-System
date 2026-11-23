@@ -41,7 +41,12 @@ public class InmateTransfer extends BaseEntity {
         this.inmate=inmate; this.sourcePrison=source; this.destinationPrison=destination; this.reason=reason; this.requestedBy=actor;
     }
     public void approve(String actor, String note) {
+        approve(actor, note, null);
+    }
+
+    public void approve(String actor, String note, Prison destination) {
         require(TransferStatus.PENDING);
+        if (destination != null) destinationPrison = destination;
         status = TransferStatus.APPROVED;
         decidedAt = Instant.now();
         decidedBy = actor;
