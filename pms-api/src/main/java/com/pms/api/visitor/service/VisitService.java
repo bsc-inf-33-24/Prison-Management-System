@@ -78,7 +78,7 @@ public class VisitService {
         if (request == null) {
             throw new IllegalArgumentException("Visit details are required.");
         }
-        VisitType visitType = request.visitType() == null ? VisitType.FAMILY : request.visitType();
+        VisitType visitType = request.visitType();
         if (visitType == VisitType.FAMILY && isBlank(request.visitorFullName())) {
             throw new IllegalArgumentException("Visitor name is required.");
         }
@@ -176,6 +176,7 @@ public class VisitService {
         if (!isBlank(visitType)) {
             specification = specification.and(equalEnum("visitType", VisitType.valueOf(visitType.trim().toUpperCase(Locale.ROOT))));
         }
+        specification = specification.and(allowedVisitTypes(user));
         if (inmateId != null) {
             specification = specification.and(equalRelatedId("inmate", inmateRepository.findByPublicUuid(inmateId)
                     .map(Inmate::getId).orElse(-1L)));
@@ -250,6 +251,7 @@ public class VisitService {
         if (effectiveType != null) {
             specification = specification.and(equalEnum("visitType", effectiveType));
         }
+        specification = specification.and(allowedVisitTypes(user));
         if (visitDateFrom != null) {
             specification = specification.and(greaterThanOrEqualTo("startDateTime", visitDateFrom));
         }
@@ -265,6 +267,16 @@ public class VisitService {
 
     private static Specification<Visit> equalLong(String fieldName, Long value) {
         return (root, query, cb) -> cb.equal(root.get(fieldName), value);
+    }
+
+    private static Specification<Visit> allowedVisitTypes(User user) {
+        if (hasRole(user, "Medical Officer")) {
+            return equalEnum("visitType", VisitType.HEALTH);
+        }
+        if (hasRole(user, "Records Officer")) {
+            return (root, query, cb) -> root.get("visitType").in(VisitType.LEGAL, VisitType.HEALTH);
+        }
+        throw new AccessDeniedException("Your role cannot access visits.");
     }
 
     private static <T> Specification<Visit> equalEnum(String fieldName, T value) {
@@ -389,9 +401,9 @@ public class VisitService {
 
     private static void requireCreatePermission(User user, VisitType visitType) {
         boolean allowed = switch (visitType) {
-            case FAMILY -> hasRole(user, "Visitor Officer", "Records Officer", "Super Admin");
-            case LEGAL -> hasRole(user, "Case Officer", "Records Officer", "Super Admin");
-            case HEALTH -> hasRole(user, "Medical Officer");
+            case FAMILY -> false;
+            case LEGAL -> hasRole(user, "Records Officer");
+            case HEALTH -> hasRole(user, "Medical Officer", "Records Officer");
         };
         if (!allowed) {
             throw new AccessDeniedException("Your role cannot record this visit type.");
@@ -399,15 +411,15 @@ public class VisitService {
     }
 
     private static boolean canViewFamilyDetails(User user) {
-        return hasRole(user, "Visitor Officer", "Records Officer", "Super Admin");
+        return false;
     }
 
     private static boolean canViewLegalDetails(User user) {
-        return hasRole(user, "Case Officer", "Records Officer", "Super Admin");
+        return hasRole(user, "Records Officer");
     }
 
     private static boolean canViewHealthDetails(User user) {
-        return hasRole(user, "Medical Officer");
+        return hasRole(user, "Medical Officer", "Records Officer");
     }
 
     private static boolean hasRole(User user, String... roles) {

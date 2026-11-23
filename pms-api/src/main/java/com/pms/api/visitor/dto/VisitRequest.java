@@ -10,7 +10,7 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 public record VisitRequest(
-        VisitType visitType,
+        @NotNull(message = "visitType is required") VisitType visitType,
         @Size(max = 255, message = "visitorFullName must not exceed 255 characters") String visitorFullName,
         @NotNull(message = "inmateId is required") UUID inmateId,
         @NotNull(message = "visitDate is required") LocalDate visitDate,
@@ -33,14 +33,14 @@ public record VisitRequest(
     @AssertTrue(message = "visitorFullName is required for family visits.")
     @JsonIgnore
     public boolean isVisitorNameValidForFamilyVisits() {
-        VisitType resolvedType = visitType == null ? VisitType.FAMILY : visitType;
+        VisitType resolvedType = visitType;
         return resolvedType != VisitType.FAMILY || visitorFullName != null && !visitorFullName.isBlank();
     }
 
     @AssertTrue(message = "complaint and diagnosis are required for health visits.")
     @JsonIgnore
     public boolean isHealthVisitDetailsValid() {
-        VisitType resolvedType = visitType == null ? VisitType.FAMILY : visitType;
+        VisitType resolvedType = visitType;
         if (resolvedType != VisitType.HEALTH) {
             return true;
         }
@@ -50,7 +50,7 @@ public record VisitRequest(
     @AssertTrue(message = "legalCaseNumber is required for legal visits.")
     @JsonIgnore
     public boolean isLegalVisitDetailsValid() {
-        VisitType resolvedType = visitType == null ? VisitType.FAMILY : visitType;
+        VisitType resolvedType = visitType;
         if (resolvedType != VisitType.LEGAL) {
             return true;
         }
