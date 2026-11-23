@@ -1,19 +1,8 @@
 package com.pms.api.visitor.controller;
 
-import com.pms.api.health.dto.MedicalHistoryResponse;
-import com.pms.api.health.dto.MedicalVisitResponse;
-import com.pms.api.health.dto.RecordMedicalVisitRequest;
-import com.pms.api.health.service.MedicalVisitService;
-import com.pms.api.visitor.dto.RecordFamilyVisitRequest;
-import com.pms.api.visitor.dto.RecordLegalVisitRequest;
-import com.pms.api.visitor.dto.FamilyVisitHistoryResponse;
-import com.pms.api.visitor.dto.FamilyVisitResponse;
-import com.pms.api.visitor.dto.VisitHistoryResponse;
 import com.pms.api.visitor.dto.VisitRequest;
 import com.pms.api.visitor.dto.VisitResponse;
-import com.pms.api.visitor.entity.VisitType;
 import com.pms.api.visitor.service.VisitService;
-import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -41,70 +30,23 @@ import org.springframework.web.bind.annotation.RestController;
 public class VisitController {
 
     private final VisitService visitService;
-    private final MedicalVisitService medicalVisitService;
 
-    public VisitController(VisitService visitService, MedicalVisitService medicalVisitService) {
+    public VisitController(VisitService visitService) {
         this.visitService = visitService;
-        this.medicalVisitService = medicalVisitService;
     }
 
-    @Operation(summary = "Record a family or friend visit", description = "Records a family or friend visit for the inmate and uses the authenticated account as the recording officer. Requires VISITOR_OFFICER, RECORDS_OFFICER, or SUPER_ADMIN.")
-    @PostMapping("/visits/family-friends")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
-    public FamilyVisitResponse recordFamilyFriendsVisit(@Valid @RequestBody RecordFamilyVisitRequest request,
-                                                        @AuthenticationPrincipal UserDetails currentUser) {
-        return visitService.recordFamilyVisit(request, currentUser.getUsername());
-    }
-
-    @Operation(summary = "Record a legal visit", description = "Records a legal visit for the inmate and uses the authenticated account as the recording officer. Requires CASE_OFFICER, RECORDS_OFFICER, or SUPER_ADMIN.")
-    @PostMapping("/visits/legal")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
-    public VisitResponse recordLegalVisit(@Valid @RequestBody RecordLegalVisitRequest request,
-                                          @AuthenticationPrincipal UserDetails currentUser) {
-        return visitService.recordLegalVisit(request, currentUser.getUsername());
-    }
-
-    @Operation(summary = "Record a medical visit", description = "Records a medical visit for the inmate and uses the authenticated account as the recording officer. Requires MEDICAL_OFFICER or SUPER_ADMIN; medical details are restricted to these roles.")
-    @PostMapping("/visits/medical")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('MEDICAL_OFFICER', 'SUPER_ADMIN')")
-    public MedicalVisitResponse recordMedicalVisit(@Valid @RequestBody RecordMedicalVisitRequest request,
-                                                    @AuthenticationPrincipal UserDetails currentUser) {
-        return medicalVisitService.recordVisit(request, currentUser.getUsername());
-    }
-
-    @Hidden
-    @PostMapping("/medical-visits")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('MEDICAL_OFFICER', 'SUPER_ADMIN')")
-    public MedicalVisitResponse recordLegacyMedicalVisit(@Valid @RequestBody RecordMedicalVisitRequest request,
-                                                          @AuthenticationPrincipal UserDetails currentUser) {
-        return medicalVisitService.recordVisit(request, currentUser.getUsername());
-    }
-
-    @GetMapping("/medical-visits")
-    @PreAuthorize("hasAnyRole('MEDICAL_OFFICER', 'SUPER_ADMIN')")
-    @Operation(summary = "Search an inmate's medical history", description = "Returns medical visit history for the required inmate UUID, optionally matching the inmate name. Requires MEDICAL_OFFICER or SUPER_ADMIN.")
-    public MedicalHistoryResponse getMedicalHistory(@RequestParam UUID inmateId,
-                                                     @RequestParam(required = false) String name) {
-        return medicalVisitService.getHistory(inmateId, name);
-    }
-
-    @Hidden
-    @Operation(summary = "Record a visit", description = "Record a family, legal, or health visit. Health details are restricted to Medical Officers.")
+    @Operation(summary = "Record a visit", description = "Record a family, legal, or health visit using the type field. Type-specific details are supplied in the same request.")
     @PostMapping("/visits")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'MEDICAL_OFFICER')")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'CASE_OFFICER', 'RECORDS_OFFICER', 'MEDICAL_OFFICER', 'SUPER_ADMIN')")
     public VisitResponse recordVisit(@Valid @RequestBody VisitRequest request,
                                     @AuthenticationPrincipal UserDetails currentUser) {
         return visitService.recordVisit(request, currentUser.getUsername());
     }
 
-    @Operation(summary = "Search visits", description = "Filters visits by visit UUID, visitor name, visit type, inmate UUID or name, visit date range, and recording officer UUID. Records Officers can access legal and medical visits; Medical Officers can access medical visits only.")
+    @Operation(summary = "Search visits", description = "Filters visits by visit UUID, visitor name, visit type, inmate UUID or name, visit date range, and recording officer UUID. Results are restricted by the authenticated user's role.")
     @GetMapping("/visits")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'MEDICAL_OFFICER')")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'CASE_OFFICER', 'RECORDS_OFFICER', 'MEDICAL_OFFICER', 'SUPER_ADMIN')")
     public Page<VisitResponse> searchVisits(
             @RequestParam(required = false) UUID visitId,
             @RequestParam(required = false) String visitorName,
@@ -122,52 +64,17 @@ public class VisitController {
                 inmateName, visitDateFrom, visitDateTo, loggedBy, page, size, sort, currentUser.getUsername());
     }
 
-    @Operation(summary = "Get an inmate's visit history", description = "Returns paged visits associated with the inmate UUID, including visitor name and visit type. Optional filters include visitor name, visit type, and inclusive ISO-8601 date bounds. Requires VISITOR_OFFICER, RECORDS_OFFICER, CASE_OFFICER, MEDICAL_OFFICER, or SUPER_ADMIN.")
-    @GetMapping("/inmates/{inmateId}/visits")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'MEDICAL_OFFICER')")
-    public Page<VisitHistoryResponse> getInmateVisitHistory(
+    @Operation(summary = "Get visits for an inmate", description = "Returns visits for the inmate UUID, filtered by the authenticated user's role: Medical Officers see health visits; other roles see their authorized family and legal visits.")
+    @GetMapping("/visits/inmate/{inmateId}")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'CASE_OFFICER', 'RECORDS_OFFICER', 'MEDICAL_OFFICER', 'SUPER_ADMIN')")
+    public Page<VisitResponse> getVisitsByInmate(
             @PathVariable UUID inmateId,
-            @RequestParam(required = false) String visitorName,
-            @RequestParam(required = false) String visitType,
-            @RequestParam(required = false) OffsetDateTime visitDateFrom,
-            @RequestParam(required = false) OffsetDateTime visitDateTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sort,
             @AuthenticationPrincipal UserDetails currentUser) {
-        return visitService.getInmateVisitHistory(inmateId, visitorName, visitType, visitDateFrom, visitDateTo,
-                page, size, sort, currentUser.getUsername());
-    }
-
-    @Operation(summary = "Get an inmate's family and friend visits", description = "Returns paged family and friend visits for the inmate UUID, optionally filtered by visitor name and inclusive ISO-8601 date bounds. Requires VISITOR_OFFICER, RECORDS_OFFICER, or SUPER_ADMIN.")
-    @GetMapping("/inmates/{inmateId}/visits/family-friends")
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
-    public Page<FamilyVisitHistoryResponse> getInmateFamilyFriendVisits(
-            @PathVariable UUID inmateId,
-            @RequestParam(required = false) String visitorName,
-            @RequestParam(required = false) OffsetDateTime visitDateFrom,
-            @RequestParam(required = false) OffsetDateTime visitDateTo,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String sort,
-            @AuthenticationPrincipal UserDetails currentUser) {
-        return visitService.getInmateFamilyVisitHistory(inmateId, visitorName,
-                visitDateFrom, visitDateTo, page, size, sort, currentUser.getUsername());
-    }
-
-    @Operation(summary = "Get an inmate's legal visits", description = "Returns paged legal visits for the inmate UUID, optionally filtered by inclusive ISO-8601 date bounds. Requires CASE_OFFICER, RECORDS_OFFICER, or SUPER_ADMIN.")
-    @GetMapping("/inmates/{inmateId}/visits/legal")
-    @PreAuthorize("hasAnyRole('CASE_OFFICER', 'RECORDS_OFFICER', 'SUPER_ADMIN')")
-    public Page<VisitHistoryResponse> getInmateLegalVisits(
-            @PathVariable UUID inmateId,
-            @RequestParam(required = false) OffsetDateTime visitDateFrom,
-            @RequestParam(required = false) OffsetDateTime visitDateTo,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String sort,
-            @AuthenticationPrincipal UserDetails currentUser) {
-        return visitService.getInmateVisitHistoryByType(inmateId, VisitType.LEGAL, null,
-                visitDateFrom, visitDateTo, page, size, sort, currentUser.getUsername());
+        return visitService.searchVisits(null, null, null, inmateId, null,
+                null, null, null, page, size, sort, currentUser.getUsername());
     }
 
 }
