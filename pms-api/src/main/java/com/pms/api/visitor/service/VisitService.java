@@ -78,12 +78,12 @@ public class VisitService {
         if (request == null) {
             throw new IllegalArgumentException("Visit details are required.");
         }
-        VisitType visitType = request.visitType();
+        VisitType visitType = request.type();
         if (visitType == VisitType.FAMILY && isBlank(request.visitorFullName())) {
             throw new IllegalArgumentException("Visitor name is required.");
         }
-        if (visitType == VisitType.HEALTH && (isBlank(request.complaint()) || isBlank(request.diagnosis()))) {
-            throw new IllegalArgumentException("Health visit complaint and diagnosis are required.");
+        if (visitType == VisitType.HEALTH && (isBlank(request.sickness()) || isBlank(request.diagnosis()))) {
+            throw new IllegalArgumentException("Health visit sickness and diagnosis are required.");
         }
         if (visitType == VisitType.LEGAL && isBlank(request.legalCaseNumber())) {
             throw new IllegalArgumentException("Legal case number is required.");
@@ -105,7 +105,7 @@ public class VisitService {
         String medications = null;
         String recommendations = null;
         if (visitType == VisitType.HEALTH) {
-            complaint = request.complaint().trim();
+            complaint = request.sickness().trim();
             diagnosis = request.diagnosis().trim();
             medications = normalizeOptionalText(request.medicationsProvided());
             recommendations = normalizeOptionalText(request.recommendations());
@@ -274,7 +274,16 @@ public class VisitService {
             return equalEnum("visitType", VisitType.HEALTH);
         }
         if (hasRole(user, "Records Officer")) {
-            return (root, query, cb) -> root.get("visitType").in(VisitType.LEGAL, VisitType.HEALTH);
+            return (root, query, cb) -> root.get("visitType").in(VisitType.FAMILY, VisitType.LEGAL);
+        }
+        if (hasRole(user, "Visitor Officer")) {
+            return equalEnum("visitType", VisitType.FAMILY);
+        }
+        if (hasRole(user, "Case Officer")) {
+            return equalEnum("visitType", VisitType.LEGAL);
+        }
+        if (hasRole(user, "Super Admin")) {
+            return (root, query, cb) -> root.get("visitType").in(VisitType.FAMILY, VisitType.LEGAL);
         }
         throw new AccessDeniedException("Your role cannot access visits.");
     }
@@ -401,9 +410,9 @@ public class VisitService {
 
     private static void requireCreatePermission(User user, VisitType visitType) {
         boolean allowed = switch (visitType) {
-            case FAMILY -> false;
-            case LEGAL -> hasRole(user, "Records Officer");
-            case HEALTH -> hasRole(user, "Medical Officer", "Records Officer");
+            case FAMILY -> hasRole(user, "Visitor Officer", "Records Officer", "Super Admin");
+            case LEGAL -> hasRole(user, "Case Officer", "Records Officer", "Super Admin");
+            case HEALTH -> hasRole(user, "Medical Officer", "Records Officer", "Super Admin");
         };
         if (!allowed) {
             throw new AccessDeniedException("Your role cannot record this visit type.");
@@ -411,15 +420,15 @@ public class VisitService {
     }
 
     private static boolean canViewFamilyDetails(User user) {
-        return false;
+        return hasRole(user, "Visitor Officer", "Records Officer", "Super Admin");
     }
 
     private static boolean canViewLegalDetails(User user) {
-        return hasRole(user, "Records Officer");
+        return hasRole(user, "Case Officer", "Records Officer", "Super Admin");
     }
 
     private static boolean canViewHealthDetails(User user) {
-        return hasRole(user, "Medical Officer", "Records Officer");
+        return hasRole(user, "Medical Officer", "Super Admin");
     }
 
     private static boolean hasRole(User user, String... roles) {
