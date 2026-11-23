@@ -68,6 +68,11 @@ public class InmateTransfer extends BaseEntity {
         receivedBy = actor;
     }
 
+    public void confirm(String actor, UUID cellId) {
+        confirm(actor);
+        receivedCellId = cellId;
+    }
+
     public void reject(String actor, String note) {
         require(TransferStatus.PENDING);
         status = TransferStatus.REJECTED;
