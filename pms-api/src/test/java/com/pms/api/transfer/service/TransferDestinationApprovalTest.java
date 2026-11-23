@@ -5,8 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.pms.api.cell.dto.AllocateCellRequest;
 import com.pms.api.cell.service.CellService;
 import com.pms.api.common.pagination.PaginationProperties;
 import com.pms.api.inmate.entity.Inmate;
@@ -107,6 +109,30 @@ class TransferDestinationApprovalTest {
 
         assertEquals(TransferStatus.APPROVED, result.status());
         assertEquals(destination.getPublicUuid(), result.destinationPrisonId());
+    }
+
+    @Test
+    void confirmingTransferReleasesOldCellAndAssignsDestinationCell() {
+        Prison source = prison(1L, UUID.randomUUID(), "Source Prison");
+        Prison destination = prison(2L, UUID.randomUUID(), "Destination Prison");
+        Inmate inmate = inmate(source);
+        InmateTransfer transfer = new InmateTransfer(inmate, source, destination, "Operational need", "requester");
+        transfer.approve("approver", null, destination);
+        UUID transferId = UUID.randomUUID();
+        UUID cellId = UUID.randomUUID();
+        when(transfers.findByPublicUuidForUpdate(transferId)).thenReturn(java.util.Optional.of(transfer));
+        when(prisonAccess.currentUser()).thenReturn(user("Records Officer"));
+        authenticate("records-officer");
+
+        var result = service.changeStatus(transferId,
+                new ChangeTransferStatusRequest(TransferStatus.CONFIRMED, null, cellId));
+
+        assertEquals(TransferStatus.CONFIRMED, result.status());
+        assertEquals(destination, inmate.getCurrentPrison());
+        assertEquals(cellId, result.receivedCellId());
+        verify(cells).releaseCurrentAllocation(inmate.getId());
+        verify(cells).allocate(inmate.getPublicUuid(), new AllocateCellRequest(cellId));
+        verify(prisonAccess).requireTransfer(transferId, true);
     }
 
     private static Prison prison(Long id, UUID publicUuid, String name) {

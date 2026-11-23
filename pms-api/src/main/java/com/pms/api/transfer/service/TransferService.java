@@ -14,6 +14,7 @@ import com.pms.api.prison.entity.Prison;
 import com.pms.api.prison.repository.PrisonRepository;
 import com.pms.api.transfer.dto.ChangeTransferStatusRequest;
 import com.pms.api.transfer.dto.ApproveTransferRequest;
+import com.pms.api.transfer.dto.ConfirmTransferReceiptRequest;
 import com.pms.api.transfer.dto.CreateTransferRequest;
 import com.pms.api.transfer.dto.TransferResponse;
 import com.pms.api.transfer.entity.InmateTransfer;
@@ -112,20 +113,39 @@ public class TransferService {
             else if (request.status()==TransferStatus.REJECTED) transfer.reject(actor(), null);
             else throw new InvalidTransferStatusException();
         } else if ("Records Officer".equals(user.getRole()) && request.status()==TransferStatus.CONFIRMED) {
-            if (transfer.getDestinationPrison()==null) throw new MissingTransferPrisonsException();
-            prisonAccess.requireTransfer(id, true);
-            Inmate inmate=transfer.getInmate();
-            transfer.confirm(actor());
-            inmate.assignPrison(transfer.getDestinationPrison());
-            if (custodyStays!=null) {
-                CustodyStay stay=custodyStays.findFirstByInmate_IdAndEndedAtIsNullOrderByIdDesc(inmate.getId()).orElseThrow(InmateHasNoCellException::new);
-                stay.transferTo(transfer.getDestinationPrison());
-                custodyStays.saveAndFlush(stay);
-            }
+            return confirmReceipt(id, transfer, request.cellId());
         } else if (request.status()==TransferStatus.CANCELLED && "Records Officer".equals(user.getRole())) {
             prisonAccess.requireTransfer(id, false);
             transfer.cancel(actor(), null);
         } else throw new InvalidTransferStatusException();
+        return TransferResponse.from(transfer);
+    }
+
+    @Audited
+    @Transactional
+    public TransferResponse confirmReceipt(UUID id, ConfirmTransferReceiptRequest request) {
+        InmateTransfer transfer=getLocked(id);
+        User user=prisonAccess.currentUser();
+        if (!"Records Officer".equals(user.getRole())) throw new InvalidTransferStatusException();
+        return confirmReceipt(id, transfer, request.cellId());
+    }
+
+    private TransferResponse confirmReceipt(UUID id, InmateTransfer transfer, UUID cellId) {
+        if (transfer.getDestinationPrison()==null) throw new MissingTransferPrisonsException();
+        if (cellId==null) throw new MissingDestinationCellException();
+        prisonAccess.requireTransfer(id, true);
+
+        Inmate inmate=transfer.getInmate();
+        transfer.confirm(actor(), cellId);
+        inmate.assignPrison(transfer.getDestinationPrison());
+        cells.releaseCurrentAllocation(inmate.getId());
+        cells.allocate(inmate.getPublicUuid(), new AllocateCellRequest(cellId));
+
+        if (custodyStays!=null) {
+            CustodyStay stay=custodyStays.findFirstByInmate_IdAndEndedAtIsNullOrderByIdDesc(inmate.getId()).orElseThrow(InmateHasNoCellException::new);
+            stay.transferTo(transfer.getDestinationPrison());
+            custodyStays.saveAndFlush(stay);
+        }
         return TransferResponse.from(transfer);
     }
 
@@ -150,4 +170,5 @@ public class TransferService {
     public static class InmateHasNoCellException extends RuntimeException { }
     public static class MissingTransferPrisonsException extends RuntimeException { }
     public static class InvalidTransferStatusException extends RuntimeException { }
+    public static class MissingDestinationCellException extends RuntimeException { }
 }

@@ -2,6 +2,7 @@ package com.pms.api.transfer.controller;
 
 import com.pms.api.common.pagination.PageResponse;
 import com.pms.api.transfer.dto.ChangeTransferStatusRequest;
+import com.pms.api.transfer.dto.ConfirmTransferReceiptRequest;
 import com.pms.api.transfer.dto.CreateTransferRequest;
 import com.pms.api.transfer.dto.TransferResponse;
 import com.pms.api.transfer.entity.TransferStatus;
@@ -49,5 +50,14 @@ public class TransferController {
             description = "Approves or rejects transfers as a Commissioner or Transfer Officer. Approval may include destinationPrisonId when the request has no destination; it is optional when one is already recorded. Records Officers may confirm receipt or cancel transfers at their assigned prison.")
     public TransferResponse changeStatus(@PathVariable UUID id,@Valid @RequestBody ChangeTransferStatusRequest request) {
         return service.changeStatus(id,request);
+    }
+
+    @PostMapping("/{id}/confirm")
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @Operation(summary = "Confirm transfer receipt",
+            description = "Confirms receipt at the destination prison and assigns the inmate to the selected destination cell.")
+    public TransferResponse confirmReceipt(@PathVariable UUID id,
+                                           @Valid @RequestBody ConfirmTransferReceiptRequest request) {
+        return service.confirmReceipt(id, request);
     }
 }
