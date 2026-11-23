@@ -96,15 +96,15 @@ public class VisitController {
     @Operation(summary = "Record a visit", description = "Record a family, legal, or health visit. Health details are restricted to Medical Officers.")
     @PostMapping("/visits")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER', 'CASE_OFFICER', 'MEDICAL_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'MEDICAL_OFFICER')")
     public VisitResponse recordVisit(@Valid @RequestBody VisitRequest request,
                                     @AuthenticationPrincipal UserDetails currentUser) {
         return visitService.recordVisit(request, currentUser.getUsername());
     }
 
-    @Operation(summary = "Search visits", description = "Filters visits by visit UUID, visitor name, visit type, inmate UUID or name, visit date range, and recording officer UUID. Date values use ISO-8601 offset date-time. Results are paged; the recording officer is constrained by the caller's access. Requires VISITOR_OFFICER, RECORDS_OFFICER, CASE_OFFICER, MEDICAL_OFFICER, or SUPER_ADMIN.")
+    @Operation(summary = "Search visits", description = "Filters visits by visit UUID, visitor name, visit type, inmate UUID or name, visit date range, and recording officer UUID. Records Officers can access legal and medical visits; Medical Officers can access medical visits only.")
     @GetMapping("/visits")
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER', 'CASE_OFFICER', 'MEDICAL_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'MEDICAL_OFFICER')")
     public Page<VisitResponse> searchVisits(
             @RequestParam(required = false) UUID visitId,
             @RequestParam(required = false) String visitorName,
@@ -124,7 +124,7 @@ public class VisitController {
 
     @Operation(summary = "Get an inmate's visit history", description = "Returns paged visits associated with the inmate UUID, including visitor name and visit type. Optional filters include visitor name, visit type, and inclusive ISO-8601 date bounds. Requires VISITOR_OFFICER, RECORDS_OFFICER, CASE_OFFICER, MEDICAL_OFFICER, or SUPER_ADMIN.")
     @GetMapping("/inmates/{inmateId}/visits")
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'RECORDS_OFFICER', 'CASE_OFFICER', 'MEDICAL_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'MEDICAL_OFFICER')")
     public Page<VisitHistoryResponse> getInmateVisitHistory(
             @PathVariable UUID inmateId,
             @RequestParam(required = false) String visitorName,
