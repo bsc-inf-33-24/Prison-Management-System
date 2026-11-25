@@ -282,9 +282,6 @@ public class VisitService {
         if (hasRole(user, "Case Officer")) {
             return equalEnum("visitType", VisitType.LEGAL);
         }
-        if (hasRole(user, "Super Admin")) {
-            return (root, query, cb) -> root.get("visitType").in(VisitType.FAMILY, VisitType.LEGAL);
-        }
         throw new AccessDeniedException("Your role cannot access visits.");
     }
 
@@ -410,9 +407,9 @@ public class VisitService {
 
     private static void requireCreatePermission(User user, VisitType visitType) {
         boolean allowed = switch (visitType) {
-            case FAMILY -> hasRole(user, "Visitor Officer", "Records Officer", "Super Admin");
-            case LEGAL -> hasRole(user, "Case Officer", "Records Officer", "Super Admin");
-            case HEALTH -> hasRole(user, "Medical Officer", "Records Officer", "Super Admin");
+            case FAMILY -> hasRole(user, "Visitor Officer", "Records Officer");
+            case LEGAL -> hasRole(user, "Case Officer", "Records Officer");
+            case HEALTH -> hasRole(user, "Medical Officer", "Records Officer");
         };
         if (!allowed) {
             throw new AccessDeniedException("Your role cannot record this visit type.");
@@ -420,15 +417,15 @@ public class VisitService {
     }
 
     private static boolean canViewFamilyDetails(User user) {
-        return hasRole(user, "Visitor Officer", "Records Officer", "Super Admin");
+        return hasRole(user, "Visitor Officer", "Records Officer");
     }
 
     private static boolean canViewLegalDetails(User user) {
-        return hasRole(user, "Case Officer", "Records Officer", "Super Admin");
+        return hasRole(user, "Case Officer", "Records Officer");
     }
 
     private static boolean canViewHealthDetails(User user) {
-        return hasRole(user, "Medical Officer", "Super Admin");
+        return hasRole(user, "Medical Officer");
     }
 
     private static boolean hasRole(User user, String... roles) {

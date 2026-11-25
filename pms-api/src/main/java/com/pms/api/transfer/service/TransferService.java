@@ -45,6 +45,7 @@ public class TransferService {
     private final PaginationProperties pagination;
     private final PrisonAccessService prisonAccess;
     private final CustodyStayRepository custodyStays;
+    private TransferRequestEmailService transferRequestEmailService;
     @Autowired
     public TransferService(InmateTransferRepository transfers,InmateRepository inmates,PrisonRepository prisons,
                            CellService cells,PaginationProperties pagination,PrisonAccessService prisonAccess,
@@ -55,6 +56,11 @@ public class TransferService {
     public TransferService(InmateTransferRepository transfers, InmateRepository inmates, PrisonRepository prisons,
                            CellService cells, PaginationProperties pagination, PrisonAccessService prisonAccess) {
         this(transfers, inmates, prisons, cells, pagination, prisonAccess, null);
+    }
+
+    @Autowired(required = false)
+    public void setTransferRequestEmailService(TransferRequestEmailService transferRequestEmailService) {
+        this.transferRequestEmailService = transferRequestEmailService;
     }
 
     @Audited @Transactional
@@ -76,6 +82,7 @@ public class TransferService {
         if (transfers.existsByInmate_IdAndStatusIn(inmate.getId(),ACTIVE)) throw new ActiveTransferExistsException();
         try {
             InmateTransfer transfer=transfers.saveAndFlush(new InmateTransfer(inmate,source,destination,request.reason().trim(),actor()));
+            if (transferRequestEmailService != null) transferRequestEmailService.notifyCommissioners(transfer);
             return TransferResponse.from(transfer);
         } catch (DataIntegrityViolationException exception) { throw new ActiveTransferExistsException(); }
     }

@@ -5,6 +5,7 @@ import com.pms.api.roster.entity.RosterShift;
 import com.pms.api.roster.entity.RosterStatus;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,7 +21,7 @@ public record RosterResponse(
         Instant publishedAt,
         List<RosterShiftResponse> shifts
 ) {
-    public static RosterResponse from(Roster roster, List<RosterShift> shifts) {
+    public static RosterResponse from(Roster roster, List<RosterShift> shifts, ZoneId rosterTimeZone) {
         return new RosterResponse(
                 roster.getPublicUuid(),
                 roster.getPrison().getPublicUuid(),
@@ -31,6 +32,6 @@ public record RosterResponse(
                 roster.getCreatedAt(),
                 roster.getUpdatedAt(),
                 roster.getPublishedAt(),
-                shifts.stream().map(RosterShiftResponse::from).toList());
+                shifts.stream().map(shift -> RosterShiftResponse.from(shift, rosterTimeZone)).toList());
     }
 }

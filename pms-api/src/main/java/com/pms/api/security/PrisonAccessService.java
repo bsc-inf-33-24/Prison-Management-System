@@ -33,7 +33,7 @@ public class PrisonAccessService {
 
     public boolean isGlobalAdmin() {
         String role=currentUser().getRole();
-        return "Super Admin".equals(role) || "Commissioner".equals(role) || "Transfer Officer".equals(role);
+        return "Commissioner".equals(role) || "Transfer Officer".equals(role);
     }
 
     /** Null means an unrestricted system-wide role; otherwise it is the account's prison UUID. */
