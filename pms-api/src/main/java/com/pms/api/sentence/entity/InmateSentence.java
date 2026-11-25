@@ -43,4 +43,18 @@ public class InmateSentence extends BaseEntity {
     public LocalDate getEndDate() { return endDate; }
     public SentenceStatus getStatus() { return status; }
     public void changeStatus(SentenceStatus status) { this.status = status; }
+    public void updateDetails(String offence, SentenceType sentenceType, LocalDate startDate, LocalDate endDate) {
+        SentenceType nextType = sentenceType == null ? this.sentenceType : sentenceType;
+        LocalDate nextStart = startDate == null ? this.startDate : startDate;
+        LocalDate nextEnd = endDate == null ? this.endDate : endDate;
+        if (nextType != SentenceType.FIXED_TERM) nextEnd = null;
+        if (nextType == SentenceType.FIXED_TERM && (nextEnd == null || nextEnd.isBefore(nextStart)))
+            throw new IllegalArgumentException("A fixed-term sentence requires a valid end date.");
+        if (nextType != SentenceType.FIXED_TERM && nextEnd != null)
+            throw new IllegalArgumentException("Life and undetermined sentences must not have an end date.");
+        if (offence != null) this.offence = offence.trim();
+        this.sentenceType = nextType;
+        this.startDate = nextStart;
+        this.endDate = nextEnd;
+    }
 }

@@ -1,6 +1,7 @@
 package com.pms.api.inmate.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.pms.api.inmate.entity.InmateType;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
@@ -20,6 +21,8 @@ public record UpdateInmateDetailsRequest(
         @Size(min = 1, max = 20, message = "Gender must not be blank and must not exceed 20 characters.")
         String gender,
 
-        LocalDate admissionDate
+        LocalDate admissionDate,
+        InmateType inmateType,
+        LocalDate expectedCourtDate
 ) {
 }
