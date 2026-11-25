@@ -104,7 +104,7 @@ class CellAllocationApiIntegrationTest {
         moveRequest.put("cellId", newCell.getPublicUuid().toString());
 
         mockMvc.perform(put("/api/v1/inmates/" + inmate.getPublicUuid() + "/cell-allocation")
-                        .header("Authorization", bearerToken())
+                        .header("Authorization", recordsOfficerBearerToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(moveRequest)))
                 .andExpect(status().isOk())
@@ -116,6 +116,12 @@ class CellAllocationApiIntegrationTest {
                 .findByInmate_IdAndReleasedAtIsNull(inmate.getId())
                 .orElseThrow();
         assertThat(activeAllocation.getCell().getId()).isEqualTo(newCell.getId());
+
+        mockMvc.perform(put("/api/v1/inmates/" + inmate.getPublicUuid() + "/cell-allocation")
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(moveRequest)))
+                .andExpect(status().isForbidden());
     }
 
     @Test

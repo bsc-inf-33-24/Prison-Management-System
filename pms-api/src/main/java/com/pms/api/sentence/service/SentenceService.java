@@ -1,6 +1,7 @@
 package com.pms.api.sentence.service;
 
 import com.pms.api.inmate.entity.Inmate;
+import com.pms.api.inmate.entity.InmateType;
 import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.security.PrisonAccessService;
 import com.pms.api.sentence.dto.*;
@@ -30,6 +31,9 @@ public class SentenceService {
     public SentenceResponse create(CreateSentenceRequest request) {
         Inmate inmate = inmate(request.inmateId());
         prisonAccess.requirePrison(inmate.getCurrentPrison() == null ? null : inmate.getCurrentPrison().getPublicUuid());
+        if (inmate.getInmateType() == InmateType.REMAND) {
+            throw new IllegalArgumentException("A sentence cannot be created for a REMAND inmate.");
+        }
         InmateSentence sentence = sentences.save(new InmateSentence(inmate, request.offence().trim(),
                 request.sentenceType(), request.startDate(), request.endDate()));
         if (request.remission() != null) {

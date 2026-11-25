@@ -35,7 +35,7 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/v1/users")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "03. User management", description = "Create users and update user details, status, roles, and permissions.")
+@Tag(name = "03. User management", description = "Super Admins manage user accounts; Commissioners can list accounts.")
 public class UserController {
 
     private final UserService userService;
@@ -98,7 +98,7 @@ public class UserController {
 
     @PatchMapping("/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(summary = "Update a user's details", description = "Updates the supplied user details, including optional email or prison assignment. Requires SUPER_ADMIN.")
+    @Operation(summary = "Update a user's details", description = "Updates the supplied user details, including email or prison assignment. Requires SUPER_ADMIN.")
     public UserResponse updateDetails(@PathVariable UUID userId,
                                       @Valid @RequestBody UpdateUserDetailsRequest request) {
         return userService.updateDetails(userId, request);

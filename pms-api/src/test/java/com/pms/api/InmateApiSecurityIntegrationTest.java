@@ -102,12 +102,12 @@ class InmateApiSecurityIntegrationTest {
 
         String superAdminToken = tokenForRole("Super Admin");
         expectStatus(superAdminToken, "POST", INMATES_PATH, validRequest(), 403);
-        expectStatus(superAdminToken, "GET", INMATES_PATH, null, 200);
-        expectStatus(superAdminToken, "GET", UNKNOWN_INMATE_PATH, null, 404);
+        expectStatus(superAdminToken, "GET", INMATES_PATH, null, 403);
+        expectStatus(superAdminToken, "GET", UNKNOWN_INMATE_PATH, null, 403);
         expectStatus(superAdminToken, "PATCH", UNKNOWN_INMATE_PATH, validRequest(), 403);
 
         for (String role : User.ALLOWED_ROLES) {
-            if (role.equals("Records Officer") || role.equals("Super Admin")) {
+            if (role.equals("Records Officer")) {
                 continue;
             }
             String token = tokenForRole(role);

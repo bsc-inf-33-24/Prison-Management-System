@@ -17,7 +17,7 @@ import java.util.UUID;
 public record InmateRequest(
         @NotBlank @Size(max = 100) String firstName,
         @NotBlank @Size(max = 100) String lastName,
-        @NotNull @Past LocalDate dateOfBirth,
+        @NotNull @Past(message = "Date of birth must be before today.") LocalDate dateOfBirth,
         @NotBlank @Size(max = 20) String gender,
         @NotNull LocalDate admissionDate,
         @NotNull InmateType inmateType,
@@ -33,6 +33,13 @@ public record InmateRequest(
         @Size(max = 255) String homeOfOrigin,
         @NotNull UUID cellId
 ) {
+    @AssertTrue(message = "Date of birth must be before the admission date.")
+    @JsonIgnore
+    @Schema(hidden = true)
+    public boolean isBirthDateBeforeAdmission() {
+        return dateOfBirth == null || admissionDate == null || dateOfBirth.isBefore(admissionDate);
+    }
+
     @AssertTrue(message = "REMAND inmates require an expected court date; SENTENCED inmates must not have one.")
     @JsonIgnore
     @Schema(hidden = true)

@@ -43,9 +43,9 @@ public class CellController {
     }
 
     @GetMapping("/cells")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER')")
     @Operation(summary = "List cells",
-            description = "Returns paged cell records. Optional filters include block name, prison UUID, and block UUID; page, size, and sort control pagination. Requires RECORDS_OFFICER, COMMISSIONER, or SUPER_ADMIN.")
+            description = "Returns paged cell records. Optional filters include block name, prison UUID, and block UUID; page, size, and sort control pagination. Requires RECORDS_OFFICER or COMMISSIONER.")
     public PageResponse<CellResponse> listCells(@RequestParam(required = false) String blockName,
                                                 @RequestParam(required = false) UUID prisonId,
                                                 @RequestParam(required = false) UUID blockId,
@@ -56,9 +56,9 @@ public class CellController {
     }
 
     @GetMapping("/cells/{cellId}")
-    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('RECORDS_OFFICER', 'COMMISSIONER')")
     @Operation(summary = "Get a cell",
-            description = "Returns cell details, including allocation information, for the cell public UUID. Requires RECORDS_OFFICER, COMMISSIONER, or SUPER_ADMIN.")
+            description = "Returns cell details, including allocation information, for the cell public UUID. Requires RECORDS_OFFICER or COMMISSIONER.")
     public CellDetailResponse getCell(@PathVariable UUID cellId) {
         return cellService.getCell(cellId);
     }

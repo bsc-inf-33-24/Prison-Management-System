@@ -22,13 +22,15 @@ public interface RosterRepository extends JpaRepository<Roster, Long> {
 
     @Query("""
             select r from Roster r
-            where (:prisonUuid is null or r.prison.publicUuid = :prisonUuid)
+            where (:rosterUuid is null or r.publicUuid = :rosterUuid)
+              and (:prisonUuid is null or r.prison.publicUuid = :prisonUuid)
               and (:fromDate is null or r.periodEnd >= :fromDate)
               and (:toDate is null or r.periodStart <= :toDate)
               and (:status is null or r.status = :status)
             order by r.periodStart, r.id
             """)
-    List<Roster> search(@Param("prisonUuid") UUID prisonUuid,
+    List<Roster> search(@Param("rosterUuid") UUID rosterUuid,
+                        @Param("prisonUuid") UUID prisonUuid,
                         @Param("fromDate") LocalDate fromDate,
                         @Param("toDate") LocalDate toDate,
                         @Param("status") RosterStatus status);
