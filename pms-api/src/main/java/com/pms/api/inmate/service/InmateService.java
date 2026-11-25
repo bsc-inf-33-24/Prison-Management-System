@@ -7,8 +7,8 @@ import com.pms.api.common.audit.Audited;
 import com.pms.api.inmate.dto.InmateRequest;
 import com.pms.api.inmate.dto.InmateResponse;
 import com.pms.api.inmate.dto.UpdateInmateDetailsRequest;
-import com.pms.api.inmate.dto.PatchRemandRequest;
 import com.pms.api.inmate.entity.Inmate;
+import com.pms.api.inmate.entity.InmateType;
 import com.pms.api.inmate.entity.CustodyStay;
 import com.pms.api.inmate.repository.CustodyStayRepository;
 import com.pms.api.inmate.repository.InmateRepository;
@@ -19,6 +19,7 @@ import com.pms.api.notification.service.NotificationService;
 import com.pms.api.prison.entity.Prison;
 import com.pms.api.prison.repository.PrisonRepository;
 import com.pms.api.security.PrisonAccessService;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -138,22 +139,25 @@ public class InmateService {
         String firstName = updateValue(request.firstName(), inmate.getFirstName());
         String lastName = updateValue(request.lastName(), inmate.getLastName());
         String gender = updateValue(request.gender(), inmate.getGender());
+        InmateType inmateType = request.inmateType() == null ? inmate.getInmateType() : request.inmateType();
+        LocalDate expectedCourtDate = request.expectedCourtDate() == null
+                ? inmate.getExpectedCourtDate() : request.expectedCourtDate();
+        if (inmateType == InmateType.REMAND && expectedCourtDate == null) {
+            throw new IllegalArgumentException("A REMAND inmate must have an expected court date.");
+        }
+        if (inmateType == InmateType.SENTENCED && request.expectedCourtDate() != null) {
+            throw new IllegalArgumentException("A SENTENCED inmate cannot have an expected court date.");
+        }
+        if (inmateType == InmateType.SENTENCED) expectedCourtDate = null;
         inmate.updateDetails(
                 firstName,
                 lastName,
                 request.dateOfBirth() == null ? inmate.getDateOfBirth() : request.dateOfBirth(),
                 gender,
-                request.admissionDate() == null ? inmate.getAdmissionDate() : request.admissionDate()
+                request.admissionDate() == null ? inmate.getAdmissionDate() : request.admissionDate(),
+                inmateType,
+                expectedCourtDate
         );
-        return InmateResponse.from(saveInmate(inmate));
-    }
-
-    @Audited
-    @Transactional
-    public InmateResponse updateRemand(UUID inmateId, PatchRemandRequest request) {
-        Inmate inmate = findInmate(inmateId);
-        prisonAccess.requirePrison(inmate.getCurrentPrison() == null ? null : inmate.getCurrentPrison().getPublicUuid());
-        inmate.updateExpectedCourtDate(request.expectedCourtDate());
         return InmateResponse.from(saveInmate(inmate));
     }
 

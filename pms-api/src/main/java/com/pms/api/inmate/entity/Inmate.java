@@ -150,19 +150,20 @@ public class Inmate extends BaseEntity {
 
     public void assignPrison(Prison prison) { this.currentPrison = prison; }
 
-    public void updateExpectedCourtDate(LocalDate expectedCourtDate) {
-        if (inmateType != InmateType.REMAND) {
-            throw new IllegalArgumentException("Court dates can only be updated for remand inmates.");
-        }
-        this.expectedCourtDate = expectedCourtDate;
+    public void markSentenced() {
+        this.inmateType = InmateType.SENTENCED;
+        this.expectedCourtDate = null;
     }
 
     public void updateDetails(String firstName, String lastName, LocalDate dateOfBirth,
-                              String gender, LocalDate admissionDate) {
+                              String gender, LocalDate admissionDate, InmateType inmateType,
+                              LocalDate expectedCourtDate) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.dateOfBirth = dateOfBirth;
         this.gender = gender;
         this.admissionDate = admissionDate;
+        this.inmateType = inmateType;
+        this.expectedCourtDate = expectedCourtDate;
     }
 }

@@ -2,7 +2,6 @@ package com.pms.api.inmate.controller;
 
 import com.pms.api.inmate.dto.InmateRequest;
 import com.pms.api.inmate.dto.UpdateInmateDetailsRequest;
-import com.pms.api.inmate.dto.PatchRemandRequest;
 import com.pms.api.inmate.dto.InmateResponse;
 import com.pms.api.inmate.service.InmateService;
 import com.pms.api.inmate.service.ReadmissionService;
@@ -105,14 +104,6 @@ public class InmateController {
     public InmateResponse update(@PathVariable UUID inmateId,
                                  @Valid @RequestBody UpdateInmateDetailsRequest request) {
         return inmateService.update(inmateId, request);
-    }
-
-    @PatchMapping("/{inmateId}/remand")
-    @PreAuthorize("hasRole('RECORDS_OFFICER')")
-    @Operation(summary = "Update remand details", description = "Updates the expected court date for the remand inmate public UUID. Requires RECORDS_OFFICER.")
-    public InmateResponse updateRemand(@PathVariable UUID inmateId,
-                                       @Valid @RequestBody PatchRemandRequest request) {
-        return inmateService.updateRemand(inmateId, request);
     }
 
     @PostMapping("/{prisonerId}/readmissions")

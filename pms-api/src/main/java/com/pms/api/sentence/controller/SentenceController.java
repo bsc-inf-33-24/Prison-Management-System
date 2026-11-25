@@ -22,8 +22,8 @@ public class SentenceController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
-    @io.swagger.v3.oas.annotations.Operation(summary = "Create an inmate sentence",
-            description = "Records a sentence for an inmate. Requires the RECORDS_OFFICER role.")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Record an offence or create an inmate sentence",
+            description = "For REMAND, inmateId and offence alone records an offence. Full sentence details automatically change REMAND to SENTENCED and create a sentence.")
     public SentenceResponse create(@Valid @RequestBody CreateSentenceRequest request) { return service.create(request); }
 
     @GetMapping("/{sentenceId}")
@@ -44,7 +44,7 @@ public class SentenceController {
     @GetMapping
     @PreAuthorize("hasRole('RECORDS_OFFICER')")
     @io.swagger.v3.oas.annotations.Operation(summary = "List sentences for an inmate",
-            description = "Returns all sentences associated with the required inmate UUID. Requires the RECORDS_OFFICER role.")
+            description = "Returns sentence and offence-only records associated with the required inmate UUID. Requires the RECORDS_OFFICER role.")
     public List<SentenceResponse> list(@RequestParam UUID inmateId) { return service.list(inmateId); }
 
 }
