@@ -1,10 +1,8 @@
 package com.pms.api.roster.controller;
 
 import com.pms.api.roster.dto.CreateRosterRequest;
-import com.pms.api.roster.dto.CreateShiftRequest;
 import com.pms.api.roster.dto.RosterResponse;
 import com.pms.api.roster.dto.RosterShiftResponse;
-import com.pms.api.roster.dto.RosterSummaryResponse;
 import com.pms.api.roster.dto.UpdateRosterRequest;
 import com.pms.api.roster.dto.UpdateShiftRequest;
 import com.pms.api.roster.entity.RosterStatus;
@@ -18,7 +16,6 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,77 +39,31 @@ public class RosterController {
     }
 
     @PostMapping("/rosters")
-    @PreAuthorize("hasAnyRole('DUTY_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('DUTY_OFFICER')")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create a draft duty roster", description = "Creates a draft roster for a prison and date range. Requires DUTY_OFFICER or SUPER_ADMIN.")
+    @Operation(summary = "Create a duty roster", description = "Creates a draft roster and assigns all shifts in the request. Requires DUTY_OFFICER.")
     public RosterResponse create(@Valid @RequestBody CreateRosterRequest request) {
         return rosterService.create(request);
     }
 
     @GetMapping("/rosters")
-    @PreAuthorize("hasAnyRole('DUTY_OFFICER', 'SUPER_ADMIN')")
-    @Operation(summary = "List rosters visible to the caller", description = "Lists rosters, optionally filtered by prison UUID, inclusive date range, and status. Requires DUTY_OFFICER or SUPER_ADMIN; prison visibility follows the caller's assignment.")
-    public List<RosterSummaryResponse> list(
+    @PreAuthorize("hasRole('DUTY_OFFICER')")
+    @Operation(summary = "List rosters visible to the caller", description = "Lists rosters, optionally filtered by prison UUID, inclusive date range, and status. Requires DUTY_OFFICER.")
+    public List<RosterResponse> list(
+            @RequestParam(required = false) UUID rosterId,
             @RequestParam(required = false) UUID prisonId,
             @RequestParam(required = false) LocalDate from,
             @RequestParam(required = false) LocalDate to,
             @RequestParam(required = false) RosterStatus status) {
-        return rosterService.list(prisonId, from, to, status);
-    }
-
-    @GetMapping("/rosters/{rosterId}")
-    @PreAuthorize("hasAnyRole('DUTY_OFFICER', 'SUPER_ADMIN')")
-    @Operation(summary = "View a roster and its shifts", description = "Returns the roster and its shifts by roster UUID. Requires DUTY_OFFICER or SUPER_ADMIN, subject to prison access.")
-    public RosterResponse get(@PathVariable UUID rosterId) {
-        return rosterService.get(rosterId);
+        return rosterService.list(rosterId, prisonId, from, to, status);
     }
 
     @PatchMapping("/rosters/{rosterId}")
-    @PreAuthorize("hasAnyRole('DUTY_OFFICER', 'SUPER_ADMIN')")
-    @Operation(summary = "Change a draft roster's date range", description = "Updates the date range of a draft roster. Published or closed rosters cannot be edited. Requires DUTY_OFFICER or SUPER_ADMIN.")
+    @PreAuthorize("hasRole('DUTY_OFFICER')")
+    @Operation(summary = "Update a duty roster", description = "Updates the date range, adds or updates shifts, removes shifts by ID, or changes status to PUBLISHED or CLOSED. Requires DUTY_OFFICER.")
     public RosterResponse update(@PathVariable UUID rosterId,
                                  @Valid @RequestBody UpdateRosterRequest request) {
         return rosterService.update(rosterId, request);
-    }
-
-    @PostMapping("/rosters/{rosterId}/shifts")
-    @PreAuthorize("hasAnyRole('DUTY_OFFICER', 'SUPER_ADMIN')")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Add a shift to a draft roster", description = "Adds a shift to the specified draft roster. Requires DUTY_OFFICER or SUPER_ADMIN.")
-    public RosterShiftResponse addShift(@PathVariable UUID rosterId,
-                                        @Valid @RequestBody CreateShiftRequest request) {
-        return rosterService.addShift(rosterId, request);
-    }
-
-    @PatchMapping("/rosters/{rosterId}/shifts/{shiftId}")
-    @PreAuthorize("hasAnyRole('DUTY_OFFICER', 'SUPER_ADMIN')")
-    @Operation(summary = "Update a shift", description = "Updates a shift belonging to the specified draft roster. Requires DUTY_OFFICER or SUPER_ADMIN.")
-    public RosterShiftResponse updateShift(@PathVariable UUID rosterId,
-                                           @PathVariable UUID shiftId,
-                                           @Valid @RequestBody UpdateShiftRequest request) {
-        return rosterService.updateShift(rosterId, shiftId, request);
-    }
-
-    @DeleteMapping("/rosters/{rosterId}/shifts/{shiftId}")
-    @PreAuthorize("hasAnyRole('DUTY_OFFICER', 'SUPER_ADMIN')")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Remove or cancel a roster shift", description = "Deletes a shift from a draft roster or cancels it when its roster is published. Requires DUTY_OFFICER or SUPER_ADMIN.")
-    public void deleteShift(@PathVariable UUID rosterId, @PathVariable UUID shiftId) {
-        rosterService.deleteShift(rosterId, shiftId);
-    }
-
-    @PostMapping("/rosters/{rosterId}/publish")
-    @PreAuthorize("hasAnyRole('DUTY_OFFICER', 'SUPER_ADMIN')")
-    @Operation(summary = "Validate and publish a roster", description = "Validates roster coverage and publishes the roster if all rules pass. Requires DUTY_OFFICER or SUPER_ADMIN.")
-    public RosterResponse publish(@PathVariable UUID rosterId) {
-        return rosterService.publish(rosterId);
-    }
-
-    @PostMapping("/rosters/{rosterId}/close")
-    @PreAuthorize("hasAnyRole('DUTY_OFFICER', 'SUPER_ADMIN')")
-    @Operation(summary = "Close a published roster", description = "Closes a published roster after its date range has ended. Requires DUTY_OFFICER or SUPER_ADMIN.")
-    public RosterResponse close(@PathVariable UUID rosterId) {
-        return rosterService.close(rosterId);
     }
 
     @GetMapping("/me/shifts")

@@ -38,7 +38,7 @@ public class VisitController {
     @Operation(summary = "Record a visit", description = "Record a family, legal, or health visit using the type field. Type-specific details are supplied in the same request.")
     @PostMapping("/visits")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'CASE_OFFICER', 'RECORDS_OFFICER', 'MEDICAL_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'CASE_OFFICER', 'RECORDS_OFFICER', 'MEDICAL_OFFICER')")
     public VisitResponse recordVisit(@Valid @RequestBody VisitRequest request,
                                     @AuthenticationPrincipal UserDetails currentUser) {
         return visitService.recordVisit(request, currentUser.getUsername());
@@ -46,7 +46,7 @@ public class VisitController {
 
     @Operation(summary = "Search visits", description = "Filters visits by visit UUID, visitor name, visit type, inmate UUID or name, visit date range, and recording officer UUID. Results are restricted by the authenticated user's role.")
     @GetMapping("/visits")
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'CASE_OFFICER', 'RECORDS_OFFICER', 'MEDICAL_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'CASE_OFFICER', 'RECORDS_OFFICER', 'MEDICAL_OFFICER')")
     public Page<VisitResponse> searchVisits(
             @RequestParam(required = false) UUID visitId,
             @RequestParam(required = false) String visitorName,
@@ -66,7 +66,7 @@ public class VisitController {
 
     @Operation(summary = "Get visits for an inmate", description = "Returns visits for the inmate UUID, filtered by the authenticated user's role: Medical Officers see health visits; other roles see their authorized family and legal visits.")
     @GetMapping("/visits/inmate/{inmateId}")
-    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'CASE_OFFICER', 'RECORDS_OFFICER', 'MEDICAL_OFFICER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('VISITOR_OFFICER', 'CASE_OFFICER', 'RECORDS_OFFICER', 'MEDICAL_OFFICER')")
     public Page<VisitResponse> getVisitsByInmate(
             @PathVariable UUID inmateId,
             @RequestParam(defaultValue = "0") int page,

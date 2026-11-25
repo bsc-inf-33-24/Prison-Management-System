@@ -21,6 +21,7 @@ import com.pms.api.user.repository.UserRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Collection;
@@ -68,7 +69,7 @@ public class RosterService {
         validateDateRange(request.periodStart(), request.periodEnd());
         UUID prisonId = prisonAccess.effectivePrison(request.prisonId());
         if (prisonId == null) {
-            throw new IllegalArgumentException("prisonId is required for a Super Admin.");
+            throw new IllegalArgumentException("prisonId is required when the caller has no assigned prison.");
         }
         Prison prison = prisonRepository.findByPublicUuid(prisonId)
                 .orElseThrow(PrisonNotFoundException::new);
@@ -77,54 +78,94 @@ public class RosterService {
         }
         Roster roster = rosterRepository.saveAndFlush(new Roster(
                 prison, request.periodStart(), request.periodEnd(), prisonAccess.currentUser()));
+        if (request.shifts() != null) {
+            for (CreateShiftRequest shiftRequest : request.shifts()) {
+                addShift(roster, shiftRequest);
+            }
+        }
         return response(roster);
     }
 
     @Transactional
     public RosterResponse update(UUID rosterId, UpdateRosterRequest request) {
         Roster roster = findRosterForUpdate(rosterId);
-        requireDraft(roster);
-        validateDateRange(request.periodStart(), request.periodEnd());
-        for (RosterShift shift : shiftRepository.findByRoster_IdOrderByStartAtAscIdAsc(roster.getId())) {
-            validateShiftPeriod(roster, request.periodStart(), request.periodEnd(),
-                    shift.getStartAt(), shift.getEndAt());
+        LocalDate periodStart = request.periodStart() == null ? roster.getPeriodStart() : request.periodStart();
+        LocalDate periodEnd = request.periodEnd() == null ? roster.getPeriodEnd() : request.periodEnd();
+        boolean changingPeriod = request.periodStart() != null || request.periodEnd() != null;
+        if (changingPeriod) {
+            requireDraft(roster);
+            validateDateRange(periodStart, periodEnd);
+            for (RosterShift shift : shiftRepository.findByRoster_IdOrderByStartAtAscIdAsc(roster.getId())) {
+                validateShiftPeriod(roster, periodStart, periodEnd, shift.getStartAt(), shift.getEndAt());
+            }
+            roster.updatePeriod(periodStart, periodEnd);
         }
-        roster.updatePeriod(request.periodStart(), request.periodEnd());
+
+        if (request.shifts() != null) {
+            for (UpdateShiftRequest shiftRequest : request.shifts()) {
+                if (shiftRequest.id() == null) {
+                    if (roster.getStatus() != RosterStatus.DRAFT) requireEditable(roster);
+                    addShift(roster, new CreateShiftRequest(shiftRequest.officerId(), shiftRequest.date(),
+                            shiftRequest.startTime(), shiftRequest.endTime(), shiftRequest.location()));
+                } else {
+                    updateShift(roster, shiftRequest.id(), shiftRequest);
+                }
+            }
+        }
+        if (request.removeShiftIds() != null) {
+            for (UUID shiftId : request.removeShiftIds()) removeShift(roster, shiftId);
+        }
         rosterRepository.flush();
+        if (request.status() == RosterStatus.PUBLISHED && roster.getStatus() == RosterStatus.DRAFT) {
+            return publish(rosterId);
+        }
+        if (request.status() == RosterStatus.CLOSED && roster.getStatus() == RosterStatus.PUBLISHED) {
+            return close(rosterId);
+        }
+        if (request.status() != null && request.status() != roster.getStatus()) {
+            throw new InvalidRosterStateException("The requested roster status transition is not allowed.");
+        }
         return response(roster);
     }
 
     @Transactional(readOnly = true)
-    public List<RosterSummaryResponse> list(UUID prisonId, LocalDate from, LocalDate to, RosterStatus status) {
+    public List<RosterResponse> list(UUID rosterId, UUID prisonId, LocalDate from, LocalDate to, RosterStatus status) {
         validateDateRange(from, to);
         UUID effectivePrison = prisonAccess.effectivePrison(prisonId);
-        return rosterRepository.search(effectivePrison, from, to, status)
-                .stream().map(RosterSummaryResponse::from).toList();
-    }
-
-    @Transactional(readOnly = true)
-    public RosterResponse get(UUID rosterId) {
-        Roster roster = findRoster(rosterId);
-        requirePrisonAccess(roster);
-        return response(roster);
+        return rosterRepository.search(rosterId, effectivePrison, from, to, status)
+                .stream().map(this::response).toList();
     }
 
     @Transactional
     public RosterShiftResponse addShift(UUID rosterId, CreateShiftRequest request) {
         Roster roster = findRosterForUpdate(rosterId);
         requireDraft(roster);
+        return addShift(roster, request);
+    }
+
+    private RosterShiftResponse addShift(Roster roster, CreateShiftRequest request) {
         User officer = lockOfficer(request.officerId());
         validateOfficer(officer, roster);
-        validateShiftPeriod(roster, request.startAt(), request.endAt());
-        rejectOverlap(officer, request.startAt(), request.endAt(), null);
+        OffsetDateTime startAt = shiftDateTime(request.date(), request.startTime());
+        OffsetDateTime endAt = shiftDateTime(request.date(), request.endTime());
+        validateShiftPeriod(roster, startAt, endAt);
+        rejectOverlap(officer, startAt, endAt, null);
         RosterShift shift = shiftRepository.saveAndFlush(new RosterShift(
-                roster, officer, request.startAt(), request.endAt(), request.location()));
-        return RosterShiftResponse.from(shift);
+                roster, officer, startAt, endAt, request.location()));
+        if (roster.getStatus() == RosterStatus.PUBLISHED) {
+            notifyOfficer(officer.getId(), "DUTY_SHIFT_ASSIGNED", "Duty shift assigned",
+                    "You have been assigned a duty shift. " + shiftDetails(roster, shift), roster.getPublicUuid());
+        }
+        return RosterShiftResponse.from(shift, rosterTimeZone);
     }
 
     @Transactional
     public RosterShiftResponse updateShift(UUID rosterId, UUID shiftId, UpdateShiftRequest request) {
         Roster roster = findRosterForUpdate(rosterId);
+        return updateShift(roster, shiftId, request);
+    }
+
+    private RosterShiftResponse updateShift(Roster roster, UUID shiftId, UpdateShiftRequest request) {
         RosterShift shift = findShift(roster, shiftId);
         requireEditable(roster);
 
@@ -134,25 +175,31 @@ public class RosterService {
         Map<Long, User> lockedOfficers = lockOfficers(List.of(oldOfficerId, requestedOfficerId));
         User newOfficer = lockedOfficers.get(requestedOfficerId);
         validateOfficer(newOfficer, roster);
-        validateShiftPeriod(roster, request.startAt(), request.endAt());
-        rejectOverlap(newOfficer, request.startAt(), request.endAt(), shift.getId());
+        OffsetDateTime startAt = shiftDateTime(request.date(), request.startTime());
+        OffsetDateTime endAt = shiftDateTime(request.date(), request.endTime());
+        validateShiftPeriod(roster, startAt, endAt);
+        rejectOverlap(newOfficer, startAt, endAt, shift.getId());
 
         User oldOfficer = lockedOfficers.get(oldOfficerId);
         boolean published = roster.getStatus() == RosterStatus.PUBLISHED;
         OffsetDateTime oldStartAt = shift.getStartAt();
         OffsetDateTime oldEndAt = shift.getEndAt();
         String oldLocation = shift.getLocation();
-        shift.update(newOfficer, request.startAt(), request.endAt(), request.location());
+        shift.update(newOfficer, startAt, endAt, request.location());
         shiftRepository.flush();
         if (published) {
             notifyShiftChanged(roster, shift, oldOfficer, oldStartAt, oldEndAt, oldLocation);
         }
-        return RosterShiftResponse.from(shift);
+        return RosterShiftResponse.from(shift, rosterTimeZone);
     }
 
     @Transactional
     public void deleteShift(UUID rosterId, UUID shiftId) {
         Roster roster = findRosterForUpdate(rosterId);
+        removeShift(roster, shiftId);
+    }
+
+    private void removeShift(Roster roster, UUID shiftId) {
         RosterShift shift = findShift(roster, shiftId);
         requireEditable(roster);
         User officer = userRepository.findByIdForUpdate(shift.getAssignedOfficer().getId())
@@ -211,7 +258,7 @@ public class RosterService {
         OffsetDateTime toExclusive = to.plusDays(1).atStartOfDay(rosterTimeZone).toOffsetDateTime();
         return shiftRepository.findPublishedForOfficerBetween(
                         officer.getId(), fromInclusive, toExclusive)
-                .stream().map(RosterShiftResponse::from).toList();
+                .stream().map(shift -> RosterShiftResponse.from(shift, rosterTimeZone)).toList();
     }
 
     private Roster findRoster(UUID rosterId) {
@@ -256,6 +303,11 @@ public class RosterService {
 
     private void validateShiftPeriod(Roster roster, OffsetDateTime startAt, OffsetDateTime endAt) {
         validateShiftPeriod(roster, roster.getPeriodStart(), roster.getPeriodEnd(), startAt, endAt);
+    }
+
+    private OffsetDateTime shiftDateTime(LocalDate date, LocalTime time) {
+        if (date == null || time == null) throw new InvalidShiftTimeException();
+        return date.atTime(time).atZone(rosterTimeZone).toOffsetDateTime();
     }
 
     private void validateShiftPeriod(Roster roster, LocalDate periodStart, LocalDate periodEnd,
@@ -328,13 +380,14 @@ public class RosterService {
 
     private String shiftDetails(Roster roster, RosterShift shift) {
         return "Roster " + roster.getPublicUuid() + ", shift " + shift.getPublicUuid()
-                + ", " + shift.getStartAt() + " to " + shift.getEndAt()
+                + ", " + shift.getStartAt().atZoneSameInstant(rosterTimeZone).toLocalTime()
+                + " to " + shift.getEndAt().atZoneSameInstant(rosterTimeZone).toLocalTime()
                 + ", location " + shift.getLocation() + ".";
     }
 
     private RosterResponse response(Roster roster) {
         List<RosterShift> shifts = shiftRepository.findByRoster_IdOrderByStartAtAscIdAsc(roster.getId());
-        return RosterResponse.from(roster, shifts);
+        return RosterResponse.from(roster, shifts, rosterTimeZone);
     }
 
     private static void validateDateRange(LocalDate from, LocalDate to) {

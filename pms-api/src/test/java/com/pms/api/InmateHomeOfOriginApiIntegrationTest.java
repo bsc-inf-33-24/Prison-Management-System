@@ -135,7 +135,7 @@ class InmateHomeOfOriginApiIntegrationTest {
 
                 expectDetailStatus(token, inmateId, 200);
                 expectDetailStatus(tokenFor("Records Officer", prison), inmateId, 200);
-                expectDetailStatus(tokenFor("Super Admin", null), inmateId, 200);
+                expectDetailStatus(tokenFor("Super Admin", null), inmateId, 403);
                 expectDetailStatus(tokenFor("Commissioner", null), inmateId, 200);
                 expectDetailStatus(tokenFor("Visitor Officer", prison), inmateId, 403);
 

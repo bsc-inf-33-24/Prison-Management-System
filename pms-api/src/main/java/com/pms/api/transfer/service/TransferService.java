@@ -47,6 +47,7 @@ public class TransferService {
     private final PrisonAccessService prisonAccess;
     private final CustodyStayRepository custodyStays;
     private final NotificationService notifications;
+    private TransferRequestEmailService transferRequestEmailService;
     @Autowired
     public TransferService(InmateTransferRepository transfers,InmateRepository inmates,PrisonRepository prisons,
                            CellService cells,PaginationProperties pagination,PrisonAccessService prisonAccess,
@@ -63,6 +64,11 @@ public class TransferService {
     public TransferService(InmateTransferRepository transfers, InmateRepository inmates, PrisonRepository prisons,
                            CellService cells, PaginationProperties pagination, PrisonAccessService prisonAccess) {
         this(transfers, inmates, prisons, cells, pagination, prisonAccess, null);
+    }
+
+    @Autowired(required = false)
+    public void setTransferRequestEmailService(TransferRequestEmailService transferRequestEmailService) {
+        this.transferRequestEmailService = transferRequestEmailService;
     }
 
     @Audited @Transactional
@@ -84,14 +90,7 @@ public class TransferService {
         if (transfers.existsByInmate_IdAndStatusIn(inmate.getId(),ACTIVE)) throw new ActiveTransferExistsException();
         try {
             InmateTransfer transfer=transfers.saveAndFlush(new InmateTransfer(inmate,source,destination,request.reason().trim(),actor()));
-            if (notifications != null) {
-                notifications.notifyRoles(
-                        "TRANSFER_REQUESTED",
-                        "Transfer requested",
-                        "A transfer has been requested for inmate " + inmate.getFirstName() + " " + inmate.getLastName() + ".",
-                        transfer.getPublicUuid(),
-                        Set.of("Commissioner"));
-            }
+            if (transferRequestEmailService != null) transferRequestEmailService.notifyCommissioners(transfer);
             return TransferResponse.from(transfer);
         } catch (DataIntegrityViolationException exception) { throw new ActiveTransferExistsException(); }
     }

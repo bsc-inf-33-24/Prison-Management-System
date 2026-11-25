@@ -1,8 +1,11 @@
 package com.pms.api.roster.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.pms.api.roster.entity.RosterShift;
 import java.time.Instant;
-import java.time.OffsetDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 public record RosterShiftResponse(
@@ -10,20 +13,24 @@ public record RosterShiftResponse(
         UUID rosterId,
         UUID officerId,
         String officerName,
-        OffsetDateTime startAt,
-        OffsetDateTime endAt,
+        LocalDate date,
+        @JsonFormat(pattern = "HH:mm") LocalTime startTime,
+        @JsonFormat(pattern = "HH:mm") LocalTime endTime,
         String location,
         Instant createdAt,
         Instant updatedAt
 ) {
-    public static RosterShiftResponse from(RosterShift shift) {
+    public static RosterShiftResponse from(RosterShift shift, ZoneId rosterTimeZone) {
+        var start = shift.getStartAt().atZoneSameInstant(rosterTimeZone);
+        var end = shift.getEndAt().atZoneSameInstant(rosterTimeZone);
         return new RosterShiftResponse(
                 shift.getPublicUuid(),
                 shift.getRoster().getPublicUuid(),
                 shift.getAssignedOfficer().getPublicUuid(),
                 shift.getAssignedOfficer().getFullName(),
-                shift.getStartAt(),
-                shift.getEndAt(),
+                start.toLocalDate(),
+                start.toLocalTime(),
+                end.toLocalTime(),
                 shift.getLocation(),
                 shift.getCreatedAt(),
                 shift.getUpdatedAt());

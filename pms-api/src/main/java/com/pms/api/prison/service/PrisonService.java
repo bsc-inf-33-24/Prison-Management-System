@@ -80,7 +80,12 @@ public class PrisonService {
     }
 
     @Transactional(readOnly = true)
-    public PrisonDetailResponse get(UUID id) { prisonAccess.requirePrison(id); return detail(getPrison(id)); }
+    public PrisonDetailResponse get(UUID id) {
+        if (!"Super Admin".equals(prisonAccess.currentUser().getRole())) {
+            prisonAccess.requirePrison(id);
+        }
+        return detail(getPrison(id));
+    }
 
     @Audited @Transactional
     public PrisonResponse update(UUID id, UpdatePrisonRequest request) {
