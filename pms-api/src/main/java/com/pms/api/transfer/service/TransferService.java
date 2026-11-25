@@ -10,6 +10,7 @@ import com.pms.api.inmate.entity.Inmate;
 import com.pms.api.inmate.repository.InmateRepository;
 import com.pms.api.inmate.entity.CustodyStay;
 import com.pms.api.inmate.repository.CustodyStayRepository;
+import com.pms.api.notification.service.NotificationService;
 import com.pms.api.prison.entity.Prison;
 import com.pms.api.prison.repository.PrisonRepository;
 import com.pms.api.transfer.dto.ChangeTransferStatusRequest;
@@ -45,12 +46,19 @@ public class TransferService {
     private final PaginationProperties pagination;
     private final PrisonAccessService prisonAccess;
     private final CustodyStayRepository custodyStays;
+    private final NotificationService notifications;
     private TransferRequestEmailService transferRequestEmailService;
     @Autowired
     public TransferService(InmateTransferRepository transfers,InmateRepository inmates,PrisonRepository prisons,
                            CellService cells,PaginationProperties pagination,PrisonAccessService prisonAccess,
+                           CustodyStayRepository custodyStays, NotificationService notifications) {
+        this.transfers=transfers; this.inmates=inmates; this.prisons=prisons; this.cells=cells; this.pagination=pagination; this.prisonAccess=prisonAccess; this.custodyStays=custodyStays; this.notifications=notifications;
+    }
+
+    public TransferService(InmateTransferRepository transfers,InmateRepository inmates,PrisonRepository prisons,
+                           CellService cells,PaginationProperties pagination,PrisonAccessService prisonAccess,
                            CustodyStayRepository custodyStays) {
-        this.transfers=transfers; this.inmates=inmates; this.prisons=prisons; this.cells=cells; this.pagination=pagination; this.prisonAccess=prisonAccess; this.custodyStays=custodyStays;
+        this(transfers, inmates, prisons, cells, pagination, prisonAccess, custodyStays, null);
     }
 
     public TransferService(InmateTransferRepository transfers, InmateRepository inmates, PrisonRepository prisons,
@@ -119,8 +127,6 @@ public class TransferService {
             }
             else if (request.status()==TransferStatus.REJECTED) transfer.reject(actor(), null);
             else throw new InvalidTransferStatusException();
-        } else if ("Records Officer".equals(user.getRole()) && request.status()==TransferStatus.CONFIRMED) {
-            return confirmReceipt(id, transfer, request.cellId());
         } else if (request.status()==TransferStatus.CANCELLED && "Records Officer".equals(user.getRole())) {
             prisonAccess.requireTransfer(id, false);
             transfer.cancel(actor(), null);
@@ -135,6 +141,27 @@ public class TransferService {
         User user=prisonAccess.currentUser();
         if (!"Records Officer".equals(user.getRole())) throw new InvalidTransferStatusException();
         return confirmReceipt(id, transfer, request.cellId());
+    }
+
+    @Audited
+    @Transactional
+    public void reportNotArrived(UUID id) {
+        InmateTransfer transfer=getLocked(id);
+        User user=prisonAccess.currentUser();
+        if (!"Records Officer".equals(user.getRole())) throw new InvalidTransferStatusException();
+        if (transfer.getDestinationPrison()==null) throw new MissingTransferPrisonsException();
+        if (transfer.getStatus()!=TransferStatus.APPROVED && transfer.getStatus()!=TransferStatus.IN_TRANSIT)
+            throw new InvalidTransferStatusException();
+        prisonAccess.requireTransfer(id, true);
+
+        Inmate inmate=transfer.getInmate();
+        notifications.notifyRoles(
+                "TRANSFER_NOT_ARRIVED",
+                "Inmate has not arrived",
+                "The receiving prison reported that inmate " + inmate.getFirstName() + " " + inmate.getLastName()
+                        + " has not arrived for the approved transfer.",
+                transfer.getPublicUuid(),
+                Set.of("Commissioner"));
     }
 
     private TransferResponse confirmReceipt(UUID id, InmateTransfer transfer, UUID cellId) {
