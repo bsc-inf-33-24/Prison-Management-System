@@ -180,9 +180,10 @@ An unparseable UUID or date/time query value is rejected as `400`. A syntactical
 |---|---|---:|---|---|
 | `POST` | `/api/v1/transfers` | Yes | `Records Officer`, `Commissioner`, `Transfer Officer`, other assigned officers | Submit an inmate transfer |
 | `GET` | `/api/v1/transfers` | Yes | `Records Officer`, `Commissioner`, `Transfer Officer` | List transfers |
-| `POST` | `/api/v1/transfers/{id}/status` | Yes | `Records Officer`, `Commissioner`, `Transfer Officer` | Approve/reject, confirm, or cancel a transfer |
+| `POST` | `/api/v1/transfers/{id}/status` | Yes | `Records Officer`, `Commissioner`, `Transfer Officer` | Approve/reject or cancel a transfer |
+| `POST` | `/api/v1/transfers/{id}/confirm` | Yes | `Records Officer` | Confirm receipt and assign the destination cell |
 
-Transfer requests may omit `destinationPrisonId`. A Commissioner or Transfer Officer must supply it when approving a request that does not already have a destination; it may be omitted when the request already names one. The Transfer Officer role is system-wide and may read prison and inmate records and oversee transfers across prisons. A Transfer Officer account must not be assigned to a specific prison.
+Transfer requests may omit `destinationPrisonId` or send it as `null`. A Commissioner or Transfer Officer must supply it when approving a request that does not already have a destination; it may be omitted when the request already names one. The status-change request does not accept a `cellId`; provide the destination cell only when confirming receipt through `/api/v1/transfers/{id}/confirm`. The Transfer Officer role is system-wide and may read prison and inmate records and oversee transfers across prisons. A Transfer Officer account must not be assigned to a specific prison.
 
 ### 4.10 Monitoring
 

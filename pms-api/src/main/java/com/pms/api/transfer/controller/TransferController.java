@@ -47,7 +47,7 @@ public class TransferController {
     @PostMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('RECORDS_OFFICER','COMMISSIONER','TRANSFER_OFFICER')")
     @Operation(summary = "Change a transfer status",
-            description = "Approves or rejects transfers as a Commissioner or Transfer Officer. Approval may include destinationPrisonId when the request has no destination; it is optional when one is already recorded. Records Officers may confirm receipt or cancel transfers at their assigned prison.")
+            description = "Approves or rejects transfers as a Commissioner or Transfer Officer. Approval may include destinationPrisonId when the request has no destination; it is optional when one is already recorded. Records Officers may cancel transfers at their assigned prison. Confirm receipt through the dedicated /{id}/confirm endpoint.")
     public TransferResponse changeStatus(@PathVariable UUID id,@Valid @RequestBody ChangeTransferStatusRequest request) {
         return service.changeStatus(id,request);
     }
@@ -59,5 +59,14 @@ public class TransferController {
     public TransferResponse confirmReceipt(@PathVariable UUID id,
                                            @Valid @RequestBody ConfirmTransferReceiptRequest request) {
         return service.confirmReceipt(id, request);
+    }
+
+    @PostMapping("/{id}/not-arrived")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('RECORDS_OFFICER')")
+    @Operation(summary = "Report that a transferred inmate has not arrived",
+            description = "Allows a Records Officer at the destination prison to notify Commissioners that an approved or in-transit inmate transfer has not arrived.")
+    public void reportNotArrived(@PathVariable UUID id) {
+        service.reportNotArrived(id);
     }
 }

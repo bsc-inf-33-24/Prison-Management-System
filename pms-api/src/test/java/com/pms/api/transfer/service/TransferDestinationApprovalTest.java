@@ -17,6 +17,7 @@ import com.pms.api.prison.entity.Prison;
 import com.pms.api.prison.repository.PrisonRepository;
 import com.pms.api.security.PrisonAccessService;
 import com.pms.api.transfer.dto.ChangeTransferStatusRequest;
+import com.pms.api.transfer.dto.ConfirmTransferReceiptRequest;
 import com.pms.api.transfer.dto.CreateTransferRequest;
 import com.pms.api.transfer.entity.InmateTransfer;
 import com.pms.api.transfer.entity.TransferStatus;
@@ -124,8 +125,7 @@ class TransferDestinationApprovalTest {
         when(prisonAccess.currentUser()).thenReturn(user("Records Officer"));
         authenticate("records-officer");
 
-        var result = service.changeStatus(transferId,
-                new ChangeTransferStatusRequest(TransferStatus.CONFIRMED, null, cellId));
+        var result = service.confirmReceipt(transferId, new ConfirmTransferReceiptRequest(cellId));
 
         assertEquals(TransferStatus.CONFIRMED, result.status());
         assertEquals(destination, inmate.getCurrentPrison());
